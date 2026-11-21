@@ -39,10 +39,11 @@ test("a comparator change in a legal-space row rewrites the expression", () => w
 
 test("changing a step's effect gives a complete step of the new kind", () => withApp(async ({ page, db }) => {
   await goStep(page, 1); await openAction(page, "crown.garrison");
-  await pick(page.locator('select[data-sop="actions/0/steps/0"]'), "pay");
-  assert.equal(await page.locator('select[data-sf="actions/0/steps/0/track"]').count(), 1);
+  // Step 2 (Police): the Army of step 1 still reach the Martial Law dry runs.
+  await pick(page.locator('select[data-sop="actions/0/steps/1"]'), "pay");
+  assert.equal(await page.locator('select[data-sf="actions/0/steps/1/track"]').count(), 1);
   const g = await saved(page, db);
-  assert.deepEqual(g.actions[0].steps[0], { op: "pay", track: "res.crown", amount: 1 });
+  assert.deepEqual(g.actions[0].steps[1], { op: "pay", track: "res.crown", amount: 1 });
   assert.equal(await page.innerText("#blockers"), "No blockers");
 }));
 

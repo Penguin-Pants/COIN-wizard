@@ -60,7 +60,7 @@ pre.aid{white-space:pre-wrap;font:12.5px/1.5 var(--mono);background:var(--bg);pa
 #board svg{width:100%;max-width:760px;height:auto;border:1px solid var(--line);border-radius:6px;background:var(--bg);touch-action:none}
 .rcs{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:16px}.rc{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px}.rc.bad{border-color:var(--bad)}.rc h4{margin:0 0 6px}.rc p{margin:0 0 4px;font-size:13.5px}
 .chk{display:flex;gap:8px;align-items:center}
-footer.nav{display:flex;justify-content:space-between;margin-top:8px}
+footer.nav{display:flex;justify-content:space-between;margin-top:8px}#about{font-size:12px;margin:16px 0 4px}
 
 .s-sq{border-radius:3px}.s-circ{border-radius:50%}
 .s-hex{clip-path:polygon(25% 5%,75% 5%,100% 50%,75% 95%,25% 95%,0 50%)}
@@ -136,7 +136,7 @@ ul.cases{list-style:none;padding:0;margin:0 0 10px}ul.cases li{padding:3px 0}lab
 <header class="top"><h1>COIN Wizard</h1><span id="title"></span><span id="status"></span><span id="blockers" role="status" aria-live="polite"></span><span id="save" role="status" aria-live="polite"></span><span id="undo" class="row"></span><span id="menu"></span><button type="button" id="keys" aria-expanded="false" aria-controls="help">Keys</button></header>
 <div id="help" class="help" role="dialog" aria-label="Keyboard shortcuts" hidden><h2>Keyboard shortcuts</h2><dl><dt>Alt+Shift+Right / Alt+Shift+Left</dt><dd>Next step / previous step</dd><dt>Alt+Shift+1 to 5</dt><dd>Go to step 1 to 5</dd><dt>Ctrl+Z / Ctrl+Shift+Z</dt><dd>Undo / redo (outside text fields)</dd><dt>Arrow keys on a board space</dt><dd>Move the space</dd><dt>Escape</dt><dd>Close this panel, a menu or a question</dd><dt>?</dt><dd>Open this panel (outside text fields)</dd></dl><button type="button" id="help-close">Close</button></div>
 <div class="layout">
-<nav aria-label="Steps"><ol id="rail"></ol></nav>
+<nav aria-label="Steps"><ol id="rail"></ol><p id="about">Build /*COMMIT*/, schema /*SCHEMA*/</p></nav>
 <div><main id="main" aria-live="off" tabindex="-1"></main>
 <footer class="nav"><button type="button" id="back">Back</button><button type="button" id="next" class="primary">Next</button></footer></div>
 </div>

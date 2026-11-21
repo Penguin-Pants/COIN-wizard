@@ -99,7 +99,7 @@ export function rulebookMd(g) {
 const CSS = "@page{margin:10mm}*{box-sizing:border-box}body{font:9.5pt system-ui,sans-serif;margin:0;color:#111}.page{width:190mm;break-after:page;page-break-after:always}.page:last-of-type{break-after:auto;page-break-after:auto}.note{font-size:8.5pt;margin:0 0 3mm}.draft{font-weight:700;letter-spacing:.08em}"
   + ".cards{display:grid;grid-template-columns:repeat(3,63mm);grid-auto-rows:88mm;gap:0;width:189mm}.card{width:63mm;height:88mm;border:0.3mm dashed #777;padding:3mm;overflow:hidden;break-inside:avoid;page-break-inside:avoid;position:relative;font-size:8pt;display:flex;flex-direction:column;gap:1mm}.card h3{margin:0;font-size:10pt}.ord{display:flex;gap:1mm}.ord svg{width:7mm;height:7mm}.side{border-top:0.3mm solid #999;padding-top:1mm}.shaded{background:#e8e8e8}.i{font-style:italic}.cid{margin-top:auto;font-size:7pt}"
   + ".toks{display:flex;flex-wrap:wrap;gap:1.5mm}.tok svg{width:15mm;height:15mm;display:block}.grp{break-inside:avoid;page-break-inside:avoid;margin:0 0 3mm}.grp h2{font-size:10pt;margin:0 0 1mm}"
-  + ".band{display:flex;gap:3mm;align-items:center;border-left:4mm solid var(--f);padding:2mm 3mm;margin:0 0 3mm;background:#f2f2f2}.band svg{width:10mm;height:10mm}.band h1{font-size:14pt;margin:0}.cols{columns:2;column-gap:6mm}.aidsec{break-inside:avoid;page-break-inside:avoid;margin:0 0 4mm;border-top:0.6mm solid var(--f);padding-top:1.5mm}.aidsec h2{font-size:10.5pt;margin:0 0 1.5mm}.aidsec h3{font-size:9.5pt;margin:2mm 0 0.5mm}.aidsec p{margin:0 0 1mm}.where{font-style:italic}table{border-collapse:collapse;width:100%}td,th{border-bottom:0.2mm solid #bbb;text-align:left;padding:0.6mm 1mm;font-size:8.5pt}";
+  + ".band{display:flex;gap:3mm;align-items:center;border-left:4mm solid var(--f);padding:2mm 3mm;margin:0 0 3mm;background:#f2f2f2}.band svg{width:10mm;height:10mm}.band h1{font-size:14pt;margin:0}.cols{columns:2;column-gap:6mm}.aidsec{break-inside:avoid;page-break-inside:avoid;margin:0 0 4mm;border-top:0.6mm solid var(--f);padding-top:1.5mm}.aidsec h2{font-size:10.5pt;margin:0 0 1.5mm}.aidsec h3{font-size:9.5pt;margin:2mm 0 0.5mm}.aidsec p{margin:0 0 1mm}.where{font-style:italic}.card-size,.counter-size{border:0.3mm solid #111;flex:none}.card-size{padding:3mm}.counter-size svg{width:100%;height:100%;display:block}.ruler{display:block}table{border-collapse:collapse;width:100%}td,th{border-bottom:0.2mm solid #bbb;text-align:left;padding:0.6mm 1mm;font-size:8.5pt}";
 
 // Each faction has a shape by its position in the faction list, so printed pieces read in grayscale too.
 const SHAPE = ["sq", "circ", "hex", "oct"];
@@ -127,29 +127,55 @@ export function cardsHtml(g) {
   return doc(g, "cards", pages(cards, 6).map((p, i) => `<section class="page">${i === 0 ? `${head(g, "cards")}<p class="note">Cut on the dashed lines. Faction order: ${legend}.</p>` : ""}<div class="cards">${p.join("")}</div></section>`).join(""));
 }
 
+// Print test sheet: one page that fits Letter and A4. A 50 mm ruler, one card outline and one
+// counter at the sizes the kit prints (cards 63 x 88 mm, counters 15 x 15 mm), to measure on paper.
+export function printTestHtml(g) {
+  const ticks = Array.from({ length: 51 }, (_, i) => `<line x1="${i}" y1="0" x2="${i}" y2="${i % 10 === 0 ? 5 : i % 5 === 0 ? 3.5 : 2}" stroke="#111" stroke-width="0.15"/>`).join("")
+    + [0, 10, 20, 30, 40, 50].map((i) => `<text x="${i}" y="8" font-size="2.6" text-anchor="${i === 0 ? "start" : i === 50 ? "end" : "middle"}" font-family="sans-serif">${i}</text>`).join("");
+  const ruler = `<svg class="ruler" xmlns="http://www.w3.org/2000/svg" width="50mm" height="9mm" viewBox="0 0 50 9" role="img" aria-label="50 mm ruler"><line x1="0" y1="0" x2="50" y2="0" stroke="#111" stroke-width="0.2"/>${ticks}</svg>`;
+  const f = g.factions[0];
+  const body = `<section class="page">${head(g, "print test sheet")}<h1 style="font-size:14pt;margin:0 0 2mm">Print test sheet</h1>
+<p>Print this page at 100 % scale ("Actual size"), not "Fit to page". It fits both Letter and A4. Then measure and cut:</p>
+<ol><li>The ruler must measure 50 mm from 0 to 50.</li><li>Cut the card on its outline: it must be 63 x 88 mm.</li><li>Cut the counter on its outline: it must be 15 x 15 mm.</li><li>Write the sizes below and report them with the paper size (Letter or A4).</li></ol>
+<p>${ruler}</p>
+<div style="display:flex;gap:8mm;align-items:flex-start"><div class="card-size" style="width:63mm;height:88mm"><b>Card</b><br>63 x 88 mm</div><div class="counter-size" style="width:15mm;height:15mm">${shapeSvg(g, f)}</div>
+<table style="width:auto"><tr><th>Item</th><th>Should be</th><th>Measured</th></tr><tr><td>Ruler</td><td>50 mm</td><td>&nbsp;</td></tr><tr><td>Card</td><td>63 x 88 mm</td><td>&nbsp;</td></tr><tr><td>Counter</td><td>15 x 15 mm</td><td>&nbsp;</td></tr><tr><td>Paper</td><td>Letter or A4</td><td>&nbsp;</td></tr></table></div></section>`;
+  return doc(g, "print test sheet", body);
+}
+
+// Space markers set by markerSet steps or started in setup (opinion has its own track on the board).
+// One marker per space, so every space can hold one.
+export function spaceMarkers(g) {
+  const out = new Set(Object.values(g.setup.spaceAttributes ?? {}).flatMap((a) => Object.keys(a)));
+  JSON.stringify(g, (k, v) => { if (v?.op === "markerSet" && typeof v.marker === "string") out.add(v.marker); return v; });
+  out.delete("opinion");
+  return [...out].sort().map((id) => ({ id, name: id.charAt(0).toUpperCase() + id.slice(1), count: g.board.spaces.length }));
+}
+
 // Counters: each faction's shape in its color, with the symbol. Bases have a thick border.
 export function countersHtml(g) {
   const groups = g.factions.map((f) => `<div class="grp"><h2>${h(f.name)}</h2><div class="toks">${f.pieces.flatMap((pc) => Array.from({ length: pc.supply }, () => `<span class="tok" title="${h(pc.name)}">${shapeSvg(g, f, { base: pc.isBase, label: pc.isBase ? `${f.symbol}B` : f.symbol })}</span>`)).join("")}</div><p class="note">${f.pieces.map((pc) => `${pc.supply} ${h(pc.name)}${pc.isBase ? " (thick border)" : ""}${pc.states.length > 1 ? `, two-sided: ${pc.states.map(h).join(" / ")}` : ""}`).join("; ")}.</p></div>`).join("");
-  const markers = g.tracks.map((t) => `<li>${h(t.name)} marker (track ${t.min} to ${t.max})</li>`).join("") + g.factions.map((f) => `<li>${h(f.name)} Eligibility marker (${h(f.symbol)})</li>`).join("");
+  const markers = g.tracks.map((t) => `<li>${h(t.name)} marker (track ${t.min} to ${t.max})</li>`).join("") + g.factions.map((f) => `<li>${h(f.name)} Eligibility marker (${h(f.symbol)})</li>`).join("") + spaceMarkers(g).map((m) => `<li>${h(m.name)} marker (${m.count}, one per space)</li>`).join("");
   return doc(g, "counters", `<section class="page">${head(g, "counters")}${groups}<div class="grp"><h2>Markers</h2><ul>${markers}</ul></div></section>`);
 }
 
-// Faction player aid, in the order of the COIN series foldouts: forces, Operations (3.0),
-// Special Activities (4.0), the sequence of play, Victory (7.0) and what the faction gets at scoring.
+// Faction player aid, in the order of a printed GMT faction aid (checked against the Colonial
+// Twilight FLN sheet): Operations (3.0), Special Activities (4.0), then Victory (7.0) for every
+// faction with the final-scoring rule. Each action reads Location, Cost, Procedure. Forces, the
+// sequence of play and scoring follow; that sheet does not show them.
 export function factionAidHtml(g, f) {
   const acts = (kind) => f[kind === "operation" ? "operations" : "specialActivities"].map((id) => g.actions.find((a) => a.id === id)).filter(Boolean);
   const track = (id) => g.tracks.find((t) => t.id === id)?.name ?? id;
-  const act = (a) => `<h3>${h(a.name)}</h3><p><b>Cost:</b> ${a.cost.amount ? `${a.cost.amount} ${h(track(a.cost.track))} per ${a.cost.per}` : "free"}${a.kind === "operation" ? `. ${a.limitedAllowed ? "Allowed" : "Not allowed"} as a Limited Operation` : `. Timing: ${h(a.timing ?? "after")} the Operation`}.</p><p class="where"><b>Where:</b> ${h(condTextOf(g, a.targets))}.</p><p>${h(a.plain)}</p>`;
+  const act = (a) => `<h3>${h(a.name)}</h3><p class="where"><b>Location:</b> ${h(condTextOf(g, a.targets))}.</p><p><b>Cost:</b> ${a.cost.amount ? `${a.cost.amount} ${h(track(a.cost.track))} per ${a.cost.per}` : "free"}${a.kind === "operation" ? `. ${a.limitedAllowed ? "Allowed" : "Not allowed"} as a Limited Operation` : `. Timing: ${h(a.timing ?? "after")} the Operation`}.</p><p><b>Procedure:</b> ${h(a.plain)}</p>`;
   const seq = g.rules.sequence;
-  const vic = g.victory.perFaction.find((v) => v.factionId === f.id);
   const mine = new Set([f.resourceTrack, ...f.pieces.map((p) => p.id)]);
   const scoring = g.rules.scoring.phases.flatMap((p) => p.steps.filter((st) => [...mine].some((id) => JSON.stringify(st).includes(`"${id}"`))).map((st) => `<li>${h(p.name)}: ${h(stepTextOf(g, st))}</li>`));
   const body = `<section class="page" style="--f:${f.color}"><div class="band">${shapeSvg(g, f)}<div><h1>${h(f.name)}: faction aid</h1>${head(g, "player aid")}</div></div><div class="cols">
-    <section class="aidsec"><h2>Forces</h2><table><tr><th>Piece</th><th>Sides</th><th>Supply</th></tr>${f.pieces.map((p) => `<tr><td>${h(p.name)}${p.isBase ? " (base)" : ""}</td><td>${p.states.map(h).join(" / ")}</td><td>${p.supply}</td></tr>`).join("")}</table><p>Resources: ${h(track(f.resourceTrack))}. Pass: gain ${seq.passGain[f.id] ?? 0}.</p></section>
     <section class="aidsec"><h2>3.0 Operations</h2>${acts("operation").map(act).join("") || "<p>None yet.</p>"}</section>
     <section class="aidsec"><h2>4.0 Special Activities</h2>${acts("specialActivity").map(act).join("") || "<p>None yet.</p>"}</section>
+    <section class="aidsec"><h2>7.0 Victory</h2>${g.victory.perFaction.map((v) => `<p><b>${h(faction(g, v.factionId).name)}:</b> ${h(v.plain)} Threshold: ${v.threshold}.</p>`).join("") || "<p>No victory rule yet.</p>"}<p>${h(g.victory.checkAt)} ${h(g.victory.finalScoring)}</p></section>
+    <section class="aidsec"><h2>Forces</h2><table><tr><th>Piece</th><th>Sides</th><th>Supply</th></tr>${f.pieces.map((p) => `<tr><td>${h(p.name)}${p.isBase ? " (base)" : ""}</td><td>${p.states.map(h).join(" / ")}</td><td>${p.supply}</td></tr>`).join("")}</table><p>Resources: ${h(track(f.resourceTrack))}. Pass: gain ${seq.passGain[f.id] ?? 0}.</p></section>
     <section class="aidsec"><h2>Sequence of play</h2><p>${h(seq.firstActor)}</p><table><tr><th>1st Eligible chose</th><th>2nd Eligible may choose</th></tr>${Object.entries(seq.secondActorOptions).map(([k, v]) => `<tr><td>${CHOICE[k]}</td><td>${v.map((x) => CHOICE[x]).join(", ")}</td></tr>`).join("")}</table></section>
-    <section class="aidsec"><h2>7.0 Victory</h2><p>${h(vic?.plain ?? "No victory rule yet.")}${vic ? ` Threshold: ${vic.threshold}.` : ""}</p><p>${h(g.victory.checkAt)} ${h(g.victory.finalScoring)}</p></section>
     <section class="aidsec"><h2>At each ${h(g.rules.scoring.name)} card</h2>${scoring.length ? `<ul>${scoring.join("")}</ul>` : "<p>Nothing specific to this faction.</p>"}</section></div></section>`;
   return doc(g, `${f.name} aid`, body);
 }
@@ -157,7 +183,7 @@ export function factionAidHtml(g, f) {
 export function checklistMd(g) {
   const L = [`# ${g.meta.title}: component checklist`, draftNote(g), "", "| Item | Count |", "|---|---|"];
   for (const f of g.factions) for (const pc of f.pieces) L.push(`| ${f.name}: ${pc.name}${pc.states.length > 1 ? ` (${pc.states.join("/")})` : ""} | ${pc.supply} |`);
-  L.push(`| Spaces on the board | ${g.board.spaces.length} |`, `| Event cards | ${g.deck.cards.filter((c) => c.type === "event").length} |`, `| Scoring cards | ${g.deck.cards.filter((c) => c.type === "scoring").length} |`, ...g.tracks.map((t) => `| ${t.name} marker | 1 |`), "", "Supplies you provide:", ...(g.meta.supplies ?? []).map((s) => `- ${s}`), "");
+  L.push(`| Spaces on the board | ${g.board.spaces.length} |`, `| Event cards | ${g.deck.cards.filter((c) => c.type === "event").length} |`, `| Scoring cards | ${g.deck.cards.filter((c) => c.type === "scoring").length} |`, ...g.tracks.map((t) => `| ${t.name} marker | 1 |`), ...spaceMarkers(g).map((m) => `| ${m.name} marker | ${m.count} |`), "", "Supplies you provide:", ...(g.meta.supplies ?? []).map((s) => `- ${s}`), "");
   return L.join("\n");
 }
 
@@ -172,6 +198,7 @@ export function buildFiles(g, { toMermaid, toMarkdown, toPolicyYaml }) {
     [`kit/${id}.cards.html`, cardsHtml(g)],
     [`kit/${id}.counters.html`, countersHtml(g)],
     [`kit/${id}.components.md`, checklistMd(g)],
+    [`kit/${id}.print-test.html`, printTestHtml(g)],
     ...g.factions.map((f) => [`kit/${id}.${f.id}.aid.html`, factionAidHtml(g, f)])
   ];
   const draft = draftNote(g);

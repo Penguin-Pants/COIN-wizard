@@ -20,12 +20,10 @@ test("a confirmed export carries no DRAFT mark", () => {
   for (const [p, t] of Object.entries(files(g))) assert.doesNotMatch(t, /DRAFT|"draft": true/, p);
 });
 
-test("the kit has a faction aid per faction in foldout order and a rendered flowchart per bot", () => {
+test("the kit has a faction aid per faction and a rendered flowchart per bot", () => {
   const g = example(), out = files(g);
   for (const f of g.factions) {
     const aid = out[`kit/${g.meta.gameId}.${f.id}.aid.html`];
-    const order = ["Forces", "3.0 Operations", "4.0 Special Activities", "Sequence of play", "7.0 Victory"].map((x) => aid.indexOf(x));
-    assert.ok(order.every((x, i) => x > 0 && (i === 0 || x > order[i - 1])), `${f.id} aid order ${order}`);
     for (const id of f.operations) assert.ok(aid.includes(g.actions.find((a) => a.id === id).name));
   }
   for (const b of g.bots) assert.match(out[`bots/${g.meta.gameId}.${b.factionId}.flow.svg`], /^<svg[^>]*role="img"/);
@@ -49,4 +47,42 @@ test("a board background image is drawn under the spaces", () => {
   const g = example(); g.board.presentation.background = { href: "data:image/png;base64,AAAA", opacity: 0.5 };
   const svg = files(g)["kit/tan-war.board.svg"];
   assert.ok(svg.indexOf("<image") > 0 && svg.indexOf("<image") < svg.indexOf("<line"));
+});
+
+// Known issue 3. Compared with a printed GMT faction aid (Colonial Twilight, FLN sheet,
+// examples/player-aid-sheets/Colonial_Twilight_FLN_Faction_Sheet.jpg): Operations, then Special
+// Activities, then Victory for every faction with the final-scoring rule. Each action reads
+// Location, Cost, Procedure. Sections that sheet does not show come after Victory.
+test("the faction aid follows the section order of a printed GMT faction aid", () => {
+  const g = example(), out = files(g);
+  for (const f of g.factions) {
+    const aid = out[`kit/${g.meta.gameId}.${f.id}.aid.html`];
+    const h2 = [...aid.matchAll(/<h2>([^<]*)<\/h2>/g)].map((m) => m[1]);
+    assert.deepEqual(h2, ["3.0 Operations", "4.0 Special Activities", "7.0 Victory", "Forces", "Sequence of play", `At each ${g.rules.scoring.name} card`], f.id);
+    const op = aid.slice(aid.indexOf("<h3>"));
+    const at = ["<b>Location:</b>", "<b>Cost:</b>", "<b>Procedure:</b>"].map((x) => op.indexOf(x));
+    assert.ok(at.every((x, i) => x > 0 && (i === 0 || x > at[i - 1])), `${f.id} action fields ${at}`);
+    const vic = aid.slice(aid.indexOf("7.0 Victory"), aid.indexOf("<h2>Forces"));
+    for (const x of g.factions) assert.ok(vic.includes(`<b>${x.name}:</b>`), `${f.id} victory lists ${x.name}`);
+    assert.ok(vic.includes(g.victory.finalScoring));
+  }
+});
+
+// Known issue 4: a one-page print test sheet with true-size items, to check a print on paper.
+test("the kit has a print test sheet with a 50 mm ruler, a card and a counter at true size", () => {
+  const g = example(), out = files(g);
+  const t = out[`kit/${g.meta.gameId}.print-test.html`];
+  assert.ok(t, "print test sheet exists");
+  assert.match(t, /class="ruler"[^>]*width="50mm"/);
+  assert.match(t, /class="card-size"[^>]*style="width:63mm;height:88mm"/);
+  assert.match(t, /class="counter-size"[^>]*style="width:15mm;height:15mm"/);
+  assert.match(t, /100 %/);
+  assert.match(t, /Letter/); assert.match(t, /A4/);
+});
+
+test("a markerSet step in a scoring phase also prints its marker", async () => {
+  const { spaceMarkers } = await import("../src/kit.mjs");
+  const g = example();
+  g.rules.scoring.phases[0].steps.push({ op: "markerSet", marker: "truce", value: true, space: "dublin" });
+  assert.deepEqual(spaceMarkers(g).map((m) => m.id).sort(), ["curfew", "truce"]);
 });

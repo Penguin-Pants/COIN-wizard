@@ -18,6 +18,11 @@ node src/cli.mjs validate examples/four-valleys.game.json
 node src/cli.mjs zip examples/four-valleys.game.json out/four-valleys.zip
 ```
 
+## Publish
+
+1. `make publish-check`: both test suites, the build, then the page path and the commit (the page footer shows the same commit and schema).
+2. In a Claude chat, give Claude `dist/index.html` and ask it to publish a new version of the "COIN Game Design Wizard" artifact.
+
 ## Layout
 
 | Folder | Holds |

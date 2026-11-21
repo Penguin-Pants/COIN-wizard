@@ -2377,30 +2377,27 @@
           "id": "ra.d6",
           "case": "fallback",
           "patch": {
-            "dice": [
-              3,
-              3,
-              3
-            ],
+            "resources": {
+              "f1": 1
+            },
             "card": {
               "id": "e01",
               "hasEffect": false,
               "raisesSelf": false,
               "lowersEnemy": false
-            }
+            },
+            "dice": [
+              3
+            ]
           },
           "expect": {
-            "outcome": "operation",
+            "outcome": "pass",
             "path": [
               "ra.start",
               "ra.event",
-              "ra.op",
-              "ra.end-op"
-            ],
-            "chosen": [
-              "space4"
-            ],
-            "target": "f3"
+              "ra.op:empty",
+              "ra.pass"
+            ]
           }
         }
       ]
@@ -2723,6 +2720,9 @@
           "id": "vm.d6",
           "case": "fallback",
           "patch": {
+            "resources": {
+              "f2": 1
+            },
             "card": {
               "id": "e01",
               "hasEffect": false,
@@ -2730,23 +2730,17 @@
               "lowersEnemy": false
             },
             "dice": [
-              3,
-              3,
               3
             ]
           },
           "expect": {
-            "outcome": "operation",
+            "outcome": "pass",
             "path": [
               "vm.start",
               "vm.event",
-              "vm.op",
-              "vm.end-op"
-            ],
-            "chosen": [
-              "space4"
-            ],
-            "target": "f3"
+              "vm.op:empty",
+              "vm.pass"
+            ]
           }
         }
       ]
@@ -3069,6 +3063,10 @@
           "id": "mf.d6",
           "case": "fallback",
           "patch": {
+            "clearPieces": [
+              "f3.guerrilla",
+              "f3.base"
+            ],
             "card": {
               "id": "e01",
               "hasEffect": false,
@@ -3076,23 +3074,17 @@
               "lowersEnemy": false
             },
             "dice": [
-              3,
-              3,
               3
             ]
           },
           "expect": {
-            "outcome": "operation",
+            "outcome": "pass",
             "path": [
               "mf.start",
               "mf.event",
-              "mf.op",
-              "mf.end-op"
-            ],
-            "chosen": [
-              "space4"
-            ],
-            "target": "f1"
+              "mf.op:empty",
+              "mf.pass"
+            ]
           }
         },
         {
@@ -3460,6 +3452,10 @@
           "id": "rb.d6",
           "case": "fallback",
           "patch": {
+            "clearPieces": [
+              "f4.guerrilla",
+              "f4.base"
+            ],
             "card": {
               "id": "e01",
               "hasEffect": false,
@@ -3467,23 +3463,17 @@
               "lowersEnemy": false
             },
             "dice": [
-              3,
-              3,
               3
             ]
           },
           "expect": {
-            "outcome": "operation",
+            "outcome": "pass",
             "path": [
               "rb.start",
               "rb.event",
-              "rb.op",
-              "rb.end-op"
-            ],
-            "chosen": [
-              "space10"
-            ],
-            "target": "f1"
+              "rb.op:empty",
+              "rb.pass"
+            ]
           }
         }
       ]

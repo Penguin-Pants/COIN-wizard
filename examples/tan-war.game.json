@@ -540,28 +540,36 @@
     ],
     "spaceAttributes": {
       "dublin": {
-        "opinion": 1
+        "opinion": 1,
+        "curfew": false
       },
       "belfast": {
-        "opinion": 1
+        "opinion": 1,
+        "curfew": false
       },
       "cork-city": {
-        "opinion": 0
+        "opinion": 0,
+        "curfew": false
       },
       "cork-county": {
-        "opinion": -1
+        "opinion": -1,
+        "curfew": false
       },
       "tipperary": {
-        "opinion": -1
+        "opinion": -1,
+        "curfew": false
       },
       "kerry": {
-        "opinion": 0
+        "opinion": 0,
+        "curfew": false
       },
       "limerick": {
-        "opinion": 0
+        "opinion": 0,
+        "curfew": false
       },
       "west": {
-        "opinion": 0
+        "opinion": 0,
+        "curfew": false
       }
     },
     "pools": {
@@ -1009,7 +1017,7 @@
       "faction": "crown",
       "kind": "specialActivity",
       "name": "Martial Law",
-      "plain": "In one space with 2 or more Army and opinion below Support, shift opinion one step toward the Crown. Then raise Repression by 1.",
+      "plain": "In one space with 2 or more Army and opinion below Support, shift opinion one step toward the Crown. Then raise Repression by 1 and place a Curfew marker there. The marker records Crown rule; it has no other effect.",
       "dependsOn": [
         "crown.army",
         "repression",
@@ -1062,6 +1070,12 @@
           "op": "track",
           "id": "repression",
           "delta": 1
+        },
+        {
+          "op": "markerSet",
+          "marker": "curfew",
+          "value": true,
+          "space": "$space"
         }
       ]
     },
@@ -2930,7 +2944,7 @@
           "case": "no-target",
           "patch": {},
           "expect": {
-            "outcome": "operation",
+            "outcome": "operationSpecial",
             "path": [
               "cw.start",
               "cw.event",
@@ -2942,7 +2956,7 @@
             "chosen": [
               "cork-city"
             ],
-            "linked": "skipped"
+            "linked": "crown.martial-law:cork-city"
           }
         },
         {
@@ -2964,7 +2978,7 @@
             }
           },
           "expect": {
-            "outcome": "operation",
+            "outcome": "operationSpecial",
             "path": [
               "cw.start",
               "cw.event",
@@ -2976,7 +2990,7 @@
             "chosen": [
               "belfast"
             ],
-            "linked": "skipped"
+            "linked": "crown.martial-law:belfast"
           }
         },
         {
@@ -3039,6 +3053,36 @@
               "cw.sweep:empty",
               "cw.pass"
             ]
+          }
+        },
+        {
+          "id": "cw.d7",
+          "case": "linked-sa",
+          "patch": {
+            "spaces": {
+              "limerick": {
+                "pieces": {
+                  "crown.army": {
+                    "normal": 2
+                  }
+                }
+              }
+            }
+          },
+          "expect": {
+            "outcome": "operationSpecial",
+            "path": [
+              "cw.start",
+              "cw.event",
+              "cw.low",
+              "cw.crack:empty",
+              "cw.garrison",
+              "cw.end-op"
+            ],
+            "chosen": [
+              "cork-city"
+            ],
+            "linked": "crown.martial-law:cork-city"
           }
         }
       ]
@@ -3837,7 +3881,7 @@
             }
           },
           "expect": {
-            "outcome": "operation",
+            "outcome": "operationSpecial",
             "path": [
               "ib.start",
               "ib.event",
@@ -3850,7 +3894,7 @@
             "chosen": [
               "cork-city"
             ],
-            "linked": "skipped"
+            "linked": "ira.boycott:cork-city"
           }
         },
         {
@@ -3865,7 +3909,10 @@
                   }
                 }
               }
-            }
+            },
+            "dice": [
+              3
+            ]
           },
           "expect": {
             "outcome": "operationSpecial",

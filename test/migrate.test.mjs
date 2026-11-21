@@ -8,6 +8,14 @@ const read = (rel) => JSON.parse(readFileSync(new URL(rel, import.meta.url), "ut
 const old = () => read("./fixtures/tan-war.1.0.0.game.json");
 const current = () => read("../examples/tan-war.game.json");
 const codes = (g) => validate(g).errors.map((e) => e.code);
+// Past Tan War files stored dry-run results from before an Operation changed the board for its
+// linked Special Activity (known issue 1). Those four results are now flagged; nothing else is.
+const STALE = ["/bots/0/dryRuns/2", "/bots/0/dryRuns/3", "/bots/1/dryRuns/3", "/bots/1/dryRuns/4"];
+const validOld = (g) => {
+  const errs = validate(g).errors;
+  assert.deepEqual(errs.map((e) => e.path), STALE, JSON.stringify(errs));
+  assert.ok(errs.every((e) => e.code.startsWith("dry-run")));
+};
 const STEPS = ["brief", "factions", "board", "rules", "review"];
 
 test("the shipped example is on the latest schema version", () => {
@@ -19,10 +27,10 @@ test("a 1.0.0 game is rejected until it is migrated", () => {
   assert.ok(codes(old()).includes("schema"));
 });
 
-test("migrate lifts a 1.0.0 game to the latest version and it validates", () => {
+test("migrate lifts a 1.0.0 game to the latest version and only its stale dry runs fail", () => {
   const m = migrate(old());
   assert.equal(m.meta.schemaVersion, LATEST);
-  assert.equal(validate(m).ok, true, JSON.stringify(validate(m).errors));
+  validOld(m);
 });
 
 test("migrate does not change its input", () => {
@@ -49,16 +57,16 @@ test("shift toward a faction becomes a side of the opinion axis", () => {
   assert.deepEqual(after, before.map((t) => (t === "crown" ? "support" : "opposition")));
 });
 
-test("a 1.2.0 draft migrates to the latest version and validates", () => {
+test("a 1.2.0 draft migrates to the latest version and only its stale dry runs fail", () => {
   const g = migrate(read("./fixtures/tan-war.1.2.0.game.json"));
   assert.equal(g.meta.schemaVersion, LATEST);
-  assert.equal(validate(g).ok, true);
+  validOld(g);
 });
 
-test("a 1.1.0 draft migrates to the latest version and validates", () => {
+test("a 1.1.0 draft migrates to the latest version and only its stale dry runs fail", () => {
   const g = migrate(read("./fixtures/tan-war.1.1.0.game.json"));
   assert.equal(g.meta.schemaVersion, LATEST);
-  assert.equal(validate(g).ok, true);
+  validOld(g);
 });
 
 test("a draft starts with empty step progress", () => {

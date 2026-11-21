@@ -1912,6 +1912,9 @@
           "id": "pa.d6",
           "case": "fallback",
           "patch": {
+            "resources": {
+              "f1": 1
+            },
             "card": {
               "id": "e01",
               "hasEffect": false,
@@ -1919,23 +1922,17 @@
               "lowersEnemy": false
             },
             "dice": [
-              3,
-              3,
               3
             ]
           },
           "expect": {
-            "outcome": "operation",
+            "outcome": "pass",
             "path": [
               "pa.start",
               "pa.event",
-              "pa.op",
-              "pa.end-op"
-            ],
-            "chosen": [
-              "space8"
-            ],
-            "target": "f3"
+              "pa.op:empty",
+              "pa.pass"
+            ]
           }
         }
       ]
@@ -2186,11 +2183,12 @@
           "case": "tie",
           "patch": {
             "spaces": {
-              "space2": {
-                "opinion": 0
-              },
-              "space3": {
-                "opinion": 0
+              "space5": {
+                "pieces": {
+                  "f2.guerrilla": {
+                    "underground": 1
+                  }
+                }
               }
             },
             "card": {
@@ -2198,7 +2196,10 @@
               "hasEffect": false,
               "raisesSelf": false,
               "lowersEnemy": false
-            }
+            },
+            "dice": [
+              1
+            ]
           },
           "expect": {
             "outcome": "operation",
@@ -2209,7 +2210,7 @@
               "rh.end-op"
             ],
             "chosen": [
-              "space7"
+              "space5"
             ],
             "target": "f1"
           }
@@ -2243,6 +2244,10 @@
           "id": "rh.d6",
           "case": "fallback",
           "patch": {
+            "clearPieces": [
+              "f2.guerrilla",
+              "f2.base"
+            ],
             "card": {
               "id": "e01",
               "hasEffect": false,
@@ -2251,17 +2256,13 @@
             }
           },
           "expect": {
-            "outcome": "operation",
+            "outcome": "pass",
             "path": [
               "rh.start",
               "rh.event",
-              "rh.op",
-              "rh.end-op"
-            ],
-            "chosen": [
-              "space7"
-            ],
-            "target": "f1"
+              "rh.op:empty",
+              "rh.pass"
+            ]
           }
         }
       ]
@@ -2512,11 +2513,17 @@
           "case": "tie",
           "patch": {
             "spaces": {
-              "space2": {
-                "opinion": 0
+              "space1": {
+                "pieces": {
+                  "f1.troops": {}
+                }
               },
-              "space3": {
-                "opinion": 0
+              "space7": {
+                "pieces": {
+                  "f1.troops": {
+                    "normal": 1
+                  }
+                }
               }
             },
             "card": {
@@ -2524,7 +2531,10 @@
               "hasEffect": false,
               "raisesSelf": false,
               "lowersEnemy": false
-            }
+            },
+            "dice": [
+              6
+            ]
           },
           "expect": {
             "outcome": "operation",
@@ -2535,7 +2545,7 @@
               "du.end-op"
             ],
             "chosen": [
-              "space1"
+              "space7"
             ],
             "target": "f1"
           }
@@ -2569,6 +2579,9 @@
           "id": "du.d6",
           "case": "fallback",
           "patch": {
+            "resources": {
+              "f3": 0
+            },
             "card": {
               "id": "e01",
               "hasEffect": false,
@@ -2577,17 +2590,13 @@
             }
           },
           "expect": {
-            "outcome": "operation",
+            "outcome": "pass",
             "path": [
               "du.start",
               "du.event",
-              "du.op",
-              "du.end-op"
-            ],
-            "chosen": [
-              "space1"
-            ],
-            "target": "f1"
+              "du.op:empty",
+              "du.pass"
+            ]
           }
         }
       ]

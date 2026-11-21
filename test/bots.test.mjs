@@ -99,3 +99,39 @@ test("solo rule: an action node without a priority table is an error", () => {
   delete g.bots[0].nodes.find((n) => n.kind === "action").table;
   assert.ok(validate(g).errors.some((e) => e.code === "solo"));
 });
+
+// Known issue 1. Expected values come from the Tan War rules, not from a run:
+// Crackdown has no target (no Active Volunteer). Garrison IB rule CW-2 step 1 picks Cork City (Pop 2, Neutral).
+// Garrison pays 2 Resources (8 to 6) and places 2 Army there (1 to 3 Army).
+// Martial Law (Resources 6, trigger 3 or more): legal spaces have 2 or more Army and opinion below Support.
+// Before Garrison only Limerick is legal (step 2). After Garrison Cork City is legal and wins step 1 (Pop 2, Neutral).
+test("a linked Special Activity sees the board after its Operation", () => {
+  const g = example();
+  const d = { id: "x", case: "linked-sa", patch: { spaces: { limerick: { pieces: { "crown.army": { normal: 2 } } } } }, expect: { outcome: "none" } };
+  const r = runDry(g, g.bots[0], d);
+  assert.equal(r.error, undefined);
+  assert.deepEqual(r.chosen, ["cork-city"]);
+  assert.equal(r.linked, "crown.martial-law:cork-city");
+  assert.equal(r.outcome, "operationSpecial");
+});
+
+test("a linked Special Activity with timing before sees the board before its Operation", () => {
+  const g = example();
+  const node = g.bots[0].nodes.find((n) => n.id === "cw.garrison");
+  node.linked.timing = "before";
+  g.actions.find((a) => a.id === "crown.martial-law").timing = "before";
+  // Same board as cw.d7: before Garrison only Limerick has 2 Army.
+  const d = { id: "x", case: "linked-sa", patch: { spaces: { limerick: { pieces: { "crown.army": { normal: 2 } } } } }, expect: { outcome: "none" } };
+  const r = runDry(g, g.bots[0], d);
+  assert.equal(r.linked, "crown.martial-law:limerick");
+});
+
+test("a before-timed Special Activity is skipped when it would leave too little for the Operation", () => {
+  const g = example();
+  g.bots[0].nodes.find((n) => n.id === "cw.garrison").linked.timing = "before";
+  g.bots[0].nodes.find((n) => n.id === "cw.garrison").linked.trigger = true;
+  const d = { id: "x", case: "linked-sa", patch: { resources: { crown: 3 }, spaces: { limerick: { pieces: { "crown.army": { normal: 2 } } } } }, expect: { outcome: "none" } };
+  const r = runDry(g, g.bots[0], d);
+  assert.deepEqual(r.chosen, ["cork-city"]);
+  assert.equal(r.linked, "skipped", "Martial Law (2) plus Garrison (2) is more than 3 Resources");
+});

@@ -46,3 +46,20 @@ for (const [g, out] of kits) {
     }
   });
 }
+
+// Known issue 4: the print test sheet is one page at Letter and A4, and its items print at true size.
+test("the print test sheet is one page at Letter and A4 with true-size ruler, card and counter", async () => {
+  const [g, out] = kits[0];
+  const html = out[`kit/${g.meta.gameId}.print-test.html`];
+  assert.ok(html, "print test sheet exists");
+  const r = await check(html);
+  assert.deepEqual(r.counts, { Letter: 1, A4: 1 });
+  const page = await browser.newPage();
+  try {
+    await page.setContent(html); await page.emulateMedia({ media: "print" });
+    const mm = (sel) => page.$eval(sel, (e) => { const b = e.getBoundingClientRect(); return [b.width, b.height]; }).then(([w, h]) => [w / MM, h / MM].map((x) => Math.round(x * 10) / 10));
+    assert.equal((await mm(".ruler"))[0], 50);
+    assert.deepEqual(await mm(".card-size"), [63, 88]);
+    assert.deepEqual(await mm(".counter-size"), [15, 15]);
+  } finally { await page.close(); }
+});
