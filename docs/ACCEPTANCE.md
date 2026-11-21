@@ -51,7 +51,7 @@ Status of each gap from the 2026-11-21 review (branch `fix/known-gaps`). "Gap" i
 | 7 | 4 | Print checked by PDF only, not on paper | Open: needs a person (checklist item P1) | Code part closed: `src/kit.mjs` (`printTestHtml`), kit file `kit/<game>.print-test.html`; tests "the kit has a print test sheet with a 50 mm ruler, a card and a counter at true size" (`test/kit.test.mjs`) and "the print test sheet is one page at Letter and A4 with true-size ruler, card and counter" (`test/ui/print.test.mjs`). |
 | 8 | 5 | Claim checks tested with scripted answers only | Open: needs a person (checklist item P2) | Manual test script below ("Manual test: claim check in the live artifact"). Scripted coverage: `test/ui/sources.test.mjs`, `test/sources.test.mjs`. |
 | 9 | 7 | Live URL fetch blocked by the page's content security policy | Accepted: platform limit | See "Platform limits" below. |
-| 10 | none | `main` is not protected | Open | |
+| 10 | none | `main` is not protected | Open: needs a person (checklist item P3) | `gh api -X PUT repos/Penguin-Pants/COIN-wizard/branches/main/protection` was refused on 2026-11-21: HTTP 403, "Write access to this GitHub API path is not permitted through this proxy." |
 
 Gap 1 (dry runs) changed four stored Tan War results. Each new value was derived by hand from the rules before the run:
 
@@ -65,6 +65,8 @@ Gap 1 (dry runs) changed four stored Tan War results. Each new value was derived
 Past Tan War files (`test/fixtures/`) keep the old results. After migration they flag these four cases and nothing else (`test/migrate.test.mjs`).
 
 
+Earlier: closed on 2026-11-21 (3 and 4 factions are a core requirement): `other.resources` replaced by per-faction and rival values; bots pick their enemy with opponent tables; templates target a chosen enemy; a click-through test builds 3- and 4-faction games from empty.
+
 ## Platform limits
 
 1. Live URL fetch from the artifact page is blocked by its content security policy (high confidence, from the platform guide; was known issue 7). This is a platform limit, not a defect. **The supported intake path is the chat handoff:** step 1 shows "Ask Claude in chat to read pending sources"; Claude in chat reads the URLs and returns the text, or the designer pastes the text with "Paste text for this source". The real-source session above used this path.
@@ -75,6 +77,7 @@ These items need a person. They are not done until a person records the result h
 
 - [ ] **P1 Print on paper (gap 7).** Export the Tan War kit. Print `kit/tan-war.print-test.html` at 100 % scale ("Actual size") on Letter and on A4. Measure the ruler (should be 50 mm). Cut the card (63 x 88 mm) and the counter (15 x 15 mm). Write the measured sizes in the table on the sheet and report them here.
 - [ ] **P2 Live claim check (gap 8).** Run "Manual test: claim check in the live artifact" below and fill in its table.
+- [ ] **P3 Protect `main` (gap 10).** GitHub: repository Settings, Branches (or Rules, Rulesets), add a rule for `main`: require a pull request before merging; require the status check `test` to pass; require branches to be up to date. Save.
 
 Gap 6 (faction aid) needed an image of a printed GMT faction aid. The user supplied the Colonial Twilight FLN sheet; no human item is left for it.
 
