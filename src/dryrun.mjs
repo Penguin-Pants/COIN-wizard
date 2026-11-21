@@ -2,7 +2,7 @@
 // effect steps on the dry-run state (src/effects.mjs) before its linked Special Activity
 // and before the next node, so each sees the board the action left.
 import { evalExpr } from "./expr.mjs";
-import { applyAction, payCost, refundCost, withoutCost } from "./effects.mjs";
+import { applyAction, payCost, refundCost, withoutCost, runPhaseSteps } from "./effects.mjs";
 
 
 // A node's linked Special Activities as a list: none, one object or a list (schema 1.5.0).
@@ -162,3 +162,29 @@ export function runBot(game, bot, startState) {
   }
   throw new Error("unreachable");
 }
+
+// Dry-run case "scoring": runs each phase that bot.scoring names, in rules order. Every step in it
+// that needs a space picks with that entry's table: up to the step's "spaces" (1 for "choose"),
+// capped by the table. path: the phase ids. chosen: every chosen space, in order. outcome: none.
+export function runScoring(game, bot, startState) {
+  const state = structuredClone(startState);
+  state.self = bot.factionId;
+  const tables = Object.fromEntries(bot.priorityTables.map((t) => [t.id, t]));
+  const result = { path: [], chosen: [], linked: undefined, side: undefined, outcome: "none", target: undefined };
+  for (const ph of game.rules.scoring.phases) {
+    const sc = (bot.scoring ?? []).find((x) => x.phaseId === ph.id);
+    if (!sc) continue;
+    result.path.push(ph.id);
+    const choose = (filter, n) => {
+      const legal = Object.values(state.spaces).filter((sp) => filter === undefined || !!evalExpr(filter, { state, links: game.board.links, $space: sp }));
+      const sel = selectByTable(game, state, tables[sc.table], legal, { cost: { amount: 0 }, maxSpaces: n });
+      result.chosen.push(...sel.map((sp) => sp.id));
+      return sel;
+    };
+    runPhaseSteps(game, state, ph.steps, choose);
+  }
+  return result;
+}
+
+// Runs one dry-run case: "scoring" runs the scoring phases, every other case the decision graph.
+export const runCase = (game, bot, state, kase) => (kase === "scoring" ? runScoring : runBot)(game, bot, state);

@@ -81,8 +81,32 @@ function runSteps(game, steps, ctx) {
   for (const s of steps) runStep(game, s, ctx);
 }
 
+// Steps whose space a player picks, and the field that names the space.
+const CHOICE_FIELD = { place: "to", remove: "space", flip: "space", shift: "space", markerSet: "space" };
+
+// A step that needs a space ("spaces" with "filter", or a "choose" space) asks ctx.choose(filter, n)
+// when the dry run gives one (bot.scoring, runScoring in src/dryrun.mjs). It then runs once in each
+// chosen space. Without ctx.choose the step is an error, as before.
+function chosenRun(game, s, ctx) {
+  const f = CHOICE_FIELD[s.op];
+  if (f && (s.spaces !== undefined || s.filter !== undefined || s[f] === "choose")) {
+    const { spaces, filter, ...one } = s, prev = ctx.$space;
+    for (const sp of ctx.choose(filter, spaces ?? 1)) { ctx.$space = sp; runStep(game, { ...one, [f]: "$space" }, ctx); }
+    ctx.$space = prev;
+    return true;
+  }
+  if (s.op === "move" && (s.to === "choose" || s.from === "choose")) {
+    const pick = (w) => (w === "choose" ? ctx.choose(undefined, 1)[0]?.id : w);
+    const to = pick(s.to), from = pick(s.from);
+    if (to !== undefined && from !== undefined) runStep(game, { ...s, to, from }, ctx);
+    return true;
+  }
+  return false;
+}
+
 function runStep(game, s, ctx) {
   const { state } = ctx;
+  if (ctx.choose && chosenRun(game, s, ctx)) return;
   switch (s.op) {
     case "place": {
       const sp = spaceOf(s, ctx, "to");
@@ -171,6 +195,11 @@ function runStep(game, s, ctx) {
     case "choose": runSteps(game, s.options[0].steps, ctx); return;
     default: throw new Error(`Unknown effect op ${s.op}`);
   }
+}
+
+// Runs a scoring phase's steps. choose(filter, n) picks up to n spaces for each choice step.
+export function runPhaseSteps(game, state, steps, choose) {
+  runSteps(game, steps, { state, links: game.board.links, choose });
 }
 
 // The cost of an action in the chosen spaces.

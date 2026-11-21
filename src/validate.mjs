@@ -3,7 +3,7 @@ import Ajv2020 from "ajv/dist/2020.js";
 import schema from "../schema/coin-game.schema.json" with { type: "json" };
 import { scanExpr, VAR_OK } from "./expr.mjs";
 import { deriveState, applyPatch } from "./state.mjs";
-import { runBot, linkedOf } from "./dryrun.mjs";
+import { runCase, linkedOf } from "./dryrun.mjs";
 
 const ajv = new Ajv2020({ allErrors: true, strict: false });
 const schemaCheck = ajv.compile(schema);
@@ -308,6 +308,15 @@ function validateBot(game, bot, p, { err, warn, checkExpr, actionById, cardById,
       if (n.outcome === "pass" && !seq.choices.includes("pass")) err("pass-illegal", np, "Bot passes but the rules do not allow Pass");
     }
   });
+  // Scoring choices: a known phase, a space table, and one scoring entry per phase over all bots.
+  (bot.scoring ?? []).forEach((sc, i) => {
+    const sp = `${p}/scoring/${i}`;
+    if (!game.rules.scoring.phases.some((ph) => ph.id === sc.phaseId)) err("missing-ref", sp, `Scoring phase not found: ${sc.phaseId}`);
+    if (!tables[sc.table]) err("missing-ref", sp, `Scoring table not found: ${sc.table}`);
+    else { used.add(sc.table); if (tables[sc.table].scope === "opponent") err("bad-target", sp, `Table ${sc.table} picks an enemy. A scoring phase chooses spaces with a space table`); }
+    const named = game.bots.flatMap((b) => (b.scoring ?? []).filter((x) => x.phaseId === sc.phaseId));
+    if (named.length > 1) err("scoring-phase", sp, `Phase ${sc.phaseId} is named by ${named.length} scoring entries. One bot chooses in a phase, once`);
+  });
   bot.priorityTables.forEach((t, i) => {
     const tp = `${p}/priorityTables/${i}`;
     // An opponent table reads $faction. A space table may read $target only if every node using it has a target.
@@ -341,7 +350,7 @@ function validateBot(game, bot, p, { err, warn, checkExpr, actionById, cardById,
   bot.dryRuns.forEach((d, i) => {
     const dp = `${p}/dryRuns/${i}`;
     let r;
-    try { r = runBot(game, bot, applyPatch(base, d.patch)); } catch (e) { err("dry-run-error", dp, `${d.id}: ${e.message}`); return; }
+    try { r = runCase(game, bot, applyPatch(base, d.patch), d.case); } catch (e) { err("dry-run-error", dp, `${d.id}: ${e.message}`); return; }
     const x = d.expect; const miss = [];
     if (r.outcome !== x.outcome) miss.push(`outcome ${r.outcome}, expected ${x.outcome}`);
     if (x.path && JSON.stringify(r.path) !== JSON.stringify(x.path)) miss.push(`path ${r.path.join(">")}, expected ${x.path.join(">")}`);

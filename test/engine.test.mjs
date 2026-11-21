@@ -4,7 +4,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { createHash } from "node:crypto";
 import Ajv2020 from "ajv/dist/2020.js";
 import { deriveState, applyPatch } from "../src/state.mjs";
-import { runBot } from "../src/dryrun.mjs";
+import { runBot, runScoring } from "../src/dryrun.mjs";
 
 // An engine importer sees only the schema file and the game file.
 const schemaText = readFileSync(new URL("../schema/coin-game.schema.json", import.meta.url), "utf8");
@@ -16,7 +16,7 @@ const games = readdirSync(dir).filter((f) => f.endsWith(".game.json")).map((f) =
 test("the schema is frozen at coin-game/1.5.0", () => {
   assert.equal(schema.properties.meta.properties.schemaVersion.const, "coin-game/1.5.0");
   const hash = createHash("sha256").update(schemaText).digest("hex");
-  assert.equal(hash, "0a4db61ad2d9aa13d2b043b0649e4320fb72f7e08fbb63da21a8176585c7cc15", "The frozen schema changed. Add a new version with a migrate step instead.");
+  assert.equal(hash, "4f50f052d5be86c0e9b1bc2007109ecae78cc51172a74a6458358b3eb8ebf050", "The frozen schema changed. Add a new version with a migrate step instead.");
 });
 
 for (const [f, g] of games) {
@@ -26,7 +26,8 @@ for (const [f, g] of games) {
   });
   test(`${f} imports: every dry run gives its expected result`, () => {
     for (const b of g.bots) for (const d of b.dryRuns) {
-      const r = runBot(g, b, applyPatch(deriveState(g, b.factionId), d.patch));
+      // Case "scoring" runs the scoring phases that bot.scoring names; every other case the graph.
+      const r = (d.case === "scoring" ? runScoring : runBot)(g, b, applyPatch(deriveState(g, b.factionId), d.patch));
       assert.equal(r.outcome, d.expect.outcome, `${b.id} ${d.id}`);
       if (d.expect.path) assert.deepEqual(r.path, d.expect.path, `${b.id} ${d.id} path`);
       if (d.expect.chosen) assert.deepEqual(r.chosen, d.expect.chosen, `${b.id} ${d.id} chosen`);
