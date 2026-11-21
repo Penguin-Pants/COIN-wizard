@@ -52,3 +52,26 @@ test("one example has an Event-specific bot exception with a dry run for it", ()
   assert.ok(b);
   assert.ok(b.dryRuns.some((d) => d.case === "event-override" && d.patch.card?.id === b.eventPolicy.overrides[0].cardId));
 });
+
+// Item 4 (docs/proposals/example-bots.md): in the 3- and 4-faction examples, every bot links a
+// Special Activity that its linked-sa case uses, and every bot has an Event override that its
+// event-override case uses.
+for (const f of ["harbor-strike.game.json", "four-valleys.game.json"]) {
+  test(`${f}: every linked-sa case runs a linked Special Activity`, () => {
+    const g = load(f);
+    for (const b of g.bots) {
+      const d = b.dryRuns.find((x) => x.case === "linked-sa");
+      const r = runDry(g, b, d);
+      assert.equal(r.outcome, "operationSpecial", `${b.id} outcome`);
+      assert.ok(r.linked && r.linked !== "skipped", `${b.id} linked ${r.linked}`);
+      assert.equal(d.expect.linked, r.linked, `${b.id} stores its linked result`);
+    }
+  });
+  test(`${f}: every event-override case uses an override of its bot`, () => {
+    const g = load(f);
+    for (const b of g.bots) {
+      const d = b.dryRuns.find((x) => x.case === "event-override");
+      assert.ok(b.eventPolicy.overrides.some((o) => o.cardId === d.patch.card?.id), `${b.id} override for ${d.patch.card?.id}`);
+    }
+  });
+}

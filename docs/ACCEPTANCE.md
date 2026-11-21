@@ -46,7 +46,7 @@ Status of each gap from the 2026-11-21 review (branch `fix/known-gaps`). "Gap" i
 |---|---|---|---|---|
 | 1 | 1 | Dry runs did not change the board between an Operation and its linked Special Activity | Closed | `src/effects.mjs:205` (`applyAction`), `src/dryrun.mjs:120`; tests "a linked Special Activity sees the board after its Operation" (`test/bots.test.mjs`), `test/effects.test.mjs`; Tan War dry run `cw.d7` |
 | 2 | 2 | No example uses `markerSet` | Closed | `examples/tan-war.game.json` (`crown.martial-law` sets `curfew`); `src/state.mjs:8` (markers start from setup), `src/kit.mjs:148` (`spaceMarkers`: counters and component list); test "Tan War Martial Law sets a Curfew marker that starts from setup" (`test/effects.test.mjs`) |
-| 3 | 6 | 3- and 4-faction dry runs store run results as expected | Closed (2 design gaps open) | Every case derived by hand: "Dry runs derived by hand" below; `test/engine.test.mjs` checks each one. Open: no bot in these examples links a Special Activity, and 5 bots have no Event override (see below). |
+| 3 | 6 | 3- and 4-faction dry runs store run results as expected | Closed | Every case derived by hand: "Dry runs derived by hand" below; `test/engine.test.mjs` checks each one. The 2 design gaps (no linked Special Activity; 5 bots with no Event override) were closed by item 4 (see below). |
 | 4 | none | No bundle size limit | Closed | `scripts/build.mjs:9` (`LIMIT_KIB = 700`; the build exits 1 above it and writes no page); tests "the build fails with a clear message above the size limit" and "the build passes under the default limit of 700 KiB" (`test/build.test.mjs`). Size now: 570 KiB. |
 | 5 | none | Built page not tied to a commit | Closed | `scripts/build.mjs:17` (short commit, `-dirty` for local changes) and `ui/index.template.html:139` (`#about`, under the step list: "Build <commit>, schema coin-game/1.4.0"); test "the built page names its commit and schema version" (`test/build.test.mjs`); `Makefile` targets `test`, `test-ui`, `build`, `publish-check`; publish step in `README.md` ("Publish"). |
 | 6 | 3 | Faction aid not compared with a printed GMT sheet | Closed | Compared with 5 of the 9 sheets in `examples/player-faction-sheets/` (Andean Abyss Government and Cartels, A Distant Plain Taliban and Warlords, Colonial Twilight FLN); see `docs/SHEETS.md`. `src/kit.mjs` (`factionAidHtml`): front page with an Operations column and a Special Activities column of boxes (Purpose, Accompanying Op, Location, Cost, Procedure; "+ ... ?" pairing tag; "max N space"; rule section), then a Victory box for every faction with this faction's row marked. Back page: forces, sequence of play, scoring. Fields from schema 1.4.0. Tests: "the faction sheet front has an Operations column, a Special Activities column and a Victory box" and 6 more in `test/kit.test.mjs`; `test/ui/print.test.mjs` (2 pages at Letter and A4). |
@@ -106,22 +106,22 @@ Unless a line says so, cases use card `e01` (no effect), so the Event is not pla
 | Case | Expected | Reason |
 |---|---|---|
 | `pa.d1` ineligible | none | Port Authority is not Eligible. |
-| `pa.d2` event-override | operation, Canal Row, target Dockers' Union | Card e05 has the override `ignore`. Enemy: Red Hand and Dockers' Union tie (-7, 4 pieces); die 3 picks Dockers' Union. PA-1 step 1: Fish Market and Canal Row (Pop 1); die 3 picks Canal Row. |
+| `pa.d2` event-override | operationSpecial, Canal Row, target Dockers' Union, linked Pressure in Old Harbor | Card e05 has the override `ignore`. Deploy as `pa.d5`. **Item 4:** Pressure follows, as in `pa.d5`. |
 | `pa.d3` no-target | pass | Resources 0: Deploy (cost 2) has no legal space. |
-| `pa.d4` tie | operation, Canal Row, target Dockers' Union | Shipyards and Rail Yards set to Neutral: all margins -8, the enemy tie and the space tie both go to the die (3, 3). |
-| `pa.d5` linked-sa | operation, Canal Row, target Dockers' Union | Same as setup. The bot has no linked Special Activity, so the case cannot test one (design gap). |
+| `pa.d4` tie | operationSpecial, Canal Row, target Dockers' Union, linked Pressure in Old Harbor | Shipyards and Rail Yards set to Neutral: all margins -8, the enemy tie and the space tie both go to the die (3, 3). **Item 4:** Pressure step 1 (not at Support): Old Harbor, Shipyards, Canal Row; Old Harbor wins on Pop 3. |
+| `pa.d5` linked-sa | operationSpecial, Canal Row, target Dockers' Union, linked Pressure in Old Harbor | **Item 4.** Deploy in Canal Row, pay 2 (5 to 3). Pressure (Resources 3, at least 1): legal Old Harbor, Shipyards, Canal Row (2+ Troops). Step 1, not at Support: Old Harbor, Canal Row. Old Harbor wins on Pop 3. |
 | `pa.d6` fallback | pass | **Changed.** Resources 1: below the Deploy cost of 2, so the action node falls back to Pass. |
 | `rh.d1` ineligible | none | Red Hand is not Eligible. |
-| `rh.d2` event-override | event, unshaded | Card e05 has an effect; the bot has no override, so `playIf` plays it (design gap: no override to test). |
-| `rh.d3` no-target | pass | Resources 0: Recruit (cost 1) has no legal space. |
-| `rh.d4` tie | operation, Customs Quay, target Port Authority | **Changed.** 1 Guerrilla added in Customs Quay. Enemy: the only state faction. RH-1 step 2: Customs Quay and Tenements tie at Pop 2; die 1 picks Customs Quay. The old patch had no tie (Tenements won on Pop). |
-| `rh.d5` linked-sa | operation, Tenements, target Port Authority | Recruit is legal in Rail Yards and Tenements; neither holds Port Authority pieces; Tenements has the higher Pop. No linked Special Activity (design gap). |
-| `rh.d6` fallback | pass | **Changed.** No Red Hand pieces on the map: Recruit has no legal space. |
+| `rh.d2` event-override | operation, Tenements, target Port Authority | **Item 4.** Card e05 has the override `ignore`. Strike: no space holds Red Hand Guerrillas and Port Authority Troops (`rh.strike:empty`). Recruit as `rh.d5` before item 4: Tenements (Pop 2) beats Rail Yards. |
+| `rh.d3` no-target | pass | Resources 0: Recruit (cost 1) has no legal space. **Item 4:** the path gains `rh.strike:empty` (no space holds own Guerrillas and enemy Troops). |
+| `rh.d4` tie | operation, Customs Quay, target Port Authority | **Changed.** 1 Guerrilla added in Customs Quay. Enemy: the only state faction. RH-1 step 2: Customs Quay and Tenements tie at Pop 2; die 1 picks Customs Quay. The old patch had no tie (Tenements won on Pop). **Item 4:** the path gains `rh.strike:empty` (no space holds own Guerrillas and enemy Troops). |
+| `rh.d5` linked-sa | operationSpecial, Tenements, linked Ambush in Rail Yards | **Item 4.** Patch: 2 Troops in Tenements and in Rail Yards; dice 3, 3, 3. Strike is legal in both; Tenements wins on Pop 2. Roll 3 is above 2 Guerrillas: no Troops removed; the Guerrillas flip Active. Ambush (`during`, Resources 5): Tenements has no Underground Guerrilla now, so Rail Yards is the only legal space. |
+| `rh.d6` fallback | pass | **Changed.** No Red Hand pieces on the map: Recruit has no legal space. **Item 4:** the path gains `rh.strike:empty` (no space holds own Guerrillas and enemy Troops). |
 | `du.d1` ineligible | none | Dockers' Union is not Eligible. |
-| `du.d2` event-override | event, unshaded | No override in this bot; `playIf` plays the card (design gap). |
+| `du.d2` event-override | operationSpecial, Old Harbor, target Port Authority, linked Propaganda in Shipyards | **Item 4.** Card e05 has the override `ignore`. As `du.d5`. |
 | `du.d3` no-target | pass | Resources 0: Campaign (cost 1) has no legal space. |
-| `du.d4` tie | operation, Tenements, target Port Authority | **Changed.** Troops leave Old Harbor and 1 Troops goes to Tenements. DU-1 step 1: Shipyards and Tenements tie at Pop 2; die 6 picks Tenements. The old patch had no tie (Old Harbor won on Pop 3). |
-| `du.d5` linked-sa | operation, Old Harbor, target Port Authority | DU-1 step 1: Old Harbor (Pop 3) beats Shipyards (Pop 2). No linked Special Activity (design gap). |
+| `du.d4` tie | operationSpecial, Tenements, target Port Authority, linked Propaganda in Shipyards | Troops leave Old Harbor and 1 Troops goes to Tenements. DU-1 step 1: Shipyards and Tenements tie at Pop 2; die 6 picks Tenements. **Item 4:** Campaign shifts Tenements to -1; Propaganda step 1 (Port Authority pieces, opinion above -1): Shipyards only. |
+| `du.d5` linked-sa | operationSpecial, Old Harbor, target Port Authority, linked Propaganda in Shipyards | **Item 4.** Campaign in Old Harbor (Pop 3), pay 1 (5 to 4); Old Harbor shifts 0 to -1. Propaganda step 1: Shipyards (+1) only. |
 | `du.d6` fallback | pass | **Changed.** Resources 0. Campaign is legal everywhere, so this is the only way to fall back; the case repeats `du.d3`. |
 
 ### Four Valleys
@@ -129,32 +129,34 @@ Unless a line says so, cases use card `e01` (no effect), so the Event is not pla
 | Case | Expected | Reason |
 |---|---|---|
 | `ra.d1` ineligible | none | Republic Army is not Eligible. |
-| `ra.d2` event-override | operation, East Valley, target Mountain Front | Card e03 has the override `ignore`. Enemy: Mountain Front and River Brigades tie (-6, 4 pieces); die 3 picks Mountain Front. RA-1 step 1: East Valley (Pop 2) beats South Ridge (Pop 1). |
+| `ra.d2` event-override | operationSpecial, East Valley, target Mountain Front, linked Pressure in Capital | Card e03 has the override `ignore`. Enemy tie to the die (3). **Item 4:** Pressure as `ra.d5`. |
 | `ra.d3` no-target | pass | Resources 0: Deploy (cost 2) has no legal space. |
-| `ra.d4` tie | operation, East Valley, target Mountain Front | High Pass and North Valley to Neutral: rebel margins -8, still tied; die 3. |
-| `ra.d5` linked-sa | operation, East Valley, target Mountain Front | Same as setup. No linked Special Activity (design gap). |
+| `ra.d4` tie | operationSpecial, East Valley, target Mountain Front, linked Pressure in Capital | High Pass and North Valley to Neutral: rebel margins -8, still tied; die 3. **Item 4:** Pressure step 1: Capital, High Pass, East Valley; Capital wins on Pop 3. |
+| `ra.d5` linked-sa | operationSpecial, East Valley, target Mountain Front, linked Pressure in Capital | **Item 4.** Deploy in East Valley, pay 2 (5 to 3). Pressure legal: Capital, High Pass, East Valley. Step 1: Capital, East Valley (High Pass is at Support). Capital wins on Pop 3. |
 | `ra.d6` fallback | pass | **Changed.** Resources 1: below the Deploy cost of 2. |
 | `vm.d1` ineligible | none | Valley Militia is not Eligible. |
-| `vm.d2` event-override | event, unshaded | No override in this bot; `playIf` plays e03 (design gap). |
+| `vm.d2` event-override | operation, East Valley, target Mountain Front, Fortify skipped | **Item 4.** Card e03 has the override `ignore`; dice 3, 3, 3 added (the enemy table ties). Deploy as `vm.d5`. Fortify needs 3+ own Troops: no space has them. |
 | `vm.d3` no-target | pass | Resources 0. |
-| `vm.d4` tie | operation, East Valley, target Mountain Front | As `ra.d4`: enemy tie to the die. |
-| `vm.d5` linked-sa | operation, East Valley, target Mountain Front | As `ra.d5`. No linked Special Activity (design gap). |
+| `vm.d4` tie | operation, East Valley, target Mountain Front, Fortify skipped | As `ra.d4`: enemy tie to the die. **Item 4:** no space has 3 Valley Militia Troops, so Fortify is skipped. |
+| `vm.d5` linked-sa | operationSpecial, East Valley, target Mountain Front, linked Fortify in Capital | **Item 4.** Patch: 3 Valley Militia Troops in Capital. Deploy in East Valley, pay 2 (5 to 3). Fortify (Resources 3, at least 2): Capital is the only space with 3+ Troops and no Base. |
 | `vm.d6` fallback | pass | **Changed.** Resources 1: below the Deploy cost of 2. |
 | `mf.d1` ineligible | none | Mountain Front is not Eligible. |
-| `mf.d2` event-override | event, unshaded | No override in this bot (design gap). |
-| `mf.d3` no-target | pass | Resources 0. |
-| `mf.d4` tie | operation, East Valley, target Republic Army | Enemy: Republic Army and Valley Militia tie (-8, 4 pieces); die 3 picks Republic Army. Recruit is legal in East Valley and South Ridge; no Republic Army there; East Valley has the higher Pop. |
-| `mf.d5` linked-sa | operation, East Valley, target Republic Army | Same as setup (margins -7, tie to the die). No linked Special Activity (design gap). |
-| `mf.d6` fallback | pass | **Changed.** No Mountain Front pieces on the map: Recruit has no legal space. |
-| `mf.switch` tie | operation, East Valley, target Valley Militia | 3 Valley Militia Troops added in Dam: the margin tie stays, tie-break b (most pieces, 7 to 4) picks Valley Militia. |
+| `mf.d2` event-override | operation, East Valley, target Republic Army | **Item 4.** Card e03 has the override `ignore`; dice 3, 3, 3 added. Strike: no space holds Mountain Front Guerrillas and Republic Army Troops (`mf.strike:empty`). Recruit: enemy tie to the die (3) picks Republic Army; East Valley wins on Pop. |
+| `mf.d3` no-target | pass | Resources 0. **Item 4:** the path gains `mf.strike:empty` (no space holds own Guerrillas and enemy Troops). |
+| `mf.d4` tie | operation, East Valley, target Republic Army | Enemy: Republic Army and Valley Militia tie (-8, 4 pieces); die 3 picks Republic Army. Recruit is legal in East Valley and South Ridge; no Republic Army there; East Valley has the higher Pop. **Item 4:** the path gains `mf.strike:empty` (no space holds own Guerrillas and enemy Troops). |
+| `mf.d5` linked-sa | operationSpecial, East Valley, linked Ambush in South Ridge | **Item 4.** Patch: 2 Republic Army Troops in East Valley and in South Ridge. Strike: East Valley (Pop 2) beats South Ridge. Roll 3 is above 2 Guerrillas: no Troops removed; the Guerrillas flip Active. Ambush: South Ridge is the only legal space. |
+| `mf.d6` fallback | pass | **Changed.** No Mountain Front pieces on the map: Recruit has no legal space. **Item 4:** the path gains `mf.strike:empty` (no space holds own Guerrillas and enemy Troops). |
+| `mf.switch` tie | operation, East Valley, target Valley Militia | 3 Valley Militia Troops added in Dam: the margin tie stays, tie-break b (most pieces, 7 to 4) picks Valley Militia. **Item 4:** the path gains `mf.strike:empty` (no space holds own Guerrillas and enemy Troops). |
 | `rb.d1` ineligible | none | River Brigades is not Eligible. |
-| `rb.d2` event-override | event, unshaded | No override in this bot (design gap). |
+| `rb.d2` event-override | operationSpecial, Market Town, target Republic Army, linked Raid in Market Town | **Item 4.** Card e03 has the override `ignore`; dice 3, 3, 3 added. As `rb.d5`. |
 | `rb.d3` no-target | pass | Resources 0. |
-| `rb.d4` tie | operation, Market Town, target Republic Army | Enemy tie to the die (3). Recruit is legal in River Delta and Market Town, both Pop 2: die 3 picks Market Town (first by name). |
-| `rb.d5` linked-sa | operation, Market Town, target Republic Army | Same as setup. No linked Special Activity (design gap). |
+| `rb.d4` tie | operationSpecial, Market Town, target Republic Army, linked Raid in Market Town | Enemy tie to the die (3). Recruit is legal in River Delta and Market Town, both Pop 2: die 3 picks Market Town (first by name). **Item 4:** Raid: Market Town (3 Guerrillas) beats River Delta (2). |
+| `rb.d5` linked-sa | operationSpecial, Market Town, target Republic Army, linked Raid in Market Town | **Item 4.** Recruit in Market Town, pay 1 (5 to 4), 1 Guerrilla placed (3 there). Raid: Market Town beats River Delta (2) on Guerrillas. Resources 4 plus 2 is 6. |
 | `rb.d6` fallback | pass | **Changed.** No River Brigades pieces on the map: Recruit has no legal space. |
 
 Differences found: no stored result was wrong for its patch. 9 cases did not test their label and got new patches (the 7 `fallback` cases, `rh.d4`, `du.d4`). Design gaps left open (need a designer): the 7 bots link no Special Activity, so their `linked-sa` cases cannot test one; 5 bots (`rh`, `du`, `vm`, `mf`, `rb`) have no Event override, so their `event-override` cases test `playIf` only.
+
+Item 4 (2026-11-21, `docs/proposals/example-bots.md`): the 2 design gaps are closed. Every bot links a Special Activity and its `linked-sa` case runs it; every bot has an Event override and its `event-override` case uses it. Rows marked **Item 4** changed; each was derived by hand, then the run agreed. Tests: "every linked-sa case runs a linked Special Activity" and "every event-override case uses an override of its bot" (`test/examples.test.mjs`).
 
 ## Manual test: claim check in the live artifact
 

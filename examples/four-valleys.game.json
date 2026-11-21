@@ -2146,7 +2146,22 @@
           "table": "ra.t1",
           "then": "ra.end-op",
           "onEmpty": "ra.pass",
-          "target": "ra.enemy"
+          "target": "ra.enemy",
+          "linked": {
+            "action": "f1.pressure",
+            "timing": "after",
+            "trigger": {
+              "op": "gte",
+              "args": [
+                {
+                  "var": "self.resources"
+                },
+                1
+              ]
+            },
+            "table": "ra.t.pressure",
+            "skipText": "Skip Pressure if Resources are below 1 or no space qualifies."
+          }
         },
         {
           "id": "ra.end-op",
@@ -2255,6 +2270,41 @@
               "order": "max"
             }
           ]
+        },
+        {
+          "id": "ra.t.pressure",
+          "scope": "space",
+          "select": "one",
+          "steps": [
+            {
+              "n": 1,
+              "text": "Space not at Support.",
+              "filter": {
+                "op": "lt",
+                "args": [
+                  {
+                    "var": "$space.opinion"
+                  },
+                  1
+                ]
+              }
+            },
+            {
+              "n": 2,
+              "text": "Any legal space.",
+              "filter": true
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Highest Pop.",
+              "key": {
+                "var": "$space.pop"
+              },
+              "order": "max"
+            }
+          ]
         }
       ],
       "randomization": {
@@ -2297,7 +2347,7 @@
             ]
           },
           "expect": {
-            "outcome": "operation",
+            "outcome": "operationSpecial",
             "path": [
               "ra.start",
               "ra.event",
@@ -2307,7 +2357,8 @@
             "chosen": [
               "space4"
             ],
-            "target": "f3"
+            "target": "f3",
+            "linked": "f1.pressure:space1"
           }
         },
         {
@@ -2364,7 +2415,7 @@
             }
           },
           "expect": {
-            "outcome": "operation",
+            "outcome": "operationSpecial",
             "path": [
               "ra.start",
               "ra.event",
@@ -2374,7 +2425,8 @@
             "chosen": [
               "space4"
             ],
-            "target": "f3"
+            "target": "f3",
+            "linked": "f1.pressure:space1"
           }
         },
         {
@@ -2394,7 +2446,7 @@
             }
           },
           "expect": {
-            "outcome": "operation",
+            "outcome": "operationSpecial",
             "path": [
               "ra.start",
               "ra.event",
@@ -2404,7 +2456,8 @@
             "chosen": [
               "space4"
             ],
-            "target": "f3"
+            "target": "f3",
+            "linked": "f1.pressure:space1"
           }
         },
         {
@@ -2457,7 +2510,13 @@
           "var": "card.hasEffect"
         },
         "side": "unshaded",
-        "overrides": []
+        "overrides": [
+          {
+            "cardId": "e03",
+            "directive": "ignore",
+            "plain": "Never play Pass Closed. Use the normal Operation steps."
+          }
+        ]
       },
       "start": "vm.start",
       "nodes": [
@@ -2498,7 +2557,22 @@
           "table": "vm.t1",
           "then": "vm.end-op",
           "onEmpty": "vm.pass",
-          "target": "vm.enemy"
+          "target": "vm.enemy",
+          "linked": {
+            "action": "f2.fortify",
+            "timing": "after",
+            "trigger": {
+              "op": "gte",
+              "args": [
+                {
+                  "var": "self.resources"
+                },
+                2
+              ]
+            },
+            "table": "vm.t.fortify",
+            "skipText": "Skip Fortify if Resources are below 2 or no space qualifies."
+          }
         },
         {
           "id": "vm.end-op",
@@ -2607,6 +2681,28 @@
               "order": "max"
             }
           ]
+        },
+        {
+          "id": "vm.t.fortify",
+          "scope": "space",
+          "select": "one",
+          "steps": [
+            {
+              "n": 1,
+              "text": "Any legal space.",
+              "filter": true
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Highest Pop.",
+              "key": {
+                "var": "$space.pop"
+              },
+              "order": "max"
+            }
+          ]
         }
       ],
       "randomization": {
@@ -2641,16 +2737,26 @@
               "hasEffect": true,
               "raisesSelf": true,
               "lowersEnemy": false
-            }
+            },
+            "dice": [
+              3,
+              3,
+              3
+            ]
           },
           "expect": {
-            "outcome": "event",
+            "outcome": "operation",
             "path": [
               "vm.start",
               "vm.event",
-              "vm.end-event"
+              "vm.op",
+              "vm.end-op"
             ],
-            "side": "unshaded"
+            "chosen": [
+              "space4"
+            ],
+            "target": "f3",
+            "linked": "skipped"
           }
         },
         {
@@ -2717,7 +2823,8 @@
             "chosen": [
               "space4"
             ],
-            "target": "f3"
+            "target": "f3",
+            "linked": "skipped"
           }
         },
         {
@@ -2734,10 +2841,19 @@
               3,
               3,
               3
-            ]
+            ],
+            "spaces": {
+              "space1": {
+                "pieces": {
+                  "f2.troops": {
+                    "normal": 3
+                  }
+                }
+              }
+            }
           },
           "expect": {
-            "outcome": "operation",
+            "outcome": "operationSpecial",
             "path": [
               "vm.start",
               "vm.event",
@@ -2747,7 +2863,8 @@
             "chosen": [
               "space4"
             ],
-            "target": "f3"
+            "target": "f3",
+            "linked": "f2.fortify:space1"
           }
         },
         {
@@ -2800,7 +2917,13 @@
           "var": "card.hasEffect"
         },
         "side": "unshaded",
-        "overrides": []
+        "overrides": [
+          {
+            "cardId": "e03",
+            "directive": "ignore",
+            "plain": "Never play Pass Closed. Use the normal Operation steps."
+          }
+        ]
       },
       "start": "mf.start",
       "nodes": [
@@ -2825,13 +2948,37 @@
           "kind": "event-check",
           "text": "Event: apply the Event rules.",
           "yes": "mf.end-event",
-          "no": "mf.op"
+          "no": "mf.strike"
         },
         {
           "id": "mf.end-event",
           "kind": "end",
           "text": "Execute the Event.",
           "outcome": "event"
+        },
+        {
+          "id": "mf.strike",
+          "kind": "action",
+          "text": "Strike in 1 space (priority table MF-3).",
+          "action": "f3.strike",
+          "table": "mf.t.strike",
+          "then": "mf.end-op",
+          "onEmpty": "mf.op",
+          "linked": {
+            "action": "f3.ambush",
+            "timing": "during",
+            "trigger": {
+              "op": "gte",
+              "args": [
+                {
+                  "var": "self.resources"
+                },
+                1
+              ]
+            },
+            "table": "mf.t.ambush",
+            "skipText": "Skip Ambush if Resources are below 1 or no space qualifies."
+          }
         },
         {
           "id": "mf.op",
@@ -2950,6 +3097,50 @@
               "order": "max"
             }
           ]
+        },
+        {
+          "id": "mf.t.strike",
+          "scope": "space",
+          "select": "one",
+          "steps": [
+            {
+              "n": 1,
+              "text": "Any legal space.",
+              "filter": true
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Highest Pop.",
+              "key": {
+                "var": "$space.pop"
+              },
+              "order": "max"
+            }
+          ]
+        },
+        {
+          "id": "mf.t.ambush",
+          "scope": "space",
+          "select": "one",
+          "steps": [
+            {
+              "n": 1,
+              "text": "Any legal space.",
+              "filter": true
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Highest Pop.",
+              "key": {
+                "var": "$space.pop"
+              },
+              "order": "max"
+            }
+          ]
         }
       ],
       "randomization": {
@@ -2984,16 +3175,26 @@
               "hasEffect": true,
               "raisesSelf": true,
               "lowersEnemy": false
-            }
+            },
+            "dice": [
+              3,
+              3,
+              3
+            ]
           },
           "expect": {
-            "outcome": "event",
+            "outcome": "operation",
             "path": [
               "mf.start",
               "mf.event",
-              "mf.end-event"
+              "mf.strike:empty",
+              "mf.op",
+              "mf.end-op"
             ],
-            "side": "unshaded"
+            "chosen": [
+              "space4"
+            ],
+            "target": "f1"
           }
         },
         {
@@ -3020,6 +3221,7 @@
             "path": [
               "mf.start",
               "mf.event",
+              "mf.strike:empty",
               "mf.op:empty",
               "mf.pass"
             ]
@@ -3054,6 +3256,7 @@
             "path": [
               "mf.start",
               "mf.event",
+              "mf.strike:empty",
               "mf.op",
               "mf.end-op"
             ],
@@ -3077,20 +3280,36 @@
               3,
               3,
               3
-            ]
+            ],
+            "spaces": {
+              "space4": {
+                "pieces": {
+                  "f1.troops": {
+                    "normal": 2
+                  }
+                }
+              },
+              "space9": {
+                "pieces": {
+                  "f1.troops": {
+                    "normal": 2
+                  }
+                }
+              }
+            }
           },
           "expect": {
-            "outcome": "operation",
+            "outcome": "operationSpecial",
             "path": [
               "mf.start",
               "mf.event",
-              "mf.op",
+              "mf.strike",
               "mf.end-op"
             ],
             "chosen": [
               "space4"
             ],
-            "target": "f1"
+            "linked": "f3.ambush:space9"
           }
         },
         {
@@ -3116,6 +3335,7 @@
             "path": [
               "mf.start",
               "mf.event",
+              "mf.strike:empty",
               "mf.op:empty",
               "mf.pass"
             ]
@@ -3157,6 +3377,7 @@
             "path": [
               "mf.start",
               "mf.event",
+              "mf.strike:empty",
               "mf.op",
               "mf.end-op"
             ],
@@ -3189,7 +3410,13 @@
           "var": "card.hasEffect"
         },
         "side": "unshaded",
-        "overrides": []
+        "overrides": [
+          {
+            "cardId": "e03",
+            "directive": "ignore",
+            "plain": "Never play Pass Closed. Use the normal Operation steps."
+          }
+        ]
       },
       "start": "rb.start",
       "nodes": [
@@ -3230,7 +3457,14 @@
           "table": "rb.t1",
           "then": "rb.end-op",
           "onEmpty": "rb.pass",
-          "target": "rb.enemy"
+          "target": "rb.enemy",
+          "linked": {
+            "action": "f4.raid",
+            "timing": "after",
+            "trigger": true,
+            "table": "rb.t.raid",
+            "skipText": "Skip Raid if no space qualifies."
+          }
         },
         {
           "id": "rb.end-op",
@@ -3339,6 +3573,35 @@
               "order": "max"
             }
           ]
+        },
+        {
+          "id": "rb.t.raid",
+          "scope": "space",
+          "select": "one",
+          "steps": [
+            {
+              "n": 1,
+              "text": "Any legal space.",
+              "filter": true
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Most own Guerrillas.",
+              "key": {
+                "op": "count",
+                "args": [
+                  "f4.guerrilla",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              },
+              "order": "max"
+            }
+          ]
         }
       ],
       "randomization": {
@@ -3373,16 +3636,26 @@
               "hasEffect": true,
               "raisesSelf": true,
               "lowersEnemy": false
-            }
+            },
+            "dice": [
+              3,
+              3,
+              3
+            ]
           },
           "expect": {
-            "outcome": "event",
+            "outcome": "operationSpecial",
             "path": [
               "rb.start",
               "rb.event",
-              "rb.end-event"
+              "rb.op",
+              "rb.end-op"
             ],
-            "side": "unshaded"
+            "chosen": [
+              "space10"
+            ],
+            "target": "f1",
+            "linked": "f4.raid:space10"
           }
         },
         {
@@ -3439,7 +3712,7 @@
             ]
           },
           "expect": {
-            "outcome": "operation",
+            "outcome": "operationSpecial",
             "path": [
               "rb.start",
               "rb.event",
@@ -3449,7 +3722,8 @@
             "chosen": [
               "space10"
             ],
-            "target": "f1"
+            "target": "f1",
+            "linked": "f4.raid:space10"
           }
         },
         {
@@ -3469,7 +3743,7 @@
             ]
           },
           "expect": {
-            "outcome": "operation",
+            "outcome": "operationSpecial",
             "path": [
               "rb.start",
               "rb.event",
@@ -3479,7 +3753,8 @@
             "chosen": [
               "space10"
             ],
-            "target": "f1"
+            "target": "f1",
+            "linked": "f4.raid:space10"
           }
         },
         {

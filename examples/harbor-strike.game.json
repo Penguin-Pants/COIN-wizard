@@ -1675,7 +1675,22 @@
           "table": "pa.t1",
           "then": "pa.end-op",
           "onEmpty": "pa.pass",
-          "target": "pa.enemy"
+          "target": "pa.enemy",
+          "linked": {
+            "action": "f1.pressure",
+            "timing": "after",
+            "trigger": {
+              "op": "gte",
+              "args": [
+                {
+                  "var": "self.resources"
+                },
+                1
+              ]
+            },
+            "table": "pa.t.pressure",
+            "skipText": "Skip Pressure if Resources are below 1 or no space qualifies."
+          }
         },
         {
           "id": "pa.end-op",
@@ -1784,6 +1799,41 @@
               "order": "max"
             }
           ]
+        },
+        {
+          "id": "pa.t.pressure",
+          "scope": "space",
+          "select": "one",
+          "steps": [
+            {
+              "n": 1,
+              "text": "Space not at Support.",
+              "filter": {
+                "op": "lt",
+                "args": [
+                  {
+                    "var": "$space.opinion"
+                  },
+                  1
+                ]
+              }
+            },
+            {
+              "n": 2,
+              "text": "Any legal space.",
+              "filter": true
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Highest Pop.",
+              "key": {
+                "var": "$space.pop"
+              },
+              "order": "max"
+            }
+          ]
         }
       ],
       "randomization": {
@@ -1826,7 +1876,7 @@
             ]
           },
           "expect": {
-            "outcome": "operation",
+            "outcome": "operationSpecial",
             "path": [
               "pa.start",
               "pa.event",
@@ -1836,7 +1886,8 @@
             "chosen": [
               "space8"
             ],
-            "target": "f3"
+            "target": "f3",
+            "linked": "f1.pressure:space1"
           }
         },
         {
@@ -1893,7 +1944,7 @@
             ]
           },
           "expect": {
-            "outcome": "operation",
+            "outcome": "operationSpecial",
             "path": [
               "pa.start",
               "pa.event",
@@ -1903,7 +1954,8 @@
             "chosen": [
               "space8"
             ],
-            "target": "f3"
+            "target": "f3",
+            "linked": "f1.pressure:space1"
           }
         },
         {
@@ -1923,7 +1975,7 @@
             ]
           },
           "expect": {
-            "outcome": "operation",
+            "outcome": "operationSpecial",
             "path": [
               "pa.start",
               "pa.event",
@@ -1933,7 +1985,8 @@
             "chosen": [
               "space8"
             ],
-            "target": "f3"
+            "target": "f3",
+            "linked": "f1.pressure:space1"
           }
         },
         {
@@ -1986,7 +2039,13 @@
           "var": "card.hasEffect"
         },
         "side": "unshaded",
-        "overrides": []
+        "overrides": [
+          {
+            "cardId": "e05",
+            "directive": "ignore",
+            "plain": "Never play Informer. Use the normal Operation steps."
+          }
+        ]
       },
       "start": "rh.start",
       "nodes": [
@@ -2011,13 +2070,37 @@
           "kind": "event-check",
           "text": "Event: apply the Event rules.",
           "yes": "rh.end-event",
-          "no": "rh.op"
+          "no": "rh.strike"
         },
         {
           "id": "rh.end-event",
           "kind": "end",
           "text": "Execute the Event.",
           "outcome": "event"
+        },
+        {
+          "id": "rh.strike",
+          "kind": "action",
+          "text": "Strike in 1 space (priority table RH-3).",
+          "action": "f2.strike",
+          "table": "rh.t.strike",
+          "then": "rh.end-op",
+          "onEmpty": "rh.op",
+          "linked": {
+            "action": "f2.ambush",
+            "timing": "during",
+            "trigger": {
+              "op": "gte",
+              "args": [
+                {
+                  "var": "self.resources"
+                },
+                1
+              ]
+            },
+            "table": "rh.t.ambush",
+            "skipText": "Skip Ambush if Resources are below 1 or no space qualifies."
+          }
         },
         {
           "id": "rh.op",
@@ -2136,6 +2219,50 @@
               "order": "max"
             }
           ]
+        },
+        {
+          "id": "rh.t.strike",
+          "scope": "space",
+          "select": "one",
+          "steps": [
+            {
+              "n": 1,
+              "text": "Any legal space.",
+              "filter": true
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Highest Pop.",
+              "key": {
+                "var": "$space.pop"
+              },
+              "order": "max"
+            }
+          ]
+        },
+        {
+          "id": "rh.t.ambush",
+          "scope": "space",
+          "select": "one",
+          "steps": [
+            {
+              "n": 1,
+              "text": "Any legal space.",
+              "filter": true
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Highest Pop.",
+              "key": {
+                "var": "$space.pop"
+              },
+              "order": "max"
+            }
+          ]
         }
       ],
       "randomization": {
@@ -2173,13 +2300,18 @@
             }
           },
           "expect": {
-            "outcome": "event",
+            "outcome": "operation",
             "path": [
               "rh.start",
               "rh.event",
-              "rh.end-event"
+              "rh.strike:empty",
+              "rh.op",
+              "rh.end-op"
             ],
-            "side": "unshaded"
+            "chosen": [
+              "space7"
+            ],
+            "target": "f1"
           }
         },
         {
@@ -2201,6 +2333,7 @@
             "path": [
               "rh.start",
               "rh.event",
+              "rh.strike:empty",
               "rh.op:empty",
               "rh.pass"
             ]
@@ -2234,6 +2367,7 @@
             "path": [
               "rh.start",
               "rh.event",
+              "rh.strike:empty",
               "rh.op",
               "rh.end-op"
             ],
@@ -2252,20 +2386,41 @@
               "hasEffect": false,
               "raisesSelf": false,
               "lowersEnemy": false
-            }
+            },
+            "spaces": {
+              "space7": {
+                "pieces": {
+                  "f1.troops": {
+                    "normal": 2
+                  }
+                }
+              },
+              "space3": {
+                "pieces": {
+                  "f1.troops": {
+                    "normal": 2
+                  }
+                }
+              }
+            },
+            "dice": [
+              3,
+              3,
+              3
+            ]
           },
           "expect": {
-            "outcome": "operation",
+            "outcome": "operationSpecial",
             "path": [
               "rh.start",
               "rh.event",
-              "rh.op",
+              "rh.strike",
               "rh.end-op"
             ],
             "chosen": [
               "space7"
             ],
-            "target": "f1"
+            "linked": "f2.ambush:space3"
           }
         },
         {
@@ -2288,6 +2443,7 @@
             "path": [
               "rh.start",
               "rh.event",
+              "rh.strike:empty",
               "rh.op:empty",
               "rh.pass"
             ]
@@ -2316,7 +2472,13 @@
           "var": "card.hasEffect"
         },
         "side": "unshaded",
-        "overrides": []
+        "overrides": [
+          {
+            "cardId": "e05",
+            "directive": "ignore",
+            "plain": "Never play Informer. Use the normal Operation steps."
+          }
+        ]
       },
       "start": "du.start",
       "nodes": [
@@ -2357,7 +2519,22 @@
           "table": "du.t1",
           "then": "du.end-op",
           "onEmpty": "du.pass",
-          "target": "du.enemy"
+          "target": "du.enemy",
+          "linked": {
+            "action": "f3.propaganda",
+            "timing": "after",
+            "trigger": {
+              "op": "gte",
+              "args": [
+                {
+                  "var": "self.resources"
+                },
+                1
+              ]
+            },
+            "table": "du.t.prop",
+            "skipText": "Skip Propaganda if Resources are below 1."
+          }
         },
         {
           "id": "du.end-op",
@@ -2466,6 +2643,64 @@
               "order": "max"
             }
           ]
+        },
+        {
+          "id": "du.t.prop",
+          "scope": "space",
+          "select": "one",
+          "steps": [
+            {
+              "n": 1,
+              "text": "Space with target pieces and not at Opposition.",
+              "filter": {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "gte",
+                    "args": [
+                      {
+                        "op": "factionCount",
+                        "args": [
+                          {
+                            "var": "$target.id"
+                          },
+                          {
+                            "var": "$space.id"
+                          },
+                          "*"
+                        ]
+                      },
+                      1
+                    ]
+                  },
+                  {
+                    "op": "gt",
+                    "args": [
+                      {
+                        "var": "$space.opinion"
+                      },
+                      -1
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "n": 2,
+              "text": "Any legal space.",
+              "filter": true
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Highest Pop.",
+              "key": {
+                "var": "$space.pop"
+              },
+              "order": "max"
+            }
+          ]
         }
       ],
       "randomization": {
@@ -2503,13 +2738,18 @@
             }
           },
           "expect": {
-            "outcome": "event",
+            "outcome": "operationSpecial",
             "path": [
               "du.start",
               "du.event",
-              "du.end-event"
+              "du.op",
+              "du.end-op"
             ],
-            "side": "unshaded"
+            "chosen": [
+              "space1"
+            ],
+            "target": "f1",
+            "linked": "f3.propaganda:space2"
           }
         },
         {
@@ -2565,7 +2805,7 @@
             ]
           },
           "expect": {
-            "outcome": "operation",
+            "outcome": "operationSpecial",
             "path": [
               "du.start",
               "du.event",
@@ -2575,7 +2815,8 @@
             "chosen": [
               "space7"
             ],
-            "target": "f1"
+            "target": "f1",
+            "linked": "f3.propaganda:space2"
           }
         },
         {
@@ -2590,7 +2831,7 @@
             }
           },
           "expect": {
-            "outcome": "operation",
+            "outcome": "operationSpecial",
             "path": [
               "du.start",
               "du.event",
@@ -2600,7 +2841,8 @@
             "chosen": [
               "space1"
             ],
-            "target": "f1"
+            "target": "f1",
+            "linked": "f3.propaganda:space2"
           }
         },
         {
