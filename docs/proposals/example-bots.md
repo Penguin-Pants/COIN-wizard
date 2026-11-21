@@ -54,5 +54,5 @@ Other cases of these bots: only `outcome` can change, from `operation` to `opera
 | Part | Decision |
 |---|---|
 | 1. Link a Special Activity for `pa`, `du`, `ra`, `vm`, `rb` | Approved |
-| 2. `rh` and `mf` | No linked Special Activity. Document as a model limit. (Decided before the second-space result above was found; the owner can revisit.) |
+| 2. `rh` and `mf` | Link Ambush with `during` timing (option 1, decided after the second-space result). Add a Strike node (Strike, then Recruit if none). The `linked-sa` patch puts Troops and Underground Guerrillas in 2 spaces. No game-rule change. |
 | 3. `ignore` overrides for `rh`, `du`, `vm`, `mf`, `rb` | Approved |
