@@ -39,7 +39,7 @@ All 9 photos in `examples/non-player-bot-sheets/` were checked: Non-Player AUC, 
 | "Loop" badges: when every Operation fails, run the chart again with looser rules ("Loop: Pass", "Loop: Attack", "If loop: Transport") | none (no second pass) | Gap |
 | One Operation box with several numbered sub-actions, each with its own effect (Rally: flip, then place Bases, then place Guerrillas) | none (one table chooses spaces; one step list runs in each) | Gap |
 | Support-phase box (Agitate, Elite Backing) | none (bots make no choices at scoring) | Gap |
-| Momentum and Capability box; Event box items "If current card is a Momentum Event / Capability" | none (no capabilities in the schema) | Gap |
+| Momentum and Capability box; Event box items "If current card is a Momentum Event / Capability" | `lasting` on a card side, variable `card.lasting` (schema 1.5.0) | Have: "Momentum, Capability" box with the overrides for lasting cards; card tag "Momentum" or "Capability" |
 
 Differences between the two games, found on the 5 newly checked photos:
 
