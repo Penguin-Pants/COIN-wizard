@@ -247,3 +247,27 @@ test("an Operation that picks an enemy first prints its Target priorities", () =
   const t = b.priorityTables.find((x) => x.id === b.nodes.find((n) => n.target).target);
   assert.ok(op.indexOf("<b>Target:</b>") > 0 && op.indexOf(`❶ ${t.steps[0].text}`) > op.indexOf("<b>Target:</b>"));
 });
+
+// Codex review of PR 4: the printed max follows the action's maxSpaces, the sheet defines the bot's
+// terms (measures), and each tie-break states which value wins.
+test("a Special Activity box prints the smaller of the table limit and the action's maxSpaces", () => {
+  const g = example(), t = g.bots[0].priorityTables.find((x) => x.id === "cw.t.law");
+  t.select = "all"; t.limit = 2;
+  assert.equal(g.actions.find((a) => a.id === "crown.martial-law").maxSpaces, 1);
+  assert.match(saBox(np(g, g.bots[0]), "Martial Law"), /<span class="tag">max 1<\/span>/);
+});
+
+test("the Non-Player sheet defines every term the bot uses", () => {
+  const g = example(), b = g.bots[0], html = np(g, b);
+  const terms = html.slice(html.indexOf('class="terms"'));
+  assert.ok(html.includes('class="terms"'), "terms section");
+  for (const m of b.measures) assert.ok(terms.includes(`<b>${m.name}:</b> ${m.plain}`), m.id);
+});
+
+test("each tie-break states whether the highest or the lowest value wins", () => {
+  const g = example(), b = g.bots[1], t = b.priorityTables.find((x) => x.id === "ib.t.rally");
+  t.tiebreak[1].text = "Crown cubes."; t.tiebreak[1].order = "min";
+  const op = opBox(np(g, b), "Rally");
+  assert.match(op, /ⓐ Highest Pop\. \(highest wins\)/);
+  assert.match(op, /ⓑ Crown cubes\. \(lowest wins\)/);
+});
