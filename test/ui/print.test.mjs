@@ -46,6 +46,17 @@ for (const [g, out] of kits) {
       assert.ok(r.units.every((x) => x === "avoid"));
     }
   });
+  // The Non-Player sheet is one page, as the GMT Non-Player sheets are.
+  test(`${g.meta.gameId}: every Non-Player sheet prints on one page at Letter and A4`, async () => {
+    for (const b of g.bots) {
+      const html = out[`kit/${g.meta.gameId}.${b.factionId}.nonplayer.html`] ?? "";
+      const r = await check(html);
+      assert.equal(r.boxes.length, 1, b.factionId);
+      assert.ok(r.boxes[0].w <= 190 * MM + 1, `${b.factionId} width ${r.boxes[0].w / MM} mm`);
+      assert.ok(r.boxes[0].h <= 259 * MM + 1, `${b.factionId} height ${r.boxes[0].h / MM} mm`);
+      assert.deepEqual(r.counts, { Letter: 1, A4: 1 }, b.factionId);
+    }
+  });
 }
 
 // Known issue 4: the print test sheet is one page at Letter and A4, and its items print at true size.
