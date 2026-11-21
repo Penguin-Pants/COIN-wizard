@@ -3,7 +3,8 @@
 // - "choose" takes the first option. Count "any" means as many as can move or flip.
 // - "move" from "adjacent" takes pieces from linked spaces in name order.
 // - A roll uses the next die of the dry run (error when none is left).
-// - A step that needs a player to pick a space ("choose", or "spaces" with "filter") is an error.
+// - A step that needs a player to pick a space ("choose", or "spaces" with "filter") is an error,
+//   except in a scoring phase that bot.scoring names: its table picks (chosenRun below).
 import { evalExpr, neighbors } from "./expr.mjs";
 
 const clamp = (v, lo, hi) => Math.min(hi ?? Infinity, Math.max(lo ?? -Infinity, v));
