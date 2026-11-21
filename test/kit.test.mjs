@@ -49,23 +49,80 @@ test("a board background image is drawn under the spaces", () => {
   assert.ok(svg.indexOf("<image") > 0 && svg.indexOf("<image") < svg.indexOf("<line"));
 });
 
-// Known issue 3. Compared with a printed GMT faction aid (Colonial Twilight, FLN sheet,
-// examples/player-faction-sheets/Colonial_Twilight_FLN_Faction_Sheet.jpg): Operations, then Special
-// Activities, then Victory for every faction with the final-scoring rule. Each action reads
-// Location, Cost, Procedure. Sections that sheet does not show come after Victory.
-test("the faction aid follows the section order of a printed GMT faction aid", () => {
-  const g = example(), out = files(g);
+// The player faction sheet mirrors the printed GMT faction sheets in examples/player-faction-sheets/
+// (Andean Abyss, A Distant Plain, Colonial Twilight). Front page: an Operations column and a Special
+// Activities column of boxes, then a Victory box for every faction with this faction's row marked.
+// Op boxes: Purpose, Location, Cost, Procedure and a "+ ... ?" pairing tag. Special Activity boxes:
+// Purpose, Accompanying Op, Location, Cost, Procedure and a "max N space" tag. The back page holds
+// what the front sheet does not show.
+const sheet = (g, f) => files(g)[`kit/${g.meta.gameId}.${f.id}.aid.html`];
+const front = (html) => html.slice(0, html.indexOf('class="page back"'));
+const box = (html, name) => { const i = html.indexOf(`<h3>${name}`); return html.slice(i, html.indexOf("</section>", i)); };
+
+test("the faction sheet front has an Operations column, a Special Activities column and a Victory box", () => {
+  const g = example();
   for (const f of g.factions) {
-    const aid = out[`kit/${g.meta.gameId}.${f.id}.aid.html`];
-    const h2 = [...aid.matchAll(/<h2>([^<]*)<\/h2>/g)].map((m) => m[1]);
-    assert.deepEqual(h2, ["3.0 Operations", "4.0 Special Activities", "7.0 Victory", "Forces", "Sequence of play", `At each ${g.rules.scoring.name} card`], f.id);
-    const op = aid.slice(aid.indexOf("<h3>"));
-    const at = ["<b>Location:</b>", "<b>Cost:</b>", "<b>Procedure:</b>"].map((x) => op.indexOf(x));
-    assert.ok(at.every((x, i) => x > 0 && (i === 0 || x > at[i - 1])), `${f.id} action fields ${at}`);
-    const vic = aid.slice(aid.indexOf("7.0 Victory"), aid.indexOf("<h2>Forces"));
+    const fr = front(sheet(g, f));
+    const h2 = [...fr.matchAll(/<h2>([^<]*)<\/h2>/g)].map((m) => m[1]);
+    assert.deepEqual(h2, [f.type === "state" ? "COIN Operations" : "Insurgent Operations", "Special Activities"], f.id);
+    assert.ok(fr.indexOf('class="col ops"') < fr.indexOf('class="col sas"'));
+    assert.ok(fr.indexOf("<h3>Victory (8)") > fr.indexOf('class="col sas"'), "Victory closes the Special Activities column");
+    const vic = box(fr, "Victory");
     for (const x of g.factions) assert.ok(vic.includes(`<b>${x.name}:</b>`), `${f.id} victory lists ${x.name}`);
+    assert.match(vic, new RegExp(`<p class="mine"><b>${f.name}:</b>`));
     assert.ok(vic.includes(g.victory.finalScoring));
   }
+});
+
+test("an Operation box reads Purpose, Location, Cost, Procedure and shows its rule section and pairing", () => {
+  const g = example(), f = g.factions[0];
+  const op = box(front(sheet(g, f)), "Garrison");
+  assert.match(op, /<h3>Garrison <small>\(5\.1\.1\)<\/small>/);
+  assert.match(op, /<span class="tag">\+ any Special Activity\?<\/span>/);
+  const at = ["<b>Purpose:</b>", "<b>Location:</b>", "<b>Cost:</b>", "<b>Procedure:</b>"].map((x) => op.indexOf(x));
+  assert.ok(at.every((x, i) => x > 0 && (i === 0 || x > at[i - 1])), `fields ${at}`);
+});
+
+test("a legal-space filter of true reads Any space", () => {
+  const g = example(), f = g.factions[0];
+  g.actions.find((a) => a.id === "crown.martial-law").targets = true;
+  assert.match(box(front(sheet(g, f)), "Martial Law"), /<b>Location:<\/b> Any space\./);
+});
+
+test("a Special Activity box shows Accompanying Op and its space limit", () => {
+  const g = example(), f = g.factions[0];
+  const sa = box(front(sheet(g, f)), "Martial Law");
+  assert.match(sa, /<span class="tag">max 1 space<\/span>/);
+  const at = ["<b>Purpose:</b>", "<b>Accompanying Op:</b> Any.", "<b>Location:</b>", "<b>Procedure:</b>"].map((x) => sa.indexOf(x));
+  assert.ok(at.every((x, i) => x > 0 && (i === 0 || x > at[i - 1])), `fields ${at}`);
+});
+
+test("a pairing list names the Operations, and Operations name the Special Activities that go with them", () => {
+  const g = example(), f = g.factions[0];
+  g.actions.find((a) => a.id === "crown.martial-law").accompanies = ["crown.garrison", "crown.crackdown"];
+  // A second Special Activity that goes with Sweep only. All Special Activities with an Operation: "any".
+  g.actions.push({ ...structuredClone(g.actions.find((a) => a.id === "crown.martial-law")), id: "crown.raid", name: "Raid", accompanies: ["crown.sweep"] });
+  f.specialActivities.push("crown.raid");
+  const fr = front(sheet(g, f));
+  assert.match(box(fr, "Martial Law"), /<b>Accompanying Op:<\/b> Garrison or Crackdown\./);
+  assert.match(box(fr, "Garrison"), /<span class="tag">\+ Martial Law\?<\/span>/);
+  assert.match(box(fr, "Sweep"), /<span class="tag">\+ Raid\?<\/span>/);
+  g.actions.find((a) => a.id === "crown.raid").accompanies = "any";
+  assert.match(box(front(sheet(g, f)), "Garrison"), /<span class="tag">\+ any Special Activity\?<\/span>/);
+});
+
+test("the faction sheet back holds forces, the sequence of play and scoring", () => {
+  const g = example(), f = g.factions[0], html = sheet(g, f);
+  const back = html.slice(html.indexOf('class="page back"'));
+  const h2 = [...back.matchAll(/<h2>([^<]*)<\/h2>/g)].map((m) => m[1]);
+  assert.deepEqual(h2, ["Forces", "Sequence of play", `At each ${g.rules.scoring.name} card`]);
+});
+
+test("the rulebook prints each action's rule section", async () => {
+  const { rulebookMd } = await import("../src/kit.mjs");
+  const r = rulebookMd(example());
+  assert.match(r, /### 5\.1 Crown/);
+  assert.match(r, /\*\*Garrison\*\* \(5\.1\.1, Operation/);
 });
 
 // Known issue 4: a one-page print test sheet with true-size items, to check a print on paper.
