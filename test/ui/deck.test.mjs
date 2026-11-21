@@ -55,3 +55,17 @@ test("renaming a card id keeps the deck valid", () => withApp(async ({ page }) =
   assert.match(await page.innerText("#main"), /Renamed s1 to truce1\./);
   assert.equal(await deckBadge(page), "");
 }));
+
+// Schema 1.5.0 part E: a card side may be a Momentum Event or a Capability.
+test("a designer marks a card side as a Capability and clears it again", () => withApp(async ({ page, db }) => {
+  await deckTab(page);
+  await page.locator("details > summary", { hasText: "Restoration of Order" }).first().click(); await frames(page);
+  const field = page.locator('select[data-b="deck/cards/2/sides/0/lasting"]');
+  assert.equal(await field.count(), 1, "the unshaded side has a Lasting field");
+  await field.selectOption("capability"); await frames(page);
+  await page.waitForTimeout(1800);
+  assert.equal(JSON.parse((await db())["data/users/u1/draft"].json).deck.cards[2].sides[0].lasting, "capability");
+  await page.locator('select[data-b="deck/cards/2/sides/0/lasting"]').selectOption(""); await frames(page);
+  await page.waitForTimeout(1800);
+  assert.equal("lasting" in JSON.parse((await db())["data/users/u1/draft"].json).deck.cards[2].sides[0], false);
+}));

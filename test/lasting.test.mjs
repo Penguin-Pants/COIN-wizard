@@ -53,3 +53,20 @@ test("a dry run reads card.lasting from the deck, and a patch can set it", () =>
   assert.equal(run(g, 0, { card: { ...card, lasting: "none" } }).outcome, "operationSpecial");
   assert.equal(run(g, 0, { card: { ...card, id: "e02" } }).outcome, "operationSpecial");
 });
+
+// Card print (src/kit.mjs, cardsHtml): a lasting side prints a "Momentum" or "Capability" tag.
+import { buildFiles } from "../src/kit.mjs";
+import { toMermaid, toMarkdown, toPolicyYaml } from "../src/botaid.mjs";
+const kit = (g, name) => { try { return Object.fromEntries(buildFiles(g, { toMermaid, toMarkdown, toPolicyYaml }))[`kit/${g.meta.gameId}.${name}.html`] ?? ""; } catch { return ""; } };
+const cardHtml = (html, title) => { const i = html.indexOf(`<h3>${title}</h3>`); return i < 0 ? "" : html.slice(i, html.indexOf('<div class="cid">', i)); };
+
+test("a lasting card side prints its tag, and other sides print none", () => {
+  const g = example();
+  side(g, "e03", "unshaded").lasting = "capability";
+  side(g, "e02", "shaded").lasting = "momentum";
+  const html = kit(g, "cards");
+  assert.match(cardHtml(html, "Restoration of Order"), /<div class="side unshaded"><b>[^<]*<\/b> <span class="lasting">Capability<\/span>:/);
+  assert.match(cardHtml(html, "Reprisals"), /<div class="side shaded"><b>[^<]*<\/b> <span class="lasting">Momentum<\/span>:/);
+  assert.doesNotMatch(cardHtml(html, "Reprisals"), /side unshaded"><b>[^<]*<\/b> <span/);
+  assert.match(html, /\.lasting\{[^}]*border/);
+});
