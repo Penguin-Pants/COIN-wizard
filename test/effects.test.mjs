@@ -117,3 +117,13 @@ test("remove with count moved removes the pieces that moved in, in any state", (
   ]);
   assert.equal(Object.values(s.spaces["cork-city"].pieces["ira.volunteer"]).reduce((a, b) => a + b, 0), 1);
 });
+
+test("remove with count moved and no state removes the moved pieces in their own states", () => {
+  const g = game(), s = deriveState(g, "ira");
+  s.spaces["cork-county"].pieces["ira.volunteer"] = { active: 3 };
+  run(g, s, "ira.march", ["cork-city"], [
+    { op: "move", piece: "ira.volunteer", count: "any", from: "adjacent", to: "$space" },
+    { op: "remove", piece: "ira.volunteer", count: "moved", to: "available" }
+  ]);
+  assert.deepEqual(s.spaces["cork-city"].pieces["ira.volunteer"], { underground: 1 });
+});

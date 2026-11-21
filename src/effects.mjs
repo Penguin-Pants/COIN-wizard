@@ -92,8 +92,12 @@ function runStep(game, s, ctx) {
       // The fallback piece is used only when no primary piece is there (as the rule text says).
       const primary = onSpace(sp, s.piece, s.state) > 0 || !s.fallbackPiece;
       const pid = primary ? s.piece : s.fallbackPiece, st = primary ? s.state : undefined;
-      const got = takePieces(game, sp, pid, st, qty(s.count, ctx, onSpace(sp, pid, st), pid, st));
-      poolOf(state, pid)[s.to] += got.reduce((t, [, c]) => t + c, 0);
+      // "moved" with no state removes the moved pieces in the states they moved in.
+      const parts = s.count === "moved" && st === undefined ? (ctx.moved?.piece === pid ? Object.keys(ctx.moved.byState) : []) : [st];
+      for (const ps of parts) {
+        const got = takePieces(game, sp, pid, ps, qty(s.count, ctx, onSpace(sp, pid, ps), pid, ps));
+        poolOf(state, pid)[s.to] += got.reduce((t, [, c]) => t + c, 0);
+      }
       return;
     }
     case "flip": {

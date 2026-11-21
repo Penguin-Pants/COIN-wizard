@@ -111,7 +111,10 @@ export function runBot(game, bot, startState) {
       result.path.push(node.id);
       result.chosen = chosen.map((s) => s.id);
       if (target) result.target = target;
-      applyAction(game, state, action, result.chosen, extra);
+      // A linked Special Activity with timing "before" resolves on the board before the Operation;
+      // "after" and "during" resolve after the Operation's steps.
+      const before = node.linked?.timing === "before";
+      if (!before) applyAction(game, state, action, result.chosen, extra);
       if (node.linked) {
         const sa = actions[node.linked.action];
         let hit = null;
@@ -121,6 +124,7 @@ export function runBot(game, bot, startState) {
         }
         result.linked = hit ?? "skipped";
       }
+      if (before) applyAction(game, state, action, result.chosen, extra);
       cur = node.then;
     } else if (node.kind === "end") {
       result.path.push(node.id);

@@ -114,3 +114,14 @@ test("a linked Special Activity sees the board after its Operation", () => {
   assert.equal(r.linked, "crown.martial-law:cork-city");
   assert.equal(r.outcome, "operationSpecial");
 });
+
+test("a linked Special Activity with timing before sees the board before its Operation", () => {
+  const g = example();
+  const node = g.bots[0].nodes.find((n) => n.id === "cw.garrison");
+  node.linked.timing = "before";
+  g.actions.find((a) => a.id === "crown.martial-law").timing = "before";
+  // Same board as cw.d7: before Garrison only Limerick has 2 Army.
+  const d = { id: "x", case: "linked-sa", patch: { spaces: { limerick: { pieces: { "crown.army": { normal: 2 } } } } }, expect: { outcome: "none" } };
+  const r = runDry(g, g.bots[0], d);
+  assert.equal(r.linked, "crown.martial-law:limerick");
+});
