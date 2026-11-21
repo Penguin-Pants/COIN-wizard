@@ -101,6 +101,8 @@ function runStep(game, s, ctx) {
       for (const ps of parts) {
         const got = takePieces(game, sp, pid, ps, qty(s.count, ctx, onSpace(sp, pid, ps), pid, ps));
         poolOf(state, pid)[s.to] += got.reduce((t, [, c]) => t + c, 0);
+        // Removed moved pieces leave the moved count.
+        if (s.count === "moved") for (const [gs, k] of got) ctx.moved.byState[gs] -= k;
       }
       return;
     }
@@ -125,9 +127,15 @@ function runStep(game, s, ctx) {
       const byState = {};
       const put = (st, k) => { if (dest) addPieces(dest, s.piece, st, k); else poolOf(state, s.piece)[s.to] += k; byState[st] = (byState[st] ?? 0) + k; };
       if (isPool(s.from)) { poolOf(state, s.piece)[s.from] -= left; put(s.state ?? defaultOf(game, s.piece), left); left = 0; }
-      for (const sp of sources.filter(ok)) {
-        if (!left) break;
-        for (const [st, k] of takePieces(game, sp, s.piece, s.state, left)) { put(st, k); left -= k; }
+      // "moved" with no state moves the moved pieces in their own states; otherwise one pass.
+      const passes = s.count === "moved" && s.state === undefined && ctx.moved?.piece === s.piece
+        ? Object.entries(ctx.moved.byState).filter(([, n]) => n > 0) : [[s.state, left]];
+      for (const [ps, want] of passes) {
+        let need = Math.min(want, left);
+        for (const sp of sources.filter(ok)) {
+          if (!need) break;
+          for (const [st, k] of takePieces(game, sp, s.piece, ps, need)) { put(st, k); left -= k; need -= k; }
+        }
       }
       ctx.moved = { piece: s.piece, byState };
       return;

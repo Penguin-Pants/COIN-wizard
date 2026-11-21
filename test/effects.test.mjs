@@ -149,3 +149,24 @@ test("count moved follows the moved pieces after they flip", () => {
   run(g, s, "ira.march", ["cork-city"], [...march.steps, { op: "remove", piece: "ira.volunteer", count: "moved", to: "available" }]);
   assert.deepEqual(s.spaces["cork-city"].pieces["ira.volunteer"], { underground: 1 });
 });
+
+test("removed moved pieces leave the moved count", () => {
+  const g = game(), s = deriveState(g, "ira");
+  run(g, s, "ira.march", ["cork-city"], [
+    { op: "move", piece: "ira.volunteer", count: "any", from: "adjacent", to: "$space" },
+    { op: "remove", piece: "ira.volunteer", count: "moved", to: "available" },
+    { op: "flip", piece: "ira.volunteer", from: "underground", to: "active", count: "moved" }
+  ]);
+  assert.deepEqual(s.spaces["cork-city"].pieces["ira.volunteer"], { underground: 1 });
+});
+
+test("a second move of the moved pieces keeps their states", () => {
+  const g = game(), s = deriveState(g, "ira");
+  s.spaces["cork-county"].pieces["ira.volunteer"] = { active: 3 };
+  run(g, s, "ira.march", ["cork-city"], [
+    { op: "move", piece: "ira.volunteer", count: "any", from: "adjacent", to: "$space" },
+    { op: "move", piece: "ira.volunteer", count: "moved", from: "$space", to: "cork-county" }
+  ]);
+  assert.deepEqual(s.spaces["cork-city"].pieces["ira.volunteer"], { underground: 1 });
+  assert.deepEqual(s.spaces["cork-county"].pieces["ira.volunteer"], { active: 3 });
+});
