@@ -154,3 +154,96 @@ test("no pairing tag prints while any Special Activity of the faction leaves its
   assert.doesNotMatch(box(fr, "Sweep"), /class="tag"/);
   assert.doesNotMatch(box(fr, "Garrison"), /class="tag"/);
 });
+
+// Non-Player sheet: one page in the layout of the GMT Non-Player sheets (examples/non-player-bot-sheets/).
+// Event? box top left, condition diamonds down the left, Operation boxes in the middle, Special
+// Activity boxes on the right, Event Instructions at the bottom. Built from the bot data only.
+const np = (g, b) => files(g)[`kit/${g.meta.gameId}.${b.factionId}.nonplayer.html`] ?? "";
+const opBox = (html, name) => { const i = html.indexOf(`<h3>${name}`, html.indexOf('class="col ops"')); return i < 0 ? "" : html.slice(i, html.indexOf("</section>", i)); };
+const saBox = (html, name) => { const i = html.indexOf(`<h3>${name}`, html.indexOf('class="col sas"')); return i < 0 ? "" : html.slice(i, html.indexOf("</section>", i)); };
+
+test("the kit has a one-page Non-Player sheet per bot and keeps the bot aids", () => {
+  for (const id of ["tan-war", "harbor-strike", "four-valleys"]) {
+    const g = JSON.parse(readFileSync(new URL(`../examples/${id}.game.json`, import.meta.url), "utf8")), out = files(g);
+    for (const b of g.bots) {
+      const html = np(g, b);
+      assert.ok(html, `${id} ${b.factionId} Non-Player sheet`);
+      assert.equal((html.match(/class="page/g) ?? []).length, 1);
+      assert.match(html, new RegExp(`<h1>Non-Player ${g.factions.find((f) => f.id === b.factionId).name}</h1>`));
+      for (const ext of ["aid.md", "aid.html", "flow.svg", "policy.yaml"]) assert.ok(out[`bots/${id}.${b.factionId}.${ext}`], ext);
+    }
+  }
+});
+
+test("the Event? box sits top left and states when to play the Event and which side", () => {
+  const g = example(), b = g.bots[1], html = np(g, b);
+  const at = html.indexOf('class="box evt"');
+  assert.ok(at > 0 && at < html.indexOf('class="dia"') && at < html.indexOf('class="col ops"'));
+  const evt = html.slice(at, html.indexOf("</section>", at));
+  assert.match(evt, /<h3>Event\?<\/h3>/);
+  assert.match(evt, /Play the shaded side if/);
+  assert.match(evt, /the card has an effect for this faction/);
+  // A condition that runs before the Event check (here: Eligible?) reads first, inside the Event? box.
+  assert.match(evt, /<p class="gate">Is Republic Eligible\? <b>Yes<\/b> → Event\? <b>No<\/b> → No action<\/p>[\s\S]*Play the shaded side/);
+});
+
+test("condition diamonds run down the left in flowchart order with Yes and No arrows", () => {
+  const g = example(), html = np(g, g.bots[1]);
+  const qs = [...html.matchAll(/<div class="dia"><p class="q">([^<]*)<\/p>/g)].map((m) => m[1]);
+  assert.deepEqual(qs, ["Republic Resources below 1?", "Fewer than 7 Volunteers on the map?"]);
+  const q = html.indexOf('<p class="q">Fewer than 7 Volunteers');
+  const d = html.slice(q, html.indexOf("</div>", q));
+  assert.match(d, /<b>Yes<\/b> → Rally/);
+  assert.match(d, /<b>No<\/b> → Attack/);
+});
+
+test("an Operation box numbers its priorities and shades its lettered tie-breaks", () => {
+  const g = example(), op = opBox(np(g, g.bots[1]), "Rally");
+  assert.ok(op.indexOf("❶ Space at Opposition") > 0 && op.indexOf("❷ Space with an HQ.") > op.indexOf("❶") && op.indexOf("❸ Any legal space.") > op.indexOf("❷"));
+  const tb = op.slice(op.indexOf('<div class="tb">'));
+  assert.ok(op.includes('<div class="tb">'), "tie-breaks are shaded");
+  assert.ok(tb.indexOf("ⓐ Highest Pop.") > 0 && tb.indexOf("ⓑ Fewest Crown cubes.") > tb.indexOf("ⓐ"));
+  assert.match(op, /<span class="tag">max 1<\/span>/);
+});
+
+test("an if-none arrow points to the node that runs when no space is legal", () => {
+  const g = example(), html = np(g, g.bots[1]);
+  assert.match(opBox(html, "Rally"), /<b>if none<\/b> → Attack/);
+  assert.match(opBox(html, "Attack"), /<b>if none<\/b> → March/);
+  assert.match(opBox(html, "March"), /<b>if none<\/b> → Pass/);
+});
+
+test("a then or with arrow leads to one Special Activity box with its priorities and skip text", () => {
+  const g = example(), b = g.bots[0];
+  let html = np(g, b);
+  assert.match(opBox(html, "Crackdown"), /<b>then<\/b> → Martial Law/);
+  assert.match(opBox(html, "Garrison"), /<b>then<\/b> → Martial Law/);
+  assert.doesNotMatch(opBox(html, "Sweep"), /→ Martial Law/);
+  const sas = html.slice(html.indexOf('class="col sas"'));
+  assert.equal((sas.match(/<h3>Martial Law/g) ?? []).length, 1, "one box for the same linked Special Activity");
+  const sa = saBox(html, "Martial Law");
+  assert.match(sa, /❶ /);
+  assert.match(sa, /Skip Martial Law if Resources are below 3 or no space qualifies\./);
+  b.nodes.find((n) => n.id === "cw.crack").linked.timing = "during";
+  html = np(g, b);
+  assert.match(opBox(html, "Crackdown"), /<b>with<\/b> → Martial Law/);
+});
+
+test("Event Instructions list every override with its card title and plain text", () => {
+  const g = example(), b = g.bots[1], html = np(g, b);
+  const at = html.indexOf('class="evi"');
+  assert.ok(at > html.indexOf('class="col sas"'), "at the bottom");
+  const evi = html.slice(at);
+  assert.match(evi, /<h2>Event Instructions<\/h2>/);
+  for (const o of b.eventPolicy.overrides) {
+    const title = g.deck.cards.find((c) => c.id === o.cardId).title;
+    assert.ok(evi.includes(`<b>${title}:</b> ${o.plain}`), o.cardId);
+  }
+});
+
+test("an Operation that picks an enemy first prints its Target priorities", () => {
+  const g = JSON.parse(readFileSync(new URL("../examples/harbor-strike.game.json", import.meta.url), "utf8"));
+  const b = g.bots[0], op = opBox(np(g, b), "Deploy");
+  const t = b.priorityTables.find((x) => x.id === b.nodes.find((n) => n.target).target);
+  assert.ok(op.indexOf("<b>Target:</b>") > 0 && op.indexOf(`❶ ${t.steps[0].text}`) > op.indexOf("<b>Target:</b>"));
+});

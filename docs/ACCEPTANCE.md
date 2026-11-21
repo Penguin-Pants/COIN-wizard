@@ -1,4 +1,4 @@
-# Acceptance: COIN Wizard, phases 0 to 10
+# Acceptance: COIN Wizard, phases 0 to 11
 
 Date: 2026-11-21. Schema: `coin-game/1.4.0` (frozen). Live tool: the "COIN Game Design Wizard" artifact.
 
@@ -23,6 +23,7 @@ Run the evidence: `npm test` (node tests) and `npm run test:ui` (browser tests w
 | 10 | A rule edited in the wizard reaches every export file | Pass | `test/ui/export.test.mjs` ("a rule edited in the wizard reaches every export file"), `test/kit.test.mjs` (parity) |
 | 10 | Engine import check: each example validates against the schema file alone and runs every dry run | Pass | `test/engine.test.mjs` |
 | 10 | Schema frozen and documented | Pass | `docs/SCHEMA.md` ("Engine contract"), schema fingerprint in `test/engine.test.mjs` |
+| 11 | One-page Non-Player sheet per bot in the GMT layout, built from the bot data, with no schema change | Pass | `src/kit.mjs` (`nonPlayerSheetHtml`), kit file `kit/<game>.<faction>.nonplayer.html`; 8 tests in `test/kit.test.mjs` ("the kit has a one-page Non-Player sheet per bot and keeps the bot aids" and 7 more); `test/ui/print.test.mjs` ("every Non-Player sheet prints on one page at Letter and A4", all 9 bots); photo check in `docs/SHEETS.md` |
 | Core | Every part works for 3 and 4 factions: per-faction and rival values, bots that pick their enemy, templates that target a chosen enemy, unique bot codes | Pass | `test/nfaction.test.mjs`, `test/ui/fullgame.test.mjs`, examples `harbor-strike` and `four-valleys` (every bot picks its enemy; one dry run shows the enemy change with the board) |
 
 ## Real-source session (2026-11-21)
