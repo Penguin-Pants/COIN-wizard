@@ -38,7 +38,7 @@ All approved parts go into one new version, `coin-game/1.5.0`. Every new field i
 ## D. Scoring-phase choices
 
 - **GMT:** "Elite Backing" (AUC Support Phase): free Rally where no Govt or FARC Control. "Agitate" (FARC).
-- **Today:** "The bot makes no choices in a scoring round" (`src/botaid.mjs:96`). A `choose` step takes the first option in dry runs.
+- **Today:** "The bot makes no choices in a scoring round" (`src/botaid.mjs:99`). A `choose` step takes the first option in dry runs.
 - **Change:** optional `bot.scoring: [{ phaseId, table, text }]`. In that phase, a step of this faction that needs a space (`spaces` with `filter`, or `choose`) picks with the table. Ties: the same lettered tie-breaks and die.
 - **Sheet:** a "Support phase" box on the Non-Player sheet. **Dry runs:** a new optional case `scoring`.
 
