@@ -1,10 +1,10 @@
 # GMT reference sheets: what the kit copies and what is next
 
-Source photos: `examples/player-faction-sheets/` (9 player faction sheets) and `examples/non-player-bot-sheets/` (9 Non-Player and reference sheets) from Andean Abyss, A Distant Plain and Colonial Twilight. The kit copies their layout, not their text.
+Source photos: `examples/player-faction-sheets/` (9 player faction sheets, all checked) and `examples/non-player-bot-sheets/` (9 Non-Player and reference sheets) from Andean Abyss, A Distant Plain and Colonial Twilight. The kit copies their layout, not their text.
 
 ## Player faction sheets (done)
 
-The 5 sheets checked (Andean Abyss Government and Cartels, A Distant Plain Taliban and Warlords, Colonial Twilight FLN) use one template; the other 4 were not checked. The faction sheet in `src/kit.mjs` (`factionAidHtml`) now follows it. Schema 1.4.0 adds the fields that the template needs.
+All 9 sheets use one template (the first 5 checked: Andean Abyss Government and Cartels, A Distant Plain Taliban and Warlords, Colonial Twilight FLN; the other 4 below). The faction sheet in `src/kit.mjs` (`factionAidHtml`) now follows it. Schema 1.4.0 adds the fields that the template needs.
 
 | Sheet part | Kit |
 |---|---|
@@ -46,15 +46,30 @@ Differences between the two games, found on the 5 newly checked photos:
 - Andean Abyss (AUC, Cartels, FARC): "Event?" box with a short rule and an "Event Instructions" list at the bottom.
 - A Distant Plain (Coalition, Government, Taliban, Warlords): "Pass, Event or Operations?" box with a numbered list (Momentum, Capability, which part to play, "If Res < N, Pass"). The Event Instructions are not on these sheets. A Momentum and Capability box sits at the bottom right. The kit uses the Andean Abyss form for the Event box and the Event Instructions list, as the task asks.
 
-## Reference sheets (next)
+## Reference sheets (done)
 
 | Sheet | Kit | Data |
 |---|---|---|
-| Sequence of Play: Eligible faction flow, Pass, scoring card phases | New sheet | `rules.sequence`, `rules.scoring` (have) |
-| Card list (by faction order) and Spaces list (type, population) | New sheet | `deck.cards[].order`, `board.spaces` (have) |
+| Sequence of Play: Event card flow (1st Eligible choice to 2nd Eligible options, then Adjust Eligibility and Next Card), Pass box, Non-Player Event side, scoring card phases | `kit/<game>.sequence.html` (`sequenceHtml` in `src/kit.mjs`), one page | `rules.sequence`, `rules.scoring`, `victory.finalScoring`, each bot's `eventPolicy.side` |
+| Card list (by faction order) and Spaces list (type, population) | `kit/<game>.lists.html` (`listsHtml`), one page | `deck.cards[].order` (groups in faction order, then the scoring cards), `board.spaces` (one table per type, Pop, end-points for lines from `board.links`, total Pop) |
+
+Not copied (no data in the schema): the GMT Spaces list columns Ethnicity and Terrain, and Economic Value for Lines of Communication. Space attributes other than Pop are not printed.
+
+## Player faction sheets: the 4 photos not checked before
+
+AUC and FARC (Andean Abyss), Coalition and Government (A Distant Plain) use the same template as the kit faction sheet (see "Player faction sheets (done)"). Differences from the kit sheet:
+
+| GMT sheet | Kit sheet | Status |
+|---|---|---|
+| Special Activity tag can be a phrase: "among 3 spaces" (Surge, Air Lift), "1 space to 1 space" (Transport) | Tag is only "max N spaces" (`maxSpaces`) | Gap (needs a schema field) |
+| Cost depends on the space type: "1 Resource per destination City/Dept (LoCs 0)" | Cost is one amount per space or per use | Gap (needs a schema field) |
+| "Cost: None" | "Cost: free" | Wording only |
+| No Cost line on Special Activity boxes | The kit prints Cost (already known) | Kept |
+| Rule section on each box (A Distant Plain) or none (Andean Abyss) | `ruleRef` is optional | Same |
+| Victory box with a rule section ("Victory (7.0)") or none | "Victory (8)" | Same |
 
 ## Proposed order
 
 1. Non-Player sheet: one page in the layout above, built from the existing bot data. No schema change. Done.
-2. Sequence of Play sheet, Card list and Spaces list. No schema change.
+2. Sequence of Play sheet, Card list and Spaces list. No schema change. Done.
 3. Bot model gaps (Special Activity fallback chain, Special Activity chosen by a diamond, loop, sub-actions, scoring-phase choices, Momentum and Capabilities). Each needs a schema change and a decision.
