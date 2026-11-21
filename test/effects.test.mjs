@@ -179,3 +179,14 @@ test("count moved only counts pieces in the space they moved to", () => {
   ]);
   assert.deepEqual(s.spaces["cork-city"].pieces["ira.volunteer"], { underground: 1 });
 });
+
+// Follow-up 2: place with count moved uses up the moved count.
+test("place with count moved places each moved piece once", () => {
+  const g = game(), s = deriveState(g, "ira");
+  run(g, s, "ira.march", ["cork-city"], [
+    { op: "move", piece: "ira.volunteer", count: 1, from: "cork-county", to: "available" },
+    { op: "place", piece: "ira.volunteer", count: "moved", from: "available", to: "$space" },
+    { op: "place", piece: "ira.volunteer", count: "moved", from: "available", to: "$space" }
+  ]);
+  assert.deepEqual(s.spaces["cork-city"].pieces["ira.volunteer"], { underground: 2 });
+});
