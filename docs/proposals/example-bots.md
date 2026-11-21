@@ -1,6 +1,6 @@
 # Proposal: example bot design gaps (item 4)
 
-Status: waiting for the owner. No example file changes until the owner approves.
+Status: decided by the owner on 2026-11-21 (see "Decisions" at the end). Implementation follows in a separate PR.
 Gaps (from `docs/ACCEPTANCE.md`, "Dry runs derived by hand"): no Harbor Strike or Four Valleys bot links a Special Activity, so the `linked-sa` cases cannot test one; bots `rh`, `du`, `vm`, `mf` and `rb` have no Event override.
 
 Method: each result below was derived by hand from the flowchart and the board. Then a scratch copy of the examples was run through `runBot` (`src/dryrun.mjs`); every run agreed. No schema change.
@@ -32,8 +32,9 @@ Other cases of these bots: only `outcome` can change, from `operation` to `opera
 ## Part 2: `rh` and `mf` need a rule decision
 
 - Ambush (`f2.ambush`, `f3.ambush`) accompanies Strike only, and both bots have no Strike node. So a Strike node must come first (Strike, then Recruit on `onEmpty`).
-- **Blocker (verified):** Ambush needs an Underground Guerrilla. Strike flips every Guerrilla in its space to Active. A dry run resolves a `during` Special Activity after the Operation's steps (`src/dryrun.mjs:120`), so Ambush always finds no space. Scratch run of `rh.d5` with 2 Troops in Tenements: Ambush `skipped` with die 1 and with die 3.
-- `before` timing works (scratch run: operationSpecial, linked `f2.ambush:space7`), but the validator requires the linked timing to equal the Special Activity's timing (`src/validate.mjs:297`). So Ambush's own timing must change from `during` to `before`. That is a game-rule change: Ambush resolves before the Strike roll.
+- **Limit (verified):** Ambush needs an Underground Guerrilla. Strike flips every Guerrilla in its space to Active. A dry run resolves a `during` Special Activity after the Operation's steps (`src/dryrun.mjs:120`), so Ambush can never hit the Strike space. Scratch run of `rh.d5` with 2 Troops in Tenements only: Ambush `skipped` with die 1 and with die 3.
+- Ambush can hit a second space: the linked table picks from every legal space (`src/dryrun.mjs:125`). Scratch run with 2 Troops and 2 Underground Guerrillas in Tenements and in Rail Yards, dice 3, 3, 3: Strike in Tenements, then `f2.ambush:space3` (Rail Yards), operationSpecial, timing `during` unchanged. (Found by the Codex review of this PR.) The printed rule says Ambush is in the Strike space, so this result does not test the rule as printed.
+- `before` timing also works (scratch run: operationSpecial, linked `f2.ambush:space7`), but the validator requires the linked timing to equal the Special Activity's timing (`src/validate.mjs:297`). So Ambush's own timing must change from `during` to `before`: a game-rule change.
 - With a Strike node, the other `rh` cases keep their outcome and chosen spaces; their stored `path` gains `rh.strike:empty` (scratch run of all 6 cases).
 
 ## Part 3: Event overrides for `rh`, `du`, `vm`, `mf`, `rb`
@@ -45,5 +46,13 @@ Other cases of these bots: only `outcome` can change, from `operation` to `opera
 ## Decisions needed
 
 1. Part 1 for `pa`, `du`, `ra`, `vm`, `rb`: approve or decline.
-2. Part 2: change Ambush timing to `before` in both games, or leave `rh` and `mf` with no linked Special Activity (document as a model limit).
+2. Part 2: change Ambush timing to `before` in both games, link Ambush with `during` and accept a second-space Ambush, or leave `rh` and `mf` with no linked Special Activity (document as a model limit).
 3. Part 3: `ignore` overrides as above, or another directive per bot.
+
+## Decisions (owner, 2026-11-21)
+
+| Part | Decision |
+|---|---|
+| 1. Link a Special Activity for `pa`, `du`, `ra`, `vm`, `rb` | Approved |
+| 2. `rh` and `mf` | No linked Special Activity. Document as a model limit. (Decided before the second-space result above was found; the owner can revisit.) |
+| 3. `ignore` overrides for `rh`, `du`, `vm`, `mf`, `rb` | Approved |
