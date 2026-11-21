@@ -70,9 +70,10 @@ Earlier: closed on 2026-11-21 (3 and 4 factions are a core requirement): `other.
 
 ### Follow-up: dry-run effects (frozen in this PR)
 
-Codex reviewed PR 1 seven times and found 17 edge cases in `src/effects.mjs` and `src/dryrun.mjs`. 16 are fixed, each with a test. The owner froze effect-code changes in this PR on 2026-11-21. Open items for a separate PR:
+Codex reviewed PR 1 eight times and found 18 edge cases in `src/effects.mjs` and `src/dryrun.mjs`. 16 are fixed, each with a test. The owner froze effect-code changes in this PR on 2026-11-21. Open items for a separate PR:
 
 1. **Before-timed Special Activity can make the Operation's chosen spaces illegal.** The spaces are chosen before the Special Activity runs and are not checked again. Example: Martial Law (timing `before`) shifts Cork City to Support; Garrison, restricted to opinion below Support, still places there. Needs a rules decision: drop and refund, choose again, or fall back to `onEmpty`. No shipped example uses timing `before`.
+2. **`place` with count `moved` does not use up the moved count.** A later `moved` step can then place pool pieces that never moved. Example: move 1 Volunteer to Available, then place `moved` into Cork City twice: 2 Volunteers arrive instead of 1. No shipped example places with count `moved`.
 
 ## Platform limits
 
