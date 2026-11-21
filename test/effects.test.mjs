@@ -170,3 +170,12 @@ test("a second move of the moved pieces keeps their states", () => {
   assert.deepEqual(s.spaces["cork-city"].pieces["ira.volunteer"], { underground: 1 });
   assert.deepEqual(s.spaces["cork-county"].pieces["ira.volunteer"], { active: 3 });
 });
+
+test("count moved only counts pieces in the space they moved to", () => {
+  const g = game(), s = deriveState(g, "ira");
+  run(g, s, "ira.march", ["cork-city"], [
+    { op: "move", piece: "ira.volunteer", count: 1, from: "cork-county", to: "limerick" },
+    { op: "flip", piece: "ira.volunteer", from: "underground", to: "active", count: "moved" }
+  ]);
+  assert.deepEqual(s.spaces["cork-city"].pieces["ira.volunteer"], { underground: 1 });
+});

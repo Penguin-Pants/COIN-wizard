@@ -42,11 +42,12 @@ const roomIn = (game, sp, pid) => { const m = pieceOf(game, pid)?.maxPerSpace; r
 const onSpace = (sp, pid, st) => Object.entries(sp.pieces[pid] ?? {}).filter(([s]) => st === undefined || s === st).reduce((n, [, c]) => n + c, 0);
 
 // How many: a number, "all" or "any" (as many as there are), "moved", or a formula.
-// "moved" counts the pieces of the last move in one state (moved: { piece, byState }).
-function qty(q, ctx, max, piece, st) {
+// "moved" counts the pieces of the last move in one state, at the place they moved to
+// (moved: { piece, at, byState }). at: a space id or a pool.
+function qty(q, ctx, max, piece, st, at) {
   if (q === "all" || q === "any") return max;
   if (q === "moved") {
-    if (ctx.moved?.piece !== piece) return 0;
+    if (ctx.moved?.piece !== piece || ctx.moved.at !== at) return 0;
     const n = st === undefined ? Object.values(ctx.moved.byState).reduce((a, b) => a + b, 0) : ctx.moved.byState[st] ?? 0;
     return Math.min(max, n);
   }
@@ -86,7 +87,7 @@ function runStep(game, s, ctx) {
     case "place": {
       const sp = spaceOf(s, ctx, "to");
       const pool = poolOf(state, s.piece);
-      const n = Math.min(qty(s.count, ctx, pool[s.from], s.piece, s.state), roomIn(game, sp, s.piece));
+      const n = Math.min(qty(s.count, ctx, pool[s.from], s.piece, s.state, s.from), roomIn(game, sp, s.piece));
       pool[s.from] -= n;
       addPieces(sp, s.piece, s.state ?? defaultOf(game, s.piece), n);
       return;
@@ -99,7 +100,7 @@ function runStep(game, s, ctx) {
       // "moved" with no state removes the moved pieces in the states they moved in.
       const parts = s.count === "moved" && st === undefined ? (ctx.moved?.piece === pid ? Object.keys(ctx.moved.byState) : []) : [st];
       for (const ps of parts) {
-        const got = takePieces(game, sp, pid, ps, qty(s.count, ctx, onSpace(sp, pid, ps), pid, ps));
+        const got = takePieces(game, sp, pid, ps, qty(s.count, ctx, onSpace(sp, pid, ps), pid, ps, sp.id));
         poolOf(state, pid)[s.to] += got.reduce((t, [, c]) => t + c, 0);
         // Removed moved pieces leave the moved count.
         if (s.count === "moved") for (const [gs, k] of got) ctx.moved.byState[gs] -= k;
@@ -108,7 +109,7 @@ function runStep(game, s, ctx) {
     }
     case "flip": {
       const sp = spaceOf(s, ctx, "space");
-      const n = qty(s.count, ctx, onSpace(sp, s.piece, s.from), s.piece, s.from);
+      const n = qty(s.count, ctx, onSpace(sp, s.piece, s.from), s.piece, s.from, sp.id);
       takePieces(game, sp, s.piece, s.from, n);
       addPieces(sp, s.piece, s.to, n);
       // Moved pieces that flip keep counting as moved, in their new state.
@@ -121,9 +122,11 @@ function runStep(game, s, ctx) {
       const sources = s.from === "adjacent"
         ? neighbors(game.board.links, ctx.$space.id).map((id) => state.spaces[id]).sort((a, b) => a.name.localeCompare(b.name))
         : isPool(s.from) ? [] : [spaceOf({ ...s, filter: undefined }, ctx, "from")];
-      const ok = (sp) => s.filter === undefined || !!evalExpr(s.filter, { ...ctx, $space: sp });
+      // "moved" moves only the pieces at the place they moved to.
+      const ok = (sp) => (s.count !== "moved" || sp.id === ctx.moved?.at) && (s.filter === undefined || !!evalExpr(s.filter, { ...ctx, $space: sp }));
+      const from = isPool(s.from) ? s.from : sources.find(ok)?.id;
       const can = isPool(s.from) ? poolOf(state, s.piece)[s.from] : sources.filter(ok).reduce((t, sp) => t + onSpace(sp, s.piece, s.state), 0);
-      let left = Math.min(qty(s.count, ctx, can, s.piece, s.state), dest ? roomIn(game, dest, s.piece) : Infinity);
+      let left = Math.min(qty(s.count, ctx, can, s.piece, s.state, from), dest ? roomIn(game, dest, s.piece) : Infinity);
       const byState = {};
       const put = (st, k) => { if (dest) addPieces(dest, s.piece, st, k); else poolOf(state, s.piece)[s.to] += k; byState[st] = (byState[st] ?? 0) + k; };
       if (isPool(s.from)) { poolOf(state, s.piece)[s.from] -= left; put(s.state ?? defaultOf(game, s.piece), left); left = 0; }
@@ -137,7 +140,7 @@ function runStep(game, s, ctx) {
           for (const [st, k] of takePieces(game, sp, s.piece, ps, need)) { put(st, k); left -= k; need -= k; }
         }
       }
-      ctx.moved = { piece: s.piece, byState };
+      ctx.moved = { piece: s.piece, at: dest ? dest.id : s.to, byState };
       return;
     }
     case "shift": {
