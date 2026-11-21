@@ -146,9 +146,10 @@ export function printTestHtml(g) {
 // Space markers set by markerSet steps or started in setup (opinion has its own track on the board).
 // One marker per space, so every space can hold one.
 export function spaceMarkers(g) {
-  const out = new Set(Object.values(g.setup.spaceAttributes ?? {}).flatMap((a) => Object.keys(a)).filter((k) => k !== "opinion"));
-  JSON.stringify([g.actions, g.deck.cards], (k, v) => { if (v?.op === "markerSet" && typeof v.marker === "string") out.add(v.marker); return v; });
-  return [...out].map((id) => ({ id, name: id.charAt(0).toUpperCase() + id.slice(1), count: g.board.spaces.length }));
+  const out = new Set(Object.values(g.setup.spaceAttributes ?? {}).flatMap((a) => Object.keys(a)));
+  JSON.stringify(g, (k, v) => { if (v?.op === "markerSet" && typeof v.marker === "string") out.add(v.marker); return v; });
+  out.delete("opinion");
+  return [...out].sort().map((id) => ({ id, name: id.charAt(0).toUpperCase() + id.slice(1), count: g.board.spaces.length }));
 }
 
 // Counters: each faction's shape in its color, with the symbol. Bases have a thick border.

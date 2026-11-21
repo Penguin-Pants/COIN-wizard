@@ -4,8 +4,9 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, existsSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = new URL("..", import.meta.url).pathname;
+const root = fileURLToPath(new URL("..", import.meta.url));
 const build = (env) => {
   const out = mkdtempSync(join(tmpdir(), "coin-build-"));
   const r = spawnSync(process.execPath, ["scripts/build.mjs"], { cwd: root, encoding: "utf8", env: { ...process.env, BUILD_OUT: join(out, "index.html"), ...env } });

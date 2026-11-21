@@ -79,3 +79,10 @@ test("the kit has a print test sheet with a 50 mm ruler, a card and a counter at
   assert.match(t, /100 %/);
   assert.match(t, /Letter/); assert.match(t, /A4/);
 });
+
+test("a markerSet step in a scoring phase also prints its marker", async () => {
+  const { spaceMarkers } = await import("../src/kit.mjs");
+  const g = example();
+  g.rules.scoring.phases[0].steps.push({ op: "markerSet", marker: "truce", value: true, space: "dublin" });
+  assert.deepEqual(spaceMarkers(g).map((m) => m.id).sort(), ["curfew", "truce"]);
+});

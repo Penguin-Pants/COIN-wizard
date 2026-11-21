@@ -4,6 +4,7 @@ import { confirmButton } from "./components/confirmButton.mjs";
 import { fdot, factionIssues } from "./components/faction.mjs";
 import { placeIssues } from "./components/issueMarker.mjs";
 import { renderUndo } from "./recovery.mjs";
+import { spaceMarkers } from "../src/kit.mjs";
 import { labelTableFields } from "./components/a11y.mjs";
 import { markVisited, stepStatus, stepErrors, STATUS_CHIP } from "./progress.mjs";
 import { renderBrief } from "./steps/brief.mjs";
@@ -13,12 +14,7 @@ import { renderRules } from "./steps/rules.mjs";
 import { renderReview } from "./steps/review.mjs";
 
 // Markers are mutable space attributes other than opinion: from setup and from steps that set them.
-function markers() {
-  const out = new Set(Object.values(S.game.setup.spaceAttributes ?? {}).flatMap((a) => Object.keys(a)));
-  JSON.stringify(S.game, (k, v) => { if (v?.op === "markerSet" && typeof v.marker === "string") out.add(v.marker); return v; });
-  out.delete("opinion");
-  return [...out].sort();
-}
+const markers = () => spaceMarkers(S.game).map((m) => m.id);
 // After a re-render, focus returns to the control with the same identity, so keyboard users keep their place.
 function focusKey(el) {
   if (!el || el === document.body || !el.closest?.("#main")) return null;
