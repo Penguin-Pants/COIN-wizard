@@ -220,7 +220,7 @@ export function nonPlayerSheetHtml(g, bot) {
   const act = (id) => g.actions.find((a) => a.id === id);
   const table = (id) => bot.priorityTables.find((t) => t.id === id);
   const order = bot.nodes.filter((n) => num[n.id]).sort((a, b) => num[a.id] - num[b.id]);
-  const to = (id) => { const n = nodes[id]; return n.kind === "end" ? END[n.outcome] : n.kind === "event-check" ? "Event?" : n.kind === "action" ? act(n.action)?.name ?? n.action : n.text; };
+  const to = (id) => { const n = nodes[id]; return n.kind === "end" ? END[n.outcome] : n.kind === "event-check" ? "Event?" : n.kind === "action" ? `${act(n.action)?.name ?? n.action} (${labels[n.table]})` : n.text; };
   const arr = (label, id) => `<p class="arr"><b>${label}</b> → ${h(to(id))}</p>`;
   const where = (a) => (!a || a.targets === true ? "" : `<p class="where">Where ${h(condTextOf(g, a.targets))}.</p>`);
   // The printed max is what a dry run takes: the table limit, capped by the action's maxSpaces (src/dryrun.mjs).
@@ -255,7 +255,7 @@ export function nonPlayerSheetHtml(g, bot) {
   }).join("");
 
   const card = (id) => g.deck.cards.find((c) => c.id === id)?.title ?? id.toUpperCase();
-  const evi = `<section class="evi"><h2>Event Instructions</h2>${ep.overrides.map((o) => `<p><b>${h(card(o.cardId))}:</b> ${h(o.plain)}</p>`).join("") || "<p>None.</p>"}</section>`;
+  const evi = `<section class="evi"><h2>Event Instructions</h2>${ep.overrides.map((o) => `<p><b>${h(card(o.cardId))}:</b> ${h(o.plain)}${o.directive === "ignore" ? "" : ` (play the ${o.side ?? ep.side} side)`}</p>`).join("") || "<p>None.</p>"}</section>`;
   const terms = bot.measures.length ? `<div class="terms"><b>Terms.</b> ${bot.measures.map((m) => `<b>${h(m.name)}:</b> ${h(m.plain)}`).join(" ")}</div>` : "";
   const gain = g.rules.sequence.passGain[bot.factionId] ?? 0;
   const foot = `<p class="foot">Ties after the lettered tie-breaks, when one space or faction is chosen: ${h(bot.randomization.eligibleSet)} ${h(bot.randomization.procedure)} Pass: gain ${gain} Resource${gain === 1 ? "" : "s"}.</p>`;

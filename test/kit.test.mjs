@@ -289,3 +289,26 @@ test("a box that selects several spaces says leftover ties go by space name", ()
   assert.doesNotMatch(opBox(html, "Garrison"), /alphabetical/);
   assert.match(html, /<p class="foot">Ties after the lettered tie-breaks, when one space or faction is chosen:/);
 });
+
+// Codex review of PR 4, round 3: arrows to an Operation name its table (two boxes can share one
+// Operation), and an Event instruction states its side when the override sets one.
+test("an arrow to an Operation box names that box's table", () => {
+  const g = example(), b = g.bots[0];
+  const t2 = { ...structuredClone(b.priorityTables.find((t) => t.id === "cw.t.garrison")), id: "cw.t.garrison2" };
+  b.priorityTables.push(t2);
+  b.nodes.push({ ...structuredClone(b.nodes.find((n) => n.id === "cw.garrison")), id: "cw.garrison2", table: "cw.t.garrison2", onEmpty: "cw.sweep" });
+  b.nodes.find((n) => n.id === "cw.garrison").onEmpty = "cw.garrison2";
+  const html = np(g, b), label = `CW-${b.priorityTables.length}`;
+  assert.match(opBox(html, "Garrison"), new RegExp(`<b>if none</b> → Garrison \\(${label}\\)`));
+  assert.match(opBox(html, "Crackdown"), /<b>if none<\/b> → Garrison \(CW-2\)/);
+});
+
+test("an Event instruction states the side its override plays", () => {
+  const g = example(), b = g.bots[0];
+  b.eventPolicy.overrides.find((o) => o.cardId === "e07").side = "shaded";
+  const evi = np(g, b).slice(np(g, b).indexOf('class="evi"'));
+  assert.match(evi, /<b>Martial Law Decree:<\/b> [^<]*\(play the shaded side\)/);
+  assert.match(evi, /<b>Flying Column:<\/b> [^<]*\(play the unshaded side\)/);
+  b.eventPolicy.overrides.push({ cardId: "e02", directive: "ignore", plain: "Never play it." });
+  assert.match(np(g, b), /<b>Reprisals:<\/b> Never play it\.<\/p>/);
+});
