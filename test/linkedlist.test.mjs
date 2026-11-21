@@ -92,3 +92,26 @@ test("an entry's timing must match its Special Activity", () => {
   node(g, "cw.garrison").linked[0].timing = "during";
   assert.ok(validate(g).errors.some((x) => x.code === "timing" && x.path === "/bots/0/nodes/6/linked/1"));
 });
+
+// Bot aid (src/botaid.mjs): a list prints in order, each entry after "If none".
+import { aidModel, toPolicyYaml } from "../src/botaid.mjs";
+const aidStep = (g, nodeId) => {
+  let m; try { m = aidModel(g, g.bots[0]); } catch { return ""; }
+  const lead = (node(g, nodeId).text ?? "").split(" ")[0];
+  return m.steps.map((s) => s.text).find((t) => t.startsWith(lead)) ?? "";
+};
+
+test("the bot aid lists each linked Special Activity in order with If none", () => {
+  const t = aidStep(withList(), "cw.garrison");
+  assert.match(t, /Special Activities may follow, after the Operation\. Try them in order; the first one that can be used runs\./);
+  assert.match(t, /1\. Martial Law \(cost 2 Resources per use\)\. Skip Martial Law if Resources are below 3 or no space qualifies\. Choose its space with table CW-\d\./);
+  assert.match(t, /2\. If none: Patrol \(cost free\)\. Skip Patrol if Dublin is not legal\. Choose its space with table CW-\d\./);
+});
+
+test("a single linked Special Activity keeps its bot aid text", () => {
+  assert.match(aidStep(example(), "cw.garrison"), /Before you end: Special Activity Martial Law \(cost 2 Resources per use\) may follow, after the Operation\./);
+});
+
+test("the policy file lists every linked Special Activity", () => {
+  assert.match(toPolicyYaml(withList(), withList().bots[0]), /id: crown\.patrol\n\s+name: Patrol/);
+});
