@@ -46,7 +46,7 @@ Status of each gap from the 2026-11-21 review (branch `fix/known-gaps`). Closed 
 | 2 | No example uses `markerSet` | Closed | `examples/tan-war.game.json` (`crown.martial-law` sets `curfew`); `src/state.mjs:8` (markers start from setup), `src/kit.mjs:132` (`spaceMarkers`: counters and component list); test "Tan War Martial Law sets a Curfew marker that starts from setup" (`test/effects.test.mjs`) |
 | 3 | Faction aid not compared with a printed GMT sheet | Closed (partial match, see note) | Compared with `examples/player-aid-sheets/Colonial_Twilight_FLN_Faction_Sheet.jpg` (on `main`). `src/kit.mjs` (`factionAidHtml`): Operations, Special Activities, then Victory for every faction; each action reads Location, Cost, Procedure. Test "the faction aid follows the section order of a printed GMT faction aid" (`test/kit.test.mjs`). Not matched (needs schema fields, so not done): Purpose line, accompanying Op or Special Activity, rule number per action, max spaces per Special Activity. The FLN image shows one side only; Forces, Sequence of play and scoring follow Victory. |
 | 4 | Print checked by PDF only, not on paper | Open: needs a person (checklist item P1) | Code part closed: `src/kit.mjs` (`printTestHtml`), kit file `kit/<game>.print-test.html`; tests "the kit has a print test sheet with a 50 mm ruler, a card and a counter at true size" (`test/kit.test.mjs`) and "the print test sheet is one page at Letter and A4 with true-size ruler, card and counter" (`test/ui/print.test.mjs`). |
-| 5 | Claim checks tested with scripted answers only | Open | |
+| 5 | Claim checks tested with scripted answers only | Open: needs a person (checklist item P2) | Manual test script below ("Manual test: claim check in the live artifact"). Scripted coverage: `test/ui/sources.test.mjs`, `test/sources.test.mjs`. |
 | 6 | 3- and 4-faction dry runs store run results as expected | Closed (2 design gaps open) | Every case derived by hand: "Dry runs derived by hand" below; `test/engine.test.mjs` checks each one. Open: no bot in these examples links a Special Activity, and 5 bots have no Event override (see below). |
 | 8 | No bundle size limit | Closed | `scripts/build.mjs:7` (`LIMIT_KIB = 700`; the build exits 1 above it and writes no page); tests "the build fails with a clear message above the size limit" and "the build passes under the default limit of 700 KiB" (`test/build.test.mjs`). Size now: 570 KiB. |
 | 9 | Built page not tied to a commit | Closed | `scripts/build.mjs:17` (short commit, `-dirty` for local changes) and `ui/index.template.html:139` (`#about`, under the step list: "Build <commit>, schema coin-game/1.3.0"); test "the built page names its commit and schema version" (`test/build.test.mjs`); `Makefile` targets `test`, `test-ui`, `build`, `publish-check`; publish step in `README.md` ("Publish"). |
@@ -125,3 +125,24 @@ Unless a line says so, cases use card `e01` (no effect), so the Event is not pla
 | `rb.d6` fallback | pass | **Changed.** No River Brigades pieces on the map: Recruit has no legal space. |
 
 Differences found: no stored result was wrong for its patch. 9 cases did not test their label and got new patches (the 7 `fallback` cases, `rh.d4`, `du.d4`). Design gaps left open (need a designer): the 7 bots link no Special Activity, so their `linked-sa` cases cannot test one; 5 bots (`rh`, `du`, `vm`, `mf`, `rb`) have no Event override, so their `event-override` cases test `playIf` only.
+
+## Manual test: claim check in the live artifact
+
+Run time: about 10 minutes. Tester: a person with access to the "COIN Game Design Wizard" artifact.
+
+1. Open the live artifact. Start a new game. Stay on step 1 (Brief).
+2. Under "Sources", click "Add source" two times. Enter these URLs:
+   - Source 1: `https://en.wikipedia.org/wiki/Irish_War_of_Independence`
+   - Source 2: `https://en.wikipedia.org/wiki/Anglo-Irish_Treaty`
+3. Make both sources "read": copy the text from "Ask Claude in chat to read pending sources" into a Claude chat, or open "Paste text for this source" and paste the article text, then click "Use pasted text".
+4. Under "Claims", click "Add claim" two times:
+   - True claim, sources `s1`: "The truce that ended the fighting began on 11 July 1921."
+   - False claim, sources `s1`: "The war ended with a truce in March 1925."
+5. Click "Check" on each claim. Wait for the verdict chip.
+6. Record the result in the table. Pass: the true claim shows `supported` and the false claim shows `unsupported` (`partial` on the false claim is a fail). Each verdict shows a reason and a passage (source id and characters).
+
+| Date | Tester | Claim | Verdict | Reason shown | Passage shown | Pass or fail |
+|---|---|---|---|---|---|---|
+| | | True (truce 11 July 1921) | | | | |
+| | | False (truce March 1925) | | | | |
+
