@@ -108,3 +108,12 @@ test("remove uses the fallback piece only when the primary piece is absent", () 
   assert.equal(s.spaces.kerry.pieces["crown.army"]?.normal ?? 0, 0);
   assert.deepEqual(s.spaces.kerry.pieces["crown.police"], { normal: 2 }, "Army was there, so no Police is removed");
 });
+
+test("remove with count moved removes the pieces that moved in, in any state", () => {
+  const g = game(), s = deriveState(g, "ira");
+  run(g, s, "ira.march", ["cork-city"], [
+    { op: "move", piece: "ira.volunteer", count: "any", from: "adjacent", to: "$space" },
+    { op: "remove", piece: "ira.volunteer", count: "moved", to: "available" }
+  ]);
+  assert.equal(Object.values(s.spaces["cork-city"].pieces["ira.volunteer"]).reduce((a, b) => a + b, 0), 1);
+});

@@ -41,7 +41,11 @@ const onSpace = (sp, pid, st) => Object.entries(sp.pieces[pid] ?? {}).filter(([s
 // "moved" counts the pieces of the last move in one state (moved: { piece, byState }).
 function qty(q, ctx, max, piece, st) {
   if (q === "all" || q === "any") return max;
-  if (q === "moved") return ctx.moved?.piece === piece ? Math.min(max, ctx.moved.byState[st] ?? 0) : 0;
+  if (q === "moved") {
+    if (ctx.moved?.piece !== piece) return 0;
+    const n = st === undefined ? Object.values(ctx.moved.byState).reduce((a, b) => a + b, 0) : ctx.moved.byState[st] ?? 0;
+    return Math.min(max, n);
+  }
   const n = typeof q === "number" ? q : Number(evalExpr(q, ctx));
   return Math.max(0, Math.min(max, n));
 }
@@ -78,7 +82,7 @@ function runStep(game, s, ctx) {
     case "place": {
       const sp = spaceOf(s, ctx, "to");
       const pool = poolOf(state, s.piece);
-      const n = qty(s.count, ctx, pool[s.from]);
+      const n = qty(s.count, ctx, pool[s.from], s.piece, s.state);
       pool[s.from] -= n;
       addPieces(sp, s.piece, s.state ?? statesOf(game, s.piece)[0], n);
       return;
@@ -88,7 +92,7 @@ function runStep(game, s, ctx) {
       // The fallback piece is used only when no primary piece is there (as the rule text says).
       const primary = onSpace(sp, s.piece, s.state) > 0 || !s.fallbackPiece;
       const pid = primary ? s.piece : s.fallbackPiece, st = primary ? s.state : undefined;
-      const got = takePieces(game, sp, pid, st, qty(s.count, ctx, onSpace(sp, pid, st)));
+      const got = takePieces(game, sp, pid, st, qty(s.count, ctx, onSpace(sp, pid, st), pid, st));
       poolOf(state, pid)[s.to] += got.reduce((t, [, c]) => t + c, 0);
       return;
     }
@@ -107,7 +111,7 @@ function runStep(game, s, ctx) {
         : isPool(s.from) ? [] : [spaceOf({ ...s, filter: undefined }, ctx, "from")];
       const ok = (sp) => s.filter === undefined || !!evalExpr(s.filter, { ...ctx, $space: sp });
       const can = isPool(s.from) ? poolOf(state, s.piece)[s.from] : sources.filter(ok).reduce((t, sp) => t + onSpace(sp, s.piece, s.state), 0);
-      let left = qty(s.count, ctx, can);
+      let left = qty(s.count, ctx, can, s.piece, s.state);
       const byState = {};
       const put = (st, k) => { if (dest) addPieces(dest, s.piece, st, k); else poolOf(state, s.piece)[s.to] += k; byState[st] = (byState[st] ?? 0) + k; };
       if (isPool(s.from)) { poolOf(state, s.piece)[s.from] -= left; put(s.state ?? statesOf(game, s.piece)[0], left); left = 0; }
