@@ -47,7 +47,7 @@ Status of each gap from the 2026-11-21 review (branch `fix/known-gaps`). Closed 
 | 3 | Faction aid not compared with a printed GMT sheet | Open | |
 | 4 | Print checked by PDF only, not on paper | Open | |
 | 5 | Claim checks tested with scripted answers only | Open | |
-| 6 | 3- and 4-faction dry runs store run results as expected | Open | |
+| 6 | 3- and 4-faction dry runs store run results as expected | Closed (2 design gaps open) | Every case derived by hand: "Dry runs derived by hand" below; `test/engine.test.mjs` checks each one. Open: no bot in these examples links a Special Activity, and 5 bots have no Event override (see below). |
 | 8 | No bundle size limit | Open | |
 | 9 | Built page not tied to a commit | Open | |
 | 10 | `main` is not protected | Open | |
@@ -62,3 +62,66 @@ Gap 1 changed four stored Tan War results. Each new value was derived by hand fr
 | `ib.d5` | No die in the patch | Die 3 added; result unchanged (Boycott in Kerry) | Attack rolls a die. 3 is at or below the 3 Volunteers in County Cork: 1 Police is removed (no Army there), then all Volunteers flip to Active. Kerry (2 Underground, Neutral) is the only legal Boycott space. |
 
 Past Tan War files (`test/fixtures/`) keep the old results. After migration they flag these four cases and nothing else (`test/migrate.test.mjs`).
+
+## Dry runs derived by hand (Harbor Strike, Four Valleys)
+
+The schema has no description field on a dry run, so the reasons are here. Each result was derived from the flowchart and the board before the run; the run then agreed.
+
+Board facts used. Harbor Strike: margins at setup are Port Authority -6, Red Hand -7, Dockers' Union -7; both rebel enemies hold 4 pieces. Four Valleys: margins are Republic Army -7, Valley Militia -7, Mountain Front -6, River Brigades -6; each faction holds 4 pieces. An enemy tie that survives both tie-breaks goes to the die in name order (2 items: die 1 to 3 picks the first).
+
+Unless a line says so, cases use card `e01` (no effect), so the Event is not played.
+
+### Harbor Strike
+
+| Case | Expected | Reason |
+|---|---|---|
+| `pa.d1` ineligible | none | Port Authority is not Eligible. |
+| `pa.d2` event-override | operation, Canal Row, target Dockers' Union | Card e05 has the override `ignore`. Enemy: Red Hand and Dockers' Union tie (-7, 4 pieces); die 3 picks Dockers' Union. PA-1 step 1: Fish Market and Canal Row (Pop 1); die 3 picks Canal Row. |
+| `pa.d3` no-target | pass | Resources 0: Deploy (cost 2) has no legal space. |
+| `pa.d4` tie | operation, Canal Row, target Dockers' Union | Shipyards and Rail Yards set to Neutral: all margins -8, the enemy tie and the space tie both go to the die (3, 3). |
+| `pa.d5` linked-sa | operation, Canal Row, target Dockers' Union | Same as setup. The bot has no linked Special Activity, so the case cannot test one (design gap). |
+| `pa.d6` fallback | pass | **Changed.** Resources 1: below the Deploy cost of 2, so the action node falls back to Pass. |
+| `rh.d1` ineligible | none | Red Hand is not Eligible. |
+| `rh.d2` event-override | event, unshaded | Card e05 has an effect; the bot has no override, so `playIf` plays it (design gap: no override to test). |
+| `rh.d3` no-target | pass | Resources 0: Recruit (cost 1) has no legal space. |
+| `rh.d4` tie | operation, Customs Quay, target Port Authority | **Changed.** 1 Guerrilla added in Customs Quay. Enemy: the only state faction. RH-1 step 2: Customs Quay and Tenements tie at Pop 2; die 1 picks Customs Quay. The old patch had no tie (Tenements won on Pop). |
+| `rh.d5` linked-sa | operation, Tenements, target Port Authority | Recruit is legal in Rail Yards and Tenements; neither holds Port Authority pieces; Tenements has the higher Pop. No linked Special Activity (design gap). |
+| `rh.d6` fallback | pass | **Changed.** No Red Hand pieces on the map: Recruit has no legal space. |
+| `du.d1` ineligible | none | Dockers' Union is not Eligible. |
+| `du.d2` event-override | event, unshaded | No override in this bot; `playIf` plays the card (design gap). |
+| `du.d3` no-target | pass | Resources 0: Campaign (cost 1) has no legal space. |
+| `du.d4` tie | operation, Tenements, target Port Authority | **Changed.** Troops leave Old Harbor and 1 Troops goes to Tenements. DU-1 step 1: Shipyards and Tenements tie at Pop 2; die 6 picks Tenements. The old patch had no tie (Old Harbor won on Pop 3). |
+| `du.d5` linked-sa | operation, Old Harbor, target Port Authority | DU-1 step 1: Old Harbor (Pop 3) beats Shipyards (Pop 2). No linked Special Activity (design gap). |
+| `du.d6` fallback | pass | **Changed.** Resources 0. Campaign is legal everywhere, so this is the only way to fall back; the case repeats `du.d3`. |
+
+### Four Valleys
+
+| Case | Expected | Reason |
+|---|---|---|
+| `ra.d1` ineligible | none | Republic Army is not Eligible. |
+| `ra.d2` event-override | operation, East Valley, target Mountain Front | Card e03 has the override `ignore`. Enemy: Mountain Front and River Brigades tie (-6, 4 pieces); die 3 picks Mountain Front. RA-1 step 1: East Valley (Pop 2) beats South Ridge (Pop 1). |
+| `ra.d3` no-target | pass | Resources 0: Deploy (cost 2) has no legal space. |
+| `ra.d4` tie | operation, East Valley, target Mountain Front | High Pass and North Valley to Neutral: rebel margins -8, still tied; die 3. |
+| `ra.d5` linked-sa | operation, East Valley, target Mountain Front | Same as setup. No linked Special Activity (design gap). |
+| `ra.d6` fallback | pass | **Changed.** Resources 1: below the Deploy cost of 2. |
+| `vm.d1` ineligible | none | Valley Militia is not Eligible. |
+| `vm.d2` event-override | event, unshaded | No override in this bot; `playIf` plays e03 (design gap). |
+| `vm.d3` no-target | pass | Resources 0. |
+| `vm.d4` tie | operation, East Valley, target Mountain Front | As `ra.d4`: enemy tie to the die. |
+| `vm.d5` linked-sa | operation, East Valley, target Mountain Front | As `ra.d5`. No linked Special Activity (design gap). |
+| `vm.d6` fallback | pass | **Changed.** Resources 1: below the Deploy cost of 2. |
+| `mf.d1` ineligible | none | Mountain Front is not Eligible. |
+| `mf.d2` event-override | event, unshaded | No override in this bot (design gap). |
+| `mf.d3` no-target | pass | Resources 0. |
+| `mf.d4` tie | operation, East Valley, target Republic Army | Enemy: Republic Army and Valley Militia tie (-8, 4 pieces); die 3 picks Republic Army. Recruit is legal in East Valley and South Ridge; no Republic Army there; East Valley has the higher Pop. |
+| `mf.d5` linked-sa | operation, East Valley, target Republic Army | Same as setup (margins -7, tie to the die). No linked Special Activity (design gap). |
+| `mf.d6` fallback | pass | **Changed.** No Mountain Front pieces on the map: Recruit has no legal space. |
+| `mf.switch` tie | operation, East Valley, target Valley Militia | 3 Valley Militia Troops added in Dam: the margin tie stays, tie-break b (most pieces, 7 to 4) picks Valley Militia. |
+| `rb.d1` ineligible | none | River Brigades is not Eligible. |
+| `rb.d2` event-override | event, unshaded | No override in this bot (design gap). |
+| `rb.d3` no-target | pass | Resources 0. |
+| `rb.d4` tie | operation, Market Town, target Republic Army | Enemy tie to the die (3). Recruit is legal in River Delta and Market Town, both Pop 2: die 3 picks Market Town (first by name). |
+| `rb.d5` linked-sa | operation, Market Town, target Republic Army | Same as setup. No linked Special Activity (design gap). |
+| `rb.d6` fallback | pass | **Changed.** No River Brigades pieces on the map: Recruit has no legal space. |
+
+Differences found: no stored result was wrong for its patch. 9 cases did not test their label and got new patches (the 7 `fallback` cases, `rh.d4`, `du.d4`). Design gaps left open (need a designer): the 7 bots link no Special Activity, so their `linked-sa` cases cannot test one; 5 bots (`rh`, `du`, `vm`, `mf`, `rb`) have no Event override, so their `event-override` cases test `playIf` only.
