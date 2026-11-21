@@ -68,3 +68,23 @@ test("a dry-run board change is made with dropdowns and inputs", () => withApp(a
   const g = JSON.parse((await db())["data/users/u1/draft"].json);
   assert.equal(g.bots[0].dryRuns.find((d) => d.case === "no-target").patch.spaces.kerry.opinion, -1);
 }));
+
+// Schema 1.5.0 part A: a node's linked Special Activity may be a list, tried in order.
+test("a designer adds and removes an If none Special Activity on an Operation node", () => withApp(async ({ page, db }) => {
+  await botsTab(page);
+  await page.locator('.flow g[data-node="cw.garrison"]').click(); await frames(page);
+  assert.equal(await page.locator('[data-a="bot-linked-add"]').count(), 1, "the node form offers an If none entry");
+  await page.click('[data-a="bot-linked-add"]'); await frames(page);
+  assert.equal(await page.locator('select[data-b="bots/0/nodes/6/linked/1/action"]').count(), 1);
+  assert.match(await page.innerText(".nodeform"), /If none, try next/);
+  await page.waitForTimeout(1800);
+  let g = JSON.parse((await db())["data/users/u1/draft"].json);
+  const linked = g.bots[0].nodes[6].linked;
+  assert.equal(Array.isArray(linked) && linked.length, 2);
+  assert.equal(linked[1].timing, linked[0].timing, "a new entry copies the first entry's timing");
+  await page.click('[data-a="bot-linked-del"][data-i="1"]'); await frames(page);
+  await page.waitForTimeout(1800);
+  g = JSON.parse((await db())["data/users/u1/draft"].json);
+  assert.equal(Array.isArray(g.bots[0].nodes[6].linked), false, "one entry left: back to a single object");
+  assert.equal(await page.locator("#stepissues li.error").count(), 0);
+}));

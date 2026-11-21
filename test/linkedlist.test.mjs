@@ -138,3 +138,14 @@ test("Special Activity boxes print in list order with an if none arrow to the ne
   assert.doesNotMatch(boxOf(html, "sas", "Patrol"), /<b>if none<\/b>/);
   assert.match(boxOf(html, "sas", "Patrol"), /Skip Patrol if Dublin is not legal\./);
 });
+
+// A table used only by a later list entry still counts as used by that node, so it may read $target.
+import * as V from "../src/validate.mjs";
+test("a table used by a later linked entry belongs to that node", () => {
+  const g = JSON.parse(readFileSync(new URL("../examples/four-valleys.game.json", import.meta.url), "utf8"));
+  const b = g.bots[0], n = b.nodes.find((x) => x.id === "ra.op");
+  b.priorityTables.push({ id: "ra.t.pressure2", scope: "space", select: "one", steps: [{ n: 1, text: "Any space of the target.", filter: { op: "gte", args: [{ op: "factionCount", args: [{ var: "$target.id" }, { var: "$space.id" }, "*"] }, 1] } }], tiebreak: [] });
+  n.linked = [n.linked, { ...structuredClone(n.linked), table: "ra.t.pressure2" }];
+  assert.deepEqual((V.tableUsers?.(b, "ra.t.pressure2") ?? []).map((x) => x.id), ["ra.op"]);
+  assert.deepEqual(validate(g).errors, []);
+});

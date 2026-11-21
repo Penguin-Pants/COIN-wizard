@@ -311,7 +311,7 @@ function validateBot(game, bot, p, { err, warn, checkExpr, actionById, cardById,
   bot.priorityTables.forEach((t, i) => {
     const tp = `${p}/priorityTables/${i}`;
     // An opponent table reads $faction. A space table may read $target only if every node using it has a target.
-    const users = bot.nodes.filter((n) => n.table === t.id || linkedOf(n).some((L) => L.table === t.id));
+    const users = tableUsers(bot, t.id);
     const scope = t.scope === "opponent" ? { faction: true } : { target: users.length > 0 && users.every((n) => n.target !== undefined) };
     t.steps.forEach((s, j) => checkExpr(s.filter, `${tp}/steps/${j}`, scope));
     t.steps.forEach((s, j) => { if (s.n !== j + 1) err("numbering", tp, `Table ${t.id} steps must be numbered 1, 2, 3 in order`); });
@@ -352,6 +352,9 @@ function validateBot(game, bot, p, { err, warn, checkExpr, actionById, cardById,
     if (miss.length) err("dry-run-mismatch", dp, `${d.id}: ${miss.join("; ")}`);
   });
 }
+
+// Nodes that choose with a table: as the node's table or as the table of any linked entry.
+export const tableUsers = (bot, id) => bot.nodes.filter((n) => n.table === id || linkedOf(n).some((L) => L.table === id));
 
 function result(issues) {
   return { ok: !issues.some((i) => i.severity === "error"), errors: issues.filter((i) => i.severity === "error"), warnings: issues.filter((i) => i.severity === "warning") };
