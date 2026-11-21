@@ -177,10 +177,21 @@ function runStep(game, s, ctx) {
 // No space: no cost, also for a per-use cost.
 export const costOf = (action, spaceIds) => (action.cost.amount > 0 && spaceIds.length ? (action.cost.per === "space" ? action.cost.amount * spaceIds.length : action.cost.amount) : 0);
 
-// Gives back the cost paid for these spaces.
-export function refundCost(game, state, action, spaceIds) {
-  const back = costOf(action, spaceIds);
+// Gives back the cost of the dropped spaces: the cost for all chosen spaces minus the cost for the kept ones.
+export function refundCost(game, state, action, chosenIds, keptIds) {
+  const back = costOf(action, chosenIds) - costOf(action, keptIds);
   if (back) setTrack(game, state, action.cost.track, trackValue(game, state, action.cost.track) + back);
+}
+
+// A read-only view of the state with the cost of these spaces added back to the cost track,
+// with no clamp at the track end (for legality checks that must not count the reserved cost).
+export function withoutCost(game, state, action, spaceIds) {
+  const back = costOf(action, spaceIds);
+  if (!back) return state;
+  const id = action.cost.track, view = { ...state, tracks: { ...state.tracks }, resources: { ...state.resources } };
+  view.tracks[id] = (view.tracks[id] ?? 0) + back;
+  for (const f of game.factions) if (f.resourceTrack === id) view.resources[f.id] = trackValue(game, state, id) + back;
+  return view;
 }
 
 // Pays the cost of an action (in place).

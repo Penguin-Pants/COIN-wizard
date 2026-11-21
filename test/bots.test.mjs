@@ -183,3 +183,12 @@ test("the legality recheck after a before-timed Special Activity ignores the Ope
   const r = runDry(g, bot, corkArmy);
   assert.deepEqual(r.chosen, ["cork-city"]);
 });
+
+test("the recheck after a before-timed Special Activity never charges the Operation twice at the track cap", () => {
+  const { g, bot } = beforeSetup({ targetsExtra: true });
+  g.actions.find((a) => a.id === "crown.martial-law").steps.push({ op: "gain", track: "res.crown", amount: 30 });
+  bot.nodes.find((n) => n.id === "cw.chk").test = { op: "gte", args: [{ var: "self.resources" }, 30] };
+  const r = runDry(g, bot, corkArmy);
+  assert.deepEqual(r.chosen, ["cork-city"]);
+  assert.deepEqual(r.path.slice(-2), ["cw.chk", "cw.end-op"], "Resources stay at the cap of 30");
+});

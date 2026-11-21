@@ -2,7 +2,7 @@
 // effect steps on the dry-run state (src/effects.mjs) before its linked Special Activity
 // and before the next node, so each sees the board the action left.
 import { evalExpr } from "./expr.mjs";
-import { applyAction, payCost, refundCost } from "./effects.mjs";
+import { applyAction, payCost, refundCost, withoutCost } from "./effects.mjs";
 
 
 function affordable(state, action, game) {
@@ -129,12 +129,11 @@ export function runBot(game, bot, startState) {
       }
       if (before) {
         // Spaces the Special Activity made illegal are dropped and their cost is refunded. The
-        // reserved cost is given back first, so the recheck does not count the Operation's own cost;
-        // then only the kept spaces are paid for.
-        refundCost(game, state, action, result.chosen);
-        const legalNow = (id) => !!evalExpr(action.targets, { state, links: game.board.links, $space: state.spaces[id], ...extra });
+        // recheck reads a view without the Operation's own reserved cost.
+        const view = withoutCost(game, state, action, result.chosen);
+        const legalNow = (id) => !!evalExpr(action.targets, { state: view, links: game.board.links, $space: view.spaces[id], ...extra });
         const kept = result.chosen.filter(legalNow);
-        payCost(game, state, action, kept);
+        refundCost(game, state, action, result.chosen, kept);
         result.chosen = kept;
         applyAction(game, state, action, kept, extra, { pay: false });
       }
