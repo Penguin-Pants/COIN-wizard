@@ -50,7 +50,7 @@ test("a board background image is drawn under the spaces", () => {
 });
 
 // Known issue 3. Compared with a printed GMT faction aid (Colonial Twilight, FLN sheet,
-// examples/non-player-bot-sheets/Colonial_Twilight_FLN_Faction_Sheet.jpg): Operations, then Special
+// examples/player-faction-sheets/Colonial_Twilight_FLN_Faction_Sheet.jpg): Operations, then Special
 // Activities, then Victory for every faction with the final-scoring rule. Each action reads
 // Location, Cost, Procedure. Sections that sheet does not show come after Victory.
 test("the faction aid follows the section order of a printed GMT faction aid", () => {
