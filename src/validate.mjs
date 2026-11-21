@@ -3,7 +3,7 @@ import Ajv2020 from "ajv/dist/2020.js";
 import schema from "../schema/coin-game.schema.json" with { type: "json" };
 import { scanExpr, VAR_OK } from "./expr.mjs";
 import { deriveState, applyPatch } from "./state.mjs";
-import { runBot } from "./dryrun.mjs";
+import { runBot, linkedOf } from "./dryrun.mjs";
 
 const ajv = new Ajv2020({ allErrors: true, strict: false });
 const schemaCheck = ajv.compile(schema);
@@ -291,14 +291,18 @@ function validateBot(game, bot, p, { err, warn, checkExpr, actionById, cardById,
         else used.add(n.target);
       }
       if (!n.then || !n.onEmpty) err("incomplete-node", np, `Action ${n.id} needs "then" and "onEmpty" branches (empty target sets must have a next branch)`); else { ref(n.then, np, "Then branch"); ref(n.onEmpty, np, "Empty branch"); }
-      if (n.linked) {
-        const s = actionById[n.linked.action];
-        if (!s || s.kind !== "specialActivity" || s.faction !== bot.factionId) err("wrong-owner", np, `Linked action ${n.linked.action} must be a Special Activity of ${bot.factionId}`);
-        else if (s.timing && s.timing !== "any" && s.timing !== n.linked.timing) err("timing", np, `Linked timing ${n.linked.timing} conflicts with ${s.id} timing ${s.timing}`);
-        if (s && Array.isArray(s.accompanies) && !s.accompanies.includes(n.action)) err("not-accompanying", np, `${s.id} does not accompany ${n.action}`);
-        if (!tables[n.linked.table]) err("missing-ref", np, `Linked table not found: ${n.linked.table}`); else used.add(n.linked.table);
-        checkExpr(n.linked.trigger, `${np}/linked/trigger`, { target: n.target !== undefined });
-      }
+      // linked: one object (path .../linked) or a list (path .../linked/<i>). One timing per list.
+      const list = Array.isArray(n.linked);
+      linkedOf(n).forEach((L, j) => {
+        const lp = list ? `${np}/linked/${j}` : np;
+        const s = actionById[L.action];
+        if (!s || s.kind !== "specialActivity" || s.faction !== bot.factionId) err("wrong-owner", lp, `Linked action ${L.action} must be a Special Activity of ${bot.factionId}`);
+        else if (s.timing && s.timing !== "any" && s.timing !== L.timing) err("timing", lp, `Linked timing ${L.timing} conflicts with ${s.id} timing ${s.timing}`);
+        if (s && Array.isArray(s.accompanies) && !s.accompanies.includes(n.action)) err("not-accompanying", lp, `${s.id} does not accompany ${n.action}`);
+        if (j > 0 && L.timing !== n.linked[0].timing) err("linked-timing", lp, `Linked entries of ${n.id} must share one timing: ${L.timing} differs from ${n.linked[0].timing}`);
+        if (!tables[L.table]) err("missing-ref", lp, `Linked table not found: ${L.table}`); else used.add(L.table);
+        checkExpr(L.trigger, `${list ? lp : `${np}/linked`}/trigger`, { target: n.target !== undefined });
+      });
     } else if (n.kind === "end") {
       if (!n.outcome) err("incomplete-node", np, `End node ${n.id} needs an outcome`); else outcomes.add(n.outcome);
       if (n.outcome === "pass" && !seq.choices.includes("pass")) err("pass-illegal", np, "Bot passes but the rules do not allow Pass");
@@ -307,7 +311,7 @@ function validateBot(game, bot, p, { err, warn, checkExpr, actionById, cardById,
   bot.priorityTables.forEach((t, i) => {
     const tp = `${p}/priorityTables/${i}`;
     // An opponent table reads $faction. A space table may read $target only if every node using it has a target.
-    const users = bot.nodes.filter((n) => n.table === t.id || n.linked?.table === t.id);
+    const users = bot.nodes.filter((n) => n.table === t.id || linkedOf(n).some((L) => L.table === t.id));
     const scope = t.scope === "opponent" ? { faction: true } : { target: users.length > 0 && users.every((n) => n.target !== undefined) };
     t.steps.forEach((s, j) => checkExpr(s.filter, `${tp}/steps/${j}`, scope));
     t.steps.forEach((s, j) => { if (s.n !== j + 1) err("numbering", tp, `Table ${t.id} steps must be numbered 1, 2, 3 in order`); });

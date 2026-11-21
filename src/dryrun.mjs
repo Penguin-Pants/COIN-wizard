@@ -5,6 +5,9 @@ import { evalExpr } from "./expr.mjs";
 import { applyAction, payCost, refundCost, withoutCost } from "./effects.mjs";
 
 
+// A node's linked Special Activities as a list: none, one object or a list (schema 1.5.0).
+export const linkedOf = (node) => (node?.linked == null ? [] : [node.linked].flat());
+
 function affordable(state, action, game) {
   const f = game.factions.find((x) => x.id === state.self);
   const have = state.resources[f.id];
@@ -115,15 +118,19 @@ export function runBot(game, bot, startState) {
       // "after" and "during" resolve after the Operation's steps.
       // A before-timed Special Activity must leave enough for the Operation: the Operation's cost
       // is paid first, so the Special Activity's affordability check sees what is left.
-      const before = node.linked?.timing === "before";
+      // A list of linked Special Activities is tried in order (one timing per list): the first
+      // entry whose trigger holds and whose table finds a space runs.
+      const links = linkedOf(node);
+      const before = links[0]?.timing === "before";
       if (before) payCost(game, state, action, result.chosen);
       else applyAction(game, state, action, result.chosen, extra);
-      if (node.linked) {
-        const sa = actions[node.linked.action];
+      if (links.length) {
         let hit = null;
-        if (evalExpr(node.linked.trigger, { ...ctx, ...extra })) {
-          const sel = selectByTable(game, state, tables[node.linked.table], legalSpaces(game, state, sa, extra), sa, extra);
-          if (sel.length) { hit = `${sa.id}:${sel.map((s) => s.id).join(",")}`; applyAction(game, state, sa, sel.map((s) => s.id), extra); }
+        for (const L of links) {
+          const sa = actions[L.action];
+          if (!evalExpr(L.trigger, { ...ctx, ...extra })) continue;
+          const sel = selectByTable(game, state, tables[L.table], legalSpaces(game, state, sa, extra), sa, extra);
+          if (sel.length) { hit = `${sa.id}:${sel.map((s) => s.id).join(",")}`; applyAction(game, state, sa, sel.map((s) => s.id), extra); break; }
         }
         result.linked = hit ?? "skipped";
       }

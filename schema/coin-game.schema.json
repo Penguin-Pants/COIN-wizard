@@ -2380,35 +2380,19 @@
           "$ref": "#/$defs/id"
         },
         "linked": {
-          "type": "object",
-          "required": [
-            "action",
-            "timing",
-            "trigger",
-            "table"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "action": {
-              "$ref": "#/$defs/id"
+          "description": "One linked Special Activity, or a list tried in order: the first entry whose trigger holds and whose table finds a space runs.",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/linkedSA"
             },
-            "timing": {
-              "enum": [
-                "before",
-                "during",
-                "after"
-              ]
-            },
-            "trigger": {
-              "$ref": "#/$defs/expr"
-            },
-            "table": {
-              "$ref": "#/$defs/id"
-            },
-            "skipText": {
-              "type": "string"
+            {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/linkedSA"
+              }
             }
-          }
+          ]
         },
         "outcome": {
           "enum": [
@@ -2422,6 +2406,37 @@
         "target": {
           "$ref": "#/$defs/id",
           "description": "An opponent table. The action picks this enemy first; its space table can read $target."
+        }
+      }
+    },
+    "linkedSA": {
+      "type": "object",
+      "required": [
+        "action",
+        "timing",
+        "trigger",
+        "table"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "$ref": "#/$defs/id"
+        },
+        "timing": {
+          "enum": [
+            "before",
+            "during",
+            "after"
+          ]
+        },
+        "trigger": {
+          "$ref": "#/$defs/expr"
+        },
+        "table": {
+          "$ref": "#/$defs/id"
+        },
+        "skipText": {
+          "type": "string"
         }
       }
     }

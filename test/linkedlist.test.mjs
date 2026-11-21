@@ -1,0 +1,94 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { validate } from "../src/validate.mjs";
+import { runBot } from "../src/dryrun.mjs";
+import { deriveState, applyPatch } from "../src/state.mjs";
+
+// Schema 1.5.0 part A: botNode.linked may be a list. The first entry whose trigger holds and
+// whose table finds a legal space runs (docs/proposals/bot-model-gaps.md, part A).
+const example = () => JSON.parse(readFileSync(new URL("../examples/tan-war.game.json", import.meta.url), "utf8"));
+const node = (g, id) => g.bots[0].nodes.find((n) => n.id === id) ?? {};
+const codes = (g) => validate(g).errors.map((e) => e.code);
+// A crash returns { error } so a test fails on its assertion, not on the throw.
+const run = (g, patch = {}) => { try { return runBot(g, g.bots[0], applyPatch(deriveState(g, "crown"), patch)); } catch (e) { return { error: e.message }; } };
+
+// Tan War with a second Crown Special Activity, Patrol: free, only in Dublin. Garrison tries
+// Martial Law first, then Patrol.
+function withList() {
+  const g = example();
+  g.actions.push({
+    id: "crown.patrol", faction: "crown", kind: "specialActivity", name: "Patrol", plain: "Raise Repression by 1 in Dublin.",
+    dependsOn: ["repression"], cost: { track: "res.crown", amount: 0, per: "use" }, timing: "after", accompanies: "any",
+    targets: { op: "eq", args: [{ var: "$space.id" }, "dublin"] }, steps: [{ op: "track", id: "repression", delta: 1 }]
+  });
+  g.bots[0].priorityTables.push(
+    { id: "cw.t.patrol", scope: "space", select: "one", steps: [{ n: 1, text: "Dublin.", filter: true }], tiebreak: [] },
+    { id: "cw.t.none", scope: "space", select: "one", steps: [{ n: 1, text: "No space.", filter: false }], tiebreak: [] }
+  );
+  const n = node(g, "cw.garrison");
+  n.linked = [n.linked, { action: "crown.patrol", timing: "after", trigger: true, table: "cw.t.patrol", skipText: "Skip Patrol if Dublin is not legal." }];
+  return g;
+}
+
+test("the schema accepts a list of linked Special Activities and rejects an empty list", () => {
+  const g = withList();
+  assert.deepEqual(validate(g).errors, []);
+  node(g, "cw.garrison").linked = [];
+  assert.ok(codes(g).includes("schema"));
+});
+
+test("the first linked entry that holds and finds a space wins", () => {
+  // Resources 8: Garrison pays 2, 6 is left, so Martial Law's trigger (3 or more) holds (as in cw.d3).
+  const r = run(withList());
+  assert.deepEqual(r.chosen, ["cork-city"]);
+  assert.equal(r.linked, "crown.martial-law:cork-city");
+  assert.equal(r.outcome, "operationSpecial");
+});
+
+test("a false trigger passes to the next entry", () => {
+  // Resources 4: Garrison pays 2, 2 is left, so Martial Law's trigger fails. Patrol is free and Dublin is legal.
+  const r = run(withList(), { resources: { crown: 4 } });
+  assert.deepEqual(r.chosen, ["cork-city"]);
+  assert.equal(r.linked, "crown.patrol:dublin");
+  assert.equal(r.outcome, "operationSpecial");
+});
+
+test("an entry whose table finds no space passes to the next entry", () => {
+  const g = withList();
+  node(g, "cw.garrison").linked[0].table = "cw.t.none";
+  assert.equal(run(g).linked, "crown.patrol:dublin");
+});
+
+test("when no entry runs the result is skipped and the outcome is operation", () => {
+  const g = withList();
+  node(g, "cw.garrison").linked[1].trigger = false;
+  const r = run(g, { resources: { crown: 4 } });
+  assert.equal(r.linked, "skipped");
+  assert.equal(r.outcome, "operation");
+});
+
+test("each entry is checked: owner, accompanies, table and trigger", () => {
+  const g = withList();
+  const e = node(g, "cw.garrison").linked[1];
+  g.actions.find((a) => a.id === "crown.patrol").accompanies = ["crown.sweep"];
+  e.table = "cw.t.nope";
+  const errs = validate(g).errors.filter((x) => x.path === "/bots/0/nodes/6/linked/1");
+  assert.deepEqual(errs.map((x) => x.code).sort(), ["missing-ref", "not-accompanying"]);
+  e.action = "ira.boycott";
+  assert.ok(validate(g).errors.some((x) => x.code === "wrong-owner" && x.path === "/bots/0/nodes/6/linked/1"));
+});
+
+test("every entry of one list has the same timing", () => {
+  const g = withList();
+  g.actions.find((a) => a.id === "crown.patrol").timing = "any";
+  node(g, "cw.garrison").linked[1].timing = "before";
+  assert.ok(validate(g).errors.some((x) => x.code === "linked-timing" && x.path === "/bots/0/nodes/6/linked/1"));
+});
+
+test("an entry's timing must match its Special Activity", () => {
+  const g = withList();
+  node(g, "cw.garrison").linked[1].timing = "during";
+  node(g, "cw.garrison").linked[0].timing = "during";
+  assert.ok(validate(g).errors.some((x) => x.code === "timing" && x.path === "/bots/0/nodes/6/linked/1"));
+});
