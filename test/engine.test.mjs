@@ -31,6 +31,7 @@ for (const [f, g] of games) {
       if (d.expect.path) assert.deepEqual(r.path, d.expect.path, `${b.id} ${d.id} path`);
       if (d.expect.chosen) assert.deepEqual(r.chosen, d.expect.chosen, `${b.id} ${d.id} chosen`);
       if (d.expect.target) assert.equal(r.target, d.expect.target, `${b.id} ${d.id} target`);
+      if (d.expect.linked) assert.equal(r.linked, d.expect.linked, `${b.id} ${d.id} linked`);
     }
   });
 }

@@ -41,7 +41,7 @@ test("a designer builds a bot with a flowchart, a tie-break and an Event excepti
 
 test("Run now highlights the dry-run path in the flowchart", () => withApp(async ({ page }) => {
   await botsTab(page);
-  await page.locator("details.act > summary", { hasText: "linked-sa" }).click(); await frames(page);
+  await page.locator("details.act > summary", { hasText: "linked-sa cw.d5" }).click(); await frames(page);
   await page.locator('details.act[open] [data-a="dry-run"]').click(); await frames(page);
   assert.match(await page.innerText("#main"), /Result: operationSpecial\. Path: cw\.start > cw\.event > cw\.low > cw\.crack > cw\.end-op\. Chosen: tipperary\./);
   assert.equal(await page.locator(".flow g.node.hl").count(), 5);

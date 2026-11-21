@@ -1,7 +1,8 @@
-// Walk a bot decision graph against a board state. Chooses targets only.
-// Limit: board state is not changed between the main action and its linked
-// Special Activity, so cases must not depend on that change.
+// Walk a bot decision graph against a board state. An action pays its cost and runs its
+// effect steps on the dry-run state (src/effects.mjs) before its linked Special Activity
+// and before the next node, so each sees the board the action left.
 import { evalExpr } from "./expr.mjs";
+import { applyAction } from "./effects.mjs";
 
 
 function affordable(state, action, game) {
@@ -110,12 +111,13 @@ export function runBot(game, bot, startState) {
       result.path.push(node.id);
       result.chosen = chosen.map((s) => s.id);
       if (target) result.target = target;
+      applyAction(game, state, action, result.chosen, extra);
       if (node.linked) {
         const sa = actions[node.linked.action];
         let hit = null;
         if (evalExpr(node.linked.trigger, { ...ctx, ...extra })) {
           const sel = selectByTable(game, state, tables[node.linked.table], legalSpaces(game, state, sa, extra), sa, extra);
-          if (sel.length) hit = `${sa.id}:${sel.map((s) => s.id).join(",")}`;
+          if (sel.length) { hit = `${sa.id}:${sel.map((s) => s.id).join(",")}`; applyAction(game, state, sa, sel.map((s) => s.id), extra); }
         }
         result.linked = hit ?? "skipped";
       }

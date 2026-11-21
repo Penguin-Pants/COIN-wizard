@@ -7,7 +7,8 @@ import { validate } from "../src/validate.mjs";
 const schema = JSON.parse(readFileSync(new URL("../schema/coin-game.schema.json", import.meta.url), "utf8"));
 const example = () => JSON.parse(readFileSync(new URL("../examples/tan-war.game.json", import.meta.url), "utf8"));
 const ALL = ["place", "remove", "flip", "move", "shift", "track", "gain", "pay", "roll", "markerSet", "if", "choose"];
-const withStep = (st) => { const g = example(); g.actions[0].steps = [st]; return validate(g).errors; };
+// Schema and reference errors only: a new step also changes what the example's dry runs see.
+const withStep = (st) => { const g = example(); g.actions[0].steps = [st]; return validate(g).errors.filter((e) => !e.code.startsWith("dry-run")); };
 
 test("the catalogue covers all 12 ops", () => {
   assert.deepEqual(Object.keys(OPS).sort(), [...ALL].sort());

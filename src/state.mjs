@@ -26,6 +26,8 @@ export function deriveState(game, selfFactionId) {
     eligible: { ...game.setup.eligibility },
     resources,
     tracks: { ...game.setup.tracks },
+    // Pieces off the map, so effect steps can place and remove (src/effects.mjs).
+    pools: structuredClone(game.setup.pools ?? {}),
     card: { id: "e03", hasEffect: true, raisesSelf: false, lowersEnemy: false },
     dice: [],
     vars: {},

@@ -38,12 +38,27 @@ The wizard side of this session (one source received, one failed with Retry, the
 
 ## Known issues
 
-1. Dry runs do not change the board between an Operation and its linked Special Activity.
-2. No example uses `markerSet`. Its rule is in the engine contract only.
-3. The faction aid follows the content order of the COIN series foldouts (Operations, Special Activities, Victory). It was not compared with an image of a printed GMT sheet.
-4. Print output was checked by PDF page counts and page box sizes, not on paper.
-5. Claim checks call Claude. The browser tests use scripted answers. A real claim check needs the live artifact.
-6. The dry runs of the 3- and 4-faction examples store the results of a run as expected. They catch changes, not design intent.
-7. Live URL fetch from the artifact page is blocked by its content security policy (high confidence, from the platform guide). The chat handoff is the intake path.
+Status of each gap from the 2026-11-21 review (branch `fix/known-gaps`). Closed means fixed in code with a test. Open means it waits for a named human action (see "Human checklist").
 
-Closed on 2026-11-21 (3 and 4 factions are a core requirement): `other.resources` replaced by per-faction and rival values; bots pick their enemy with opponent tables; templates target a chosen enemy; a click-through test builds 3- and 4-faction games from empty.
+| # | Gap | Status | Evidence |
+|---|---|---|---|
+| 1 | Dry runs did not change the board between an Operation and its linked Special Activity | Closed | `src/effects.mjs:149` (`applyAction`), `src/dryrun.mjs:114`; tests "a linked Special Activity sees the board after its Operation" (`test/bots.test.mjs`), `test/effects.test.mjs`; Tan War dry run `cw.d7` |
+| 2 | No example uses `markerSet` | Open | |
+| 3 | Faction aid not compared with a printed GMT sheet | Open | |
+| 4 | Print checked by PDF only, not on paper | Open | |
+| 5 | Claim checks tested with scripted answers only | Open | |
+| 6 | 3- and 4-faction dry runs store run results as expected | Open | |
+| 8 | No bundle size limit | Open | |
+| 9 | Built page not tied to a commit | Open | |
+| 10 | `main` is not protected | Open | |
+
+Gap 1 changed four stored Tan War results. Each new value was derived by hand from the rules before the run:
+
+| Case | Before | After | Why |
+|---|---|---|---|
+| `cw.d3` | Operation, Martial Law skipped | Operation plus Martial Law in Cork City | Garrison places 2 Army in Cork City (1 to 3). Cork City is then legal (2 or more Army, Neutral) and wins CW-4 step 1 (Pop 2, Neutral). Resources 8, minus 2, is 6: the trigger (3 or more) holds. |
+| `cw.d4` | Operation, Martial Law skipped | Operation plus Martial Law in Belfast | Garrison places 2 Army in Belfast (patched to Neutral). Belfast: 3 Army, Pop 2, Neutral: step 1. |
+| `ib.d4` | Operation, Boycott skipped | Operation plus Boycott in Cork City | March moves all 3 Volunteers from County Cork into Cork City (count `any`). No Crown cubes (cleared), so they stay Underground. Cork City: 3 Underground, Pop 2, Neutral: IB-4 step 1. Resources 3, minus 1, is 2: the trigger (2 or more) holds. |
+| `ib.d5` | No die in the patch | Die 3 added; result unchanged (Boycott in Kerry) | Attack rolls a die. 3 is at or below the 3 Volunteers in County Cork: 1 Police is removed (no Army there), then all Volunteers flip to Active. Kerry (2 Underground, Neutral) is the only legal Boycott space. |
+
+Past Tan War files (`test/fixtures/`) keep the old results. After migration they flag these four cases and nothing else (`test/migrate.test.mjs`).

@@ -2930,7 +2930,7 @@
           "case": "no-target",
           "patch": {},
           "expect": {
-            "outcome": "operation",
+            "outcome": "operationSpecial",
             "path": [
               "cw.start",
               "cw.event",
@@ -2942,7 +2942,7 @@
             "chosen": [
               "cork-city"
             ],
-            "linked": "skipped"
+            "linked": "crown.martial-law:cork-city"
           }
         },
         {
@@ -2964,7 +2964,7 @@
             }
           },
           "expect": {
-            "outcome": "operation",
+            "outcome": "operationSpecial",
             "path": [
               "cw.start",
               "cw.event",
@@ -2976,7 +2976,7 @@
             "chosen": [
               "belfast"
             ],
-            "linked": "skipped"
+            "linked": "crown.martial-law:belfast"
           }
         },
         {
@@ -3039,6 +3039,36 @@
               "cw.sweep:empty",
               "cw.pass"
             ]
+          }
+        },
+        {
+          "id": "cw.d7",
+          "case": "linked-sa",
+          "patch": {
+            "spaces": {
+              "limerick": {
+                "pieces": {
+                  "crown.army": {
+                    "normal": 2
+                  }
+                }
+              }
+            }
+          },
+          "expect": {
+            "outcome": "operationSpecial",
+            "path": [
+              "cw.start",
+              "cw.event",
+              "cw.low",
+              "cw.crack:empty",
+              "cw.garrison",
+              "cw.end-op"
+            ],
+            "chosen": [
+              "cork-city"
+            ],
+            "linked": "crown.martial-law:cork-city"
           }
         }
       ]
@@ -3837,7 +3867,7 @@
             }
           },
           "expect": {
-            "outcome": "operation",
+            "outcome": "operationSpecial",
             "path": [
               "ib.start",
               "ib.event",
@@ -3850,7 +3880,7 @@
             "chosen": [
               "cork-city"
             ],
-            "linked": "skipped"
+            "linked": "ira.boycott:cork-city"
           }
         },
         {
@@ -3865,7 +3895,10 @@
                   }
                 }
               }
-            }
+            },
+            "dice": [
+              3
+            ]
           },
           "expect": {
             "outcome": "operationSpecial",
