@@ -100,7 +100,9 @@ const CSS = "@page{margin:10mm}*{box-sizing:border-box}body{font:9.5pt system-ui
   + ".cards{display:grid;grid-template-columns:repeat(3,63mm);grid-auto-rows:88mm;gap:0;width:189mm}.card{width:63mm;height:88mm;border:0.3mm dashed #777;padding:3mm;overflow:hidden;break-inside:avoid;page-break-inside:avoid;position:relative;font-size:8pt;display:flex;flex-direction:column;gap:1mm}.card h3{margin:0;font-size:10pt}.ord{display:flex;gap:1mm}.ord svg{width:7mm;height:7mm}.side{border-top:0.3mm solid #999;padding-top:1mm}.shaded{background:#e8e8e8}.i{font-style:italic}.cid{margin-top:auto;font-size:7pt}"
   + ".toks{display:flex;flex-wrap:wrap;gap:1.5mm}.tok svg{width:15mm;height:15mm;display:block}.grp{break-inside:avoid;page-break-inside:avoid;margin:0 0 3mm}.grp h2{font-size:10pt;margin:0 0 1mm}"
   + ".band{display:flex;gap:3mm;align-items:center;border-left:4mm solid var(--f);padding:2mm 3mm;margin:0 0 3mm;background:#f2f2f2}.band svg{width:10mm;height:10mm}.band h1{font-size:14pt;margin:0}.cols{columns:2;column-gap:6mm}.aidsec{break-inside:avoid;page-break-inside:avoid;margin:0 0 4mm;border-top:0.6mm solid var(--f);padding-top:1.5mm}.aidsec h2{font-size:10.5pt;margin:0 0 1.5mm}.aidsec h3{font-size:9.5pt;margin:2mm 0 0.5mm}.aidsec p{margin:0 0 1mm}.where{font-style:italic}.sheethead{display:flex;justify-content:center;align-items:center;gap:4mm;margin:0 0 1mm}.sheethead svg{width:11mm;height:11mm}.sheethead h1{font-size:20pt;margin:0}.sheetcols{display:grid;grid-template-columns:1fr 1fr;gap:4mm}.col h2{font-size:12pt;margin:0 0 1.5mm;text-align:center;color:var(--f)}.box{border:0.5mm solid #222;border-radius:2mm;padding:1.5mm 2mm;margin:0 0 3mm;break-inside:avoid;page-break-inside:avoid;font-size:8.5pt}.box p{margin:0 0 0.6mm;padding-left:3mm;text-indent:-3mm}.bt{display:flex;justify-content:space-between;align-items:baseline;gap:2mm;border-bottom:0.5mm solid var(--f);margin:0 0 1mm}.bt h3{font-size:11pt;margin:0}.bt small{font-weight:400;font-size:8pt}.tag{font-weight:700;font-size:8pt;color:var(--f);white-space:nowrap}.box.sa{background:color-mix(in srgb,var(--f) 14%,#fff)}.vic p.mine{background:color-mix(in srgb,var(--f) 28%,#fff);font-weight:600}.vic .i{font-style:italic;text-indent:0}.card-size,.counter-size{border:0.3mm solid #111;flex:none}.card-size{padding:3mm}.counter-size svg{width:100%;height:100%;display:block}.ruler{display:block}table{border-collapse:collapse;width:100%}td,th{border-bottom:0.2mm solid #bbb;text-align:left;padding:0.6mm 1mm;font-size:8.5pt}"
-  + ".np{font-size:8pt}.npgrid{display:grid;grid-template-columns:42mm 1fr 1fr;gap:3mm;align-items:start}.np .col h2{font-size:12pt;margin:0 0 1.5mm;text-align:center;color:var(--f)}.np .box{font-size:8pt}.np .box p{margin:0 0 0.5mm}.np .where{font-style:italic;padding-left:0;text-indent:0}.np .pr{padding-left:4mm;text-indent:-4mm}.tb{background:color-mix(in srgb,var(--f) 22%,#fff);border-radius:1mm;padding:0.5mm 1.5mm;margin:0.5mm 0 1mm}.arr{font-size:7.5pt;color:#333;text-indent:0;padding-left:0}.arr b{color:var(--f)}.skip{font-style:italic;text-align:right;text-indent:0}.box.evt{background:#f2f2f2}.gate{font-weight:600;border-bottom:0.2mm solid #999;padding-bottom:0.5mm}.gate b{color:var(--f)}.dia{margin:0 0 3mm;break-inside:avoid;page-break-inside:avoid}.dia .q{clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);background:color-mix(in srgb,var(--f) 22%,#fff);margin:0;padding:6mm 7mm;text-align:center;font-weight:600;font-size:7.5pt;min-height:22mm;display:flex;align-items:center;justify-content:center}.dia .arr{text-align:center;margin:0.3mm 0}.evi{break-inside:avoid;page-break-inside:avoid;border-top:0.6mm solid var(--f);margin-top:2mm;padding-top:1mm}.evi h2{font-size:12pt;margin:0 0 1mm}.evi p{margin:0 0 0.6mm;padding-left:4mm;text-indent:-4mm}.foot{font-size:7pt;color:#333;margin:1mm 0 0}.terms{font-size:7.5pt;margin:1mm 0 0}";
+  + ".np{font-size:8pt}.npgrid{display:grid;grid-template-columns:42mm 1fr 1fr;gap:3mm;align-items:start}.np .col h2{font-size:12pt;margin:0 0 1.5mm;text-align:center;color:var(--f)}.np .box{font-size:8pt}.np .box p{margin:0 0 0.5mm}.np .where{font-style:italic;padding-left:0;text-indent:0}.np .pr{padding-left:4mm;text-indent:-4mm}.tb{background:color-mix(in srgb,var(--f) 22%,#fff);border-radius:1mm;padding:0.5mm 1.5mm;margin:0.5mm 0 1mm}.arr{font-size:7.5pt;color:#333;text-indent:0;padding-left:0}.arr b{color:var(--f)}.skip{font-style:italic;text-align:right;text-indent:0}.box.evt{background:#f2f2f2}.gate{font-weight:600;border-bottom:0.2mm solid #999;padding-bottom:0.5mm}.gate b{color:var(--f)}.dia{margin:0 0 3mm;break-inside:avoid;page-break-inside:avoid}.dia .q{clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);background:color-mix(in srgb,var(--f) 22%,#fff);margin:0;padding:6mm 7mm;text-align:center;font-weight:600;font-size:7.5pt;min-height:22mm;display:flex;align-items:center;justify-content:center}.dia .arr{text-align:center;margin:0.3mm 0}.evi{break-inside:avoid;page-break-inside:avoid;border-top:0.6mm solid var(--f);margin-top:2mm;padding-top:1mm}.evi h2{font-size:12pt;margin:0 0 1mm}.evi p{margin:0 0 0.6mm;padding-left:4mm;text-indent:-4mm}.foot{font-size:7pt;color:#333;margin:1mm 0 0}.terms{font-size:7.5pt;margin:1mm 0 0}"
+  + ".ref h1{font-size:18pt;margin:0 0 1mm;text-align:center;letter-spacing:.04em}.ref h2{font-size:13pt;margin:3mm 0 1.5mm}.ref h3{margin:0;font-size:10pt}.flow{display:grid;grid-template-columns:38mm 1fr 6mm 1fr 44mm;gap:2mm;align-items:center}.flow .hd{text-align:center;grid-column:2}.flow .hd+.hd{grid-column:4}.flow>.side-note{grid-column:1}.sop1{grid-column:2}.flow .to{grid-column:3}.sop2{grid-column:4}.sides{grid-column:1}.sop1,.sop2,.ref .box{border:0.6mm solid #6b2b2b;border-radius:3mm;padding:2mm;background:#f3e6e3;text-align:center;font-weight:600;font-size:9pt}.ref .box h3{font-size:10pt}.ref .box p{font-weight:400;padding:0;text-indent:0;font-size:8pt}.to{text-align:center;font-size:14pt;color:#6b2b2b}.side-note{font-style:italic;font-size:8pt;color:#333}.right{grid-column:5;grid-row:2 / span 4;display:flex;flex-direction:column;gap:3mm}.ref .box.pass{grid-column:2 / span 3;text-align:center}.phase{margin:0 0 1.2mm;padding-left:4mm;text-indent:-4mm}"
+  + ".clist{display:grid;grid-template-columns:repeat(4,1fr);gap:1mm 4mm}.cgrp h3{font-size:9.5pt;margin:1mm 0 0.3mm;letter-spacing:.05em}.cgrp p,.scl{margin:0 0 0.2mm;font-size:8.5pt}.band2{background:#6b2b2b;color:#fff;padding:1mm 0;margin:0 0 1.5mm}.band2 h1{margin:0}.slist{display:grid;grid-template-columns:1fr 1fr;gap:4mm;align-items:start}.slist h2{font-size:11pt;margin:2mm 0 1mm}.tot{font-style:italic;font-weight:600;margin:1mm 0 0}";
 
 // Each faction has a shape by its position in the faction list, so printed pieces read in grayscale too.
 const SHAPE = ["sq", "circ", "hex", "oct"];
@@ -272,6 +274,50 @@ export function checklistMd(g) {
   return L.join("\n");
 }
 
+// Sequence of Play sheet: one page in the layout of the GMT Sequence of Play sheet
+// (examples/non-player-bot-sheets/A_Distant_Plain_Sequence_of_Play.JPEG). Top: the Event card flow,
+// 1st Eligible choice to 2nd Eligible options, then Adjust Eligibility and Next Card, with the Pass box.
+// Bottom: the scoring card phases. Built from rules.sequence, rules.scoring and the bots' Event side.
+export function sequenceHtml(g) {
+  const seq = g.rules.sequence, sc = g.rules.scoring;
+  const rows = seq.choices.filter((k) => seq.secondActorOptions[k]).map((k) => `<div class="sop1">${CHOICE[k]}</div><div class="to">→</div><div class="sop2">${h(orList(seq.secondActorOptions[k].map((x) => CHOICE[x])))}</div>`).join("");
+  const gain = (f) => { const n = seq.passGain[f.id] ?? 0; return `${h(f.name)} +${n} Resource${n === 1 ? "" : "s"}`; };
+  const sides = g.bots.length ? `<p class="side-note">Non-Player Event side: ${g.bots.map((b) => `${h(faction(g, b.factionId)?.name ?? b.factionId)} ${b.eventPolicy.side}`).join("; ")}.</p>` : "";
+  const stays = seq.eligibilityAfter.staysEligible.map((x) => CHOICE[x]);
+  const right = `<div class="right"><div class="box adj"><h3>Adjust Eligibility</h3><p>${stays.length ? `A faction that chose ${h(orList(stays))} stays Eligible. ` : ""}Every other faction that acted is Ineligible for the next card. ${h(seq.eligibilityAfter.bothIneligibleResult)}</p></div><div class="to">↓</div><div class="box next"><h3>Next Card</h3></div></div>`;
+  const body = `<section class="page ref">${head(g, "Sequence of Play")}<h1>Sequence of Play</h1>
+    <h2>Event Card</h2><div class="flow"><div class="side-note">${h(seq.firstActor)}</div><div class="hd"><h3>1st Eligible Faction</h3></div><div class="hd"><h3>2nd Eligible Faction</h3></div>${right}${rows}<div class="sides">${sides}</div><div class="box pass"><b>Pass:</b> ${g.factions.map(gain).join("; ")}.</div></div>
+    <h2>${h(sc.name)} Card</h2>${sc.phases.map((p) => `<p class="phase">▸ <b>${h(p.name)}:</b> ${h(p.text)}</p>`).join("")}<p class="phase"><b>Final ${h(sc.name)} card:</b> ${h(g.victory.finalScoring)}</p></section>`;
+  return doc(g, "Sequence of Play", body);
+}
+
+// Card List and Spaces List: one page in the layout of the GMT list sheet
+// (examples/non-player-bot-sheets/A_Distant_Plain_Non-Player_Bot_Card_and_Space_List.JPEG).
+// Event cards grouped by faction order (groups in faction order), then the scoring cards.
+// Spaces: one table per space type with Pop, end-points for lines, and the total Pop.
+const SPACE_TYPES = [["city", "Cities"], ["province", "Provinces"], ["line", "Lines of Communication"], ["sanctuary", "Sanctuaries"], ["custom", "Other spaces"]];
+export function listsHtml(g) {
+  const idx = (id) => g.factions.findIndex((f) => f.id === id);
+  const groups = new Map();
+  for (const c of g.deck.cards.filter((x) => x.type === "event")) { const k = c.order.join(" "); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(c); }
+  const cmp = (a, b) => { const x = a.split(" ").map(idx), y = b.split(" ").map(idx); for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] ?? -1) !== (y[i] ?? -1)) return (x[i] ?? -1) - (y[i] ?? -1); return 0; };
+  const sym = (id) => { const f = faction(g, id); return f ? `<span style="color:${f.color}">${h(f.symbol)}</span>` : h(id); };
+  const cards = [...groups.keys()].sort(cmp).map((k) => `<div class="cgrp"><h3 data-order="${h(k)}">${k.split(" ").map(sym).join("")}</h3>${groups.get(k).map((c) => `<p>${h(c.id.toUpperCase())}. ${h(c.title)}</p>`).join("")}</div>`).join("");
+  const scoring = g.deck.cards.filter((x) => x.type === "scoring");
+  const name = (id) => g.board.spaces.find((s) => s.id === id)?.name ?? id;
+  const ends = (s) => g.board.links.flatMap((l) => (l.from === s.id ? [l.to] : l.to === s.id ? [l.from] : [])).map(name).sort().join(" – ");
+  const tables = SPACE_TYPES.map(([t, title]) => {
+    const ss = g.board.spaces.filter((s) => s.type === t);
+    if (!ss.length) return "";
+    const line = t === "line";
+    return `<div><h2>${title}</h2><table><tr><th>Space</th>${line ? "<th>End-points</th>" : ""}<th>Pop</th></tr>${ss.map((s) => `<tr><td>${h(s.name)}</td>${line ? `<td>${h(ends(s))}</td>` : ""}<td>${s.attrs.pop}</td></tr>`).join("")}</table></div>`;
+  }).join("");
+  const total = g.board.spaces.reduce((n, s) => n + (s.attrs.pop ?? 0), 0);
+  const body = `<section class="page ref">${head(g, "Card and Spaces list")}<div class="band2"><h1>Card List</h1></div><div class="clist">${cards}</div>${scoring.length ? `<p class="scl"><b>${h(g.rules.scoring.name)}:</b> ${scoring.map((c) => `${h(c.id.toUpperCase())}. ${h(c.title)}`).join("; ")}</p>` : ""}
+    <div class="band2"><h1>Spaces List</h1></div><div class="slist">${tables}</div><p class="tot">Total Pop: ${total}</p></section>`;
+  return doc(g, "Card and Spaces list", body);
+}
+
 // All files of the print kit and exports, as [path, text] pairs.
 export function buildFiles(g, { toMermaid, toMarkdown, toPolicyYaml }) {
   const id = g.meta.gameId;
@@ -284,6 +330,8 @@ export function buildFiles(g, { toMermaid, toMarkdown, toPolicyYaml }) {
     [`kit/${id}.counters.html`, countersHtml(g)],
     [`kit/${id}.components.md`, checklistMd(g)],
     [`kit/${id}.print-test.html`, printTestHtml(g)],
+    [`kit/${id}.sequence.html`, sequenceHtml(g)],
+    [`kit/${id}.lists.html`, listsHtml(g)],
     ...g.factions.map((f) => [`kit/${id}.${f.id}.aid.html`, factionAidHtml(g, f)]),
     ...g.bots.map((b) => [`kit/${id}.${b.factionId}.nonplayer.html`, nonPlayerSheetHtml(g, b)])
   ];

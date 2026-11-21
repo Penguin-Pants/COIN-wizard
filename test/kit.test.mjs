@@ -312,3 +312,83 @@ test("an Event instruction states the side its override plays", () => {
   b.eventPolicy.overrides.push({ cardId: "e02", directive: "ignore", plain: "Never play it." });
   assert.match(np(g, b), /<b>Reprisals:<\/b> Never play it\.<\/p>/);
 });
+
+// Sequence of Play sheet and Card and Spaces list: one page each, in the layout of the GMT reference
+// sheets (examples/non-player-bot-sheets/A_Distant_Plain_Sequence_of_Play.JPEG and
+// A_Distant_Plain_Non-Player_Bot_Card_and_Space_List.JPEG). Built from rules, deck and board.
+const CHOICE_TEXT = { event: "Event", operationSpecial: "Operation plus Special Activity", operation: "Operation only", limitedOperation: "Limited Operation", pass: "Pass" };
+const sop = (g) => files(g)[`kit/${g.meta.gameId}.sequence.html`] ?? "";
+const lists = (g) => files(g)[`kit/${g.meta.gameId}.lists.html`] ?? "";
+const after = (html, mark) => { const i = html.indexOf(mark); return i < 0 ? "" : html.slice(i); };
+
+test("the kit has a one-page Sequence of Play sheet and a one-page Card and Spaces list", () => {
+  const g = example();
+  assert.equal((sop(g).match(/class="page/g) ?? []).length, 1);
+  assert.match(sop(g), /<h1>Sequence of Play<\/h1>/);
+  assert.equal((lists(g).match(/class="page/g) ?? []).length, 1);
+  assert.match(lists(g), /<h1>Card List<\/h1>[\s\S]*<h1>Spaces List<\/h1>/);
+});
+
+test("the Event card flow has one row per first choice, with the second faction's options", () => {
+  const g = example(), html = sop(g), seq = g.rules.sequence;
+  assert.match(html, /<h2>Event Card<\/h2>/);
+  assert.match(html, /<h3>1st Eligible Faction<\/h3>[\s\S]*<h3>2nd Eligible Faction<\/h3>/);
+  const rows = [...html.matchAll(/<div class="sop1">([^<]*)<\/div><div class="to">→<\/div><div class="sop2">([^<]*)<\/div>/g)].map((m) => [m[1], m[2]]);
+  const keys = seq.choices.filter((k) => seq.secondActorOptions[k]);
+  assert.deepEqual(rows.map((r) => r[0]), keys.map((k) => CHOICE_TEXT[k]));
+  assert.equal(rows[0][1], "Operation plus Special Activity, Operation only or Pass");
+});
+
+test("the Event card flow ends in Adjust Eligibility and Next Card, with Pass gains and the first-actor rule", () => {
+  const g = example(), html = sop(g), seq = g.rules.sequence;
+  const adj = after(html, '<div class="box adj">');
+  assert.ok(adj.includes("<h3>Adjust Eligibility</h3>"));
+  assert.ok(adj.includes("Limited Operation or Pass stays Eligible"));
+  assert.ok(adj.includes(seq.eligibilityAfter.bothIneligibleResult));
+  assert.ok(html.indexOf("<h3>Next Card</h3>") > html.indexOf("<h3>Adjust Eligibility</h3>"));
+  const pass = after(html, '<div class="box pass">');
+  assert.match(pass, /<b>Pass:<\/b> Crown \+2 Resources; Republic \+1 Resource\./);
+  assert.ok(html.includes(seq.firstActor));
+});
+
+test("the Sequence of Play sheet names the Event side each Non-Player plays", () => {
+  const g = example(), html = sop(g);
+  assert.match(html, /Non-Player Event side: Crown unshaded; Republic shaded\./);
+});
+
+test("the scoring card section lists every phase in order and the final-card rule", () => {
+  const g = example(), sc = after(sop(g), `<h2>${g.rules.scoring.name} Card</h2>`);
+  assert.ok(sc, "scoring section");
+  const at = g.rules.scoring.phases.map((p) => sc.indexOf(`<b>${p.name}:</b> ${p.text}`));
+  assert.ok(at.every((x, i) => x > 0 && (i === 0 || x > at[i - 1])), `phases ${at}`);
+  assert.ok(sc.includes(g.victory.finalScoring));
+});
+
+test("the Card list groups Event cards by faction order, groups in faction order, then the scoring cards", () => {
+  const g = example(), html = lists(g);
+  const groups = [...html.matchAll(/<h3 data-order="([^"]*)">/g)].map((m) => m[1]);
+  assert.deepEqual(groups, ["crown ira", "ira crown"]);
+  const grp = (o) => { const s = after(html, `<h3 data-order="${o}">`); return s.slice(0, s.indexOf("</div>")); };
+  for (const c of g.deck.cards.filter((x) => x.type === "event")) assert.ok(grp(c.order.join(" ")).includes(`${c.id.toUpperCase()}. ${c.title}`), c.id);
+  const sc = after(html, '<p class="scl">');
+  for (const c of g.deck.cards.filter((x) => x.type === "scoring")) assert.ok(sc.includes(`${c.id.toUpperCase()}. ${c.title}`), c.id);
+});
+
+test("a card whose faction order changes moves to its new group", () => {
+  const g = example(); g.deck.cards.find((c) => c.id === "e01").order = ["ira", "crown"];
+  const s = after(lists(g), '<h3 data-order="ira crown">');
+  assert.ok(s.slice(0, s.indexOf("</div>")).includes("E01. Flying Column"));
+});
+
+test("the Spaces list has a table per space type with Pop and a total, and end-points for lines", () => {
+  const g = example();
+  g.board.spaces.push({ id: "rail", name: "Rail Line", type: "line", attrs: { pop: 0 } });
+  g.board.links.push({ from: "rail", to: "dublin" }, { from: "rail", to: "belfast" });
+  const html = after(lists(g), "<h1>Spaces List</h1>");
+  const re = (x) => String(x).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  for (const s of g.board.spaces) assert.match(html, new RegExp(`<td>${re(s.name)}</td>.*?<td>${s.attrs.pop}</td>`), s.id);
+  assert.ok(html.indexOf("<h2>Cities</h2>") < html.indexOf("<h2>Provinces</h2>") && html.indexOf("<h2>Provinces</h2>") < html.indexOf("<h2>Lines of Communication</h2>"));
+  assert.match(html, /<td>Rail Line<\/td><td>Belfast – Dublin<\/td>/);
+  const total = g.board.spaces.reduce((n, s) => n + s.attrs.pop, 0);
+  assert.match(html, new RegExp(`Total Pop: ${total}<`));
+});
