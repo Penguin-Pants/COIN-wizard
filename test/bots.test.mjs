@@ -135,3 +135,23 @@ test("a before-timed Special Activity is skipped when it would leave too little 
   assert.deepEqual(r.chosen, ["cork-city"]);
   assert.equal(r.linked, "skipped", "Martial Law (2) plus Garrison (2) is more than 3 Resources");
 });
+
+// Follow-up 1 (rule chosen by the owner): after a before-timed Special Activity, the Operation
+// drops chosen spaces that are no longer legal and refunds their cost.
+test("a before-timed Special Activity that makes a chosen space illegal drops it and refunds its cost", () => {
+  const g = example();
+  const garrison = g.actions.find((a) => a.id === "crown.garrison");
+  garrison.targets = { op: "and", args: [garrison.targets, { op: "lt", args: [{ var: "$space.opinion" }, 1] }] };
+  const bot = g.bots[0];
+  const node = bot.nodes.find((n) => n.id === "cw.garrison");
+  node.linked.timing = "before"; node.linked.trigger = true;
+  // A check after the Operation: Resources 8 - 2 (Garrison) - 2 (Martial Law) + 2 (refund) = 6.
+  node.then = "cw.chk";
+  bot.nodes.push({ id: "cw.chk", kind: "condition", text: "Resources 6 or more?", test: { op: "gte", args: [{ var: "self.resources" }, 6] }, yes: "cw.end-op", no: "cw.pass" });
+  const d = { id: "x", case: "linked-sa", patch: { spaces: { "cork-city": { pieces: { "crown.army": { normal: 2 } } } } }, expect: { outcome: "none" } };
+  const r = runDry(g, bot, d);
+  assert.equal(r.error, undefined);
+  assert.equal(r.linked, "crown.martial-law:cork-city");
+  assert.deepEqual(r.chosen, [], "Cork City is at Support after Martial Law, so Garrison drops it");
+  assert.deepEqual(r.path.slice(-2), ["cw.chk", "cw.end-op"], "the Garrison cost is refunded");
+});

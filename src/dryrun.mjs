@@ -2,7 +2,7 @@
 // effect steps on the dry-run state (src/effects.mjs) before its linked Special Activity
 // and before the next node, so each sees the board the action left.
 import { evalExpr } from "./expr.mjs";
-import { applyAction, payCost } from "./effects.mjs";
+import { applyAction, payCost, refundCost } from "./effects.mjs";
 
 
 function affordable(state, action, game) {
@@ -127,7 +127,14 @@ export function runBot(game, bot, startState) {
         }
         result.linked = hit ?? "skipped";
       }
-      if (before) applyAction(game, state, action, result.chosen, extra, { pay: false });
+      if (before) {
+        // Spaces the Special Activity made illegal are dropped and their cost is refunded.
+        const legalNow = (id) => !!evalExpr(action.targets, { state, links: game.board.links, $space: state.spaces[id], ...extra });
+        const kept = result.chosen.filter(legalNow);
+        refundCost(game, state, action, result.chosen, kept);
+        result.chosen = kept;
+        applyAction(game, state, action, kept, extra, { pay: false });
+      }
       cur = node.then;
     } else if (node.kind === "end") {
       result.path.push(node.id);
