@@ -28,3 +28,16 @@ test("the build passes under the default limit of 700 KiB", () => {
     assert.match(r.stdout, /KiB \(limit 700 KiB\)/);
   } finally { r.done(); }
 });
+
+test("the built page names its commit and schema version", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { LATEST } = await import("../src/migrate.mjs");
+  const commit = spawnSync("git", ["rev-parse", "--short", "HEAD"], { cwd: root, encoding: "utf8" }).stdout.trim();
+  const r = build({});
+  try {
+    assert.equal(r.status, 0, r.stderr);
+    const html = readFileSync(r.out, "utf8");
+    assert.match(html, new RegExp(`<p id="about">Build ${commit}(-dirty)?, schema ${LATEST.replace(/[./]/g, "\\$&")}</p>`));
+    assert.match(r.stdout, new RegExp(`commit ${commit}`));
+  } finally { r.done(); }
+});
