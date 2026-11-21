@@ -42,7 +42,7 @@ Status of each gap from the 2026-11-21 review (branch `fix/known-gaps`). "Gap" i
 
 | Gap | Known issue | Gap text | Status | Evidence |
 |---|---|---|---|---|
-| 1 | 1 | Dry runs did not change the board between an Operation and its linked Special Activity | Closed | `src/effects.mjs:149` (`applyAction`), `src/dryrun.mjs:117`; tests "a linked Special Activity sees the board after its Operation" (`test/bots.test.mjs`), `test/effects.test.mjs`; Tan War dry run `cw.d7` |
+| 1 | 1 | Dry runs did not change the board between an Operation and its linked Special Activity | Closed | `src/effects.mjs:171` (`applyAction`), `src/dryrun.mjs:120`; tests "a linked Special Activity sees the board after its Operation" (`test/bots.test.mjs`), `test/effects.test.mjs`; Tan War dry run `cw.d7` |
 | 2 | 2 | No example uses `markerSet` | Closed | `examples/tan-war.game.json` (`crown.martial-law` sets `curfew`); `src/state.mjs:8` (markers start from setup), `src/kit.mjs:148` (`spaceMarkers`: counters and component list); test "Tan War Martial Law sets a Curfew marker that starts from setup" (`test/effects.test.mjs`) |
 | 3 | 6 | 3- and 4-faction dry runs store run results as expected | Closed (2 design gaps open) | Every case derived by hand: "Dry runs derived by hand" below; `test/engine.test.mjs` checks each one. Open: no bot in these examples links a Special Activity, and 5 bots have no Event override (see below). |
 | 4 | none | No bundle size limit | Closed | `scripts/build.mjs:9` (`LIMIT_KIB = 700`; the build exits 1 above it and writes no page); tests "the build fails with a clear message above the size limit" and "the build passes under the default limit of 700 KiB" (`test/build.test.mjs`). Size now: 570 KiB. |

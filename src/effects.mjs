@@ -34,7 +34,11 @@ function spaceOf(step, ctx, field) {
   return sp;
 }
 
-const statesOf = (game, pid) => game.factions.flatMap((f) => f.pieces).find((p) => p.id === pid)?.states ?? [];
+const pieceOf = (game, pid) => game.factions.flatMap((f) => f.pieces).find((p) => p.id === pid);
+const statesOf = (game, pid) => pieceOf(game, pid)?.states ?? [];
+const defaultOf = (game, pid) => pieceOf(game, pid)?.defaultState ?? statesOf(game, pid)[0];
+// Room left for a piece in a space under its maxPerSpace (no limit: Infinity).
+const roomIn = (game, sp, pid) => { const m = pieceOf(game, pid)?.maxPerSpace; return m ? Math.max(0, m - onSpace(sp, pid)) : Infinity; };
 const onSpace = (sp, pid, st) => Object.entries(sp.pieces[pid] ?? {}).filter(([s]) => st === undefined || s === st).reduce((n, [, c]) => n + c, 0);
 
 // How many: a number, "all" or "any" (as many as there are), "moved", or a formula.
@@ -82,9 +86,9 @@ function runStep(game, s, ctx) {
     case "place": {
       const sp = spaceOf(s, ctx, "to");
       const pool = poolOf(state, s.piece);
-      const n = qty(s.count, ctx, pool[s.from], s.piece, s.state);
+      const n = Math.min(qty(s.count, ctx, pool[s.from], s.piece, s.state), roomIn(game, sp, s.piece));
       pool[s.from] -= n;
-      addPieces(sp, s.piece, s.state ?? statesOf(game, s.piece)[0], n);
+      addPieces(sp, s.piece, s.state ?? defaultOf(game, s.piece), n);
       return;
     }
     case "remove": {
@@ -105,6 +109,8 @@ function runStep(game, s, ctx) {
       const n = qty(s.count, ctx, onSpace(sp, s.piece, s.from), s.piece, s.from);
       takePieces(game, sp, s.piece, s.from, n);
       addPieces(sp, s.piece, s.to, n);
+      // Moved pieces that flip keep counting as moved, in their new state.
+      if (s.count === "moved" && n) { const b = ctx.moved.byState; b[s.from] -= n; b[s.to] = (b[s.to] ?? 0) + n; }
       return;
     }
     case "move": {
@@ -115,10 +121,10 @@ function runStep(game, s, ctx) {
         : isPool(s.from) ? [] : [spaceOf({ ...s, filter: undefined }, ctx, "from")];
       const ok = (sp) => s.filter === undefined || !!evalExpr(s.filter, { ...ctx, $space: sp });
       const can = isPool(s.from) ? poolOf(state, s.piece)[s.from] : sources.filter(ok).reduce((t, sp) => t + onSpace(sp, s.piece, s.state), 0);
-      let left = qty(s.count, ctx, can, s.piece, s.state);
+      let left = Math.min(qty(s.count, ctx, can, s.piece, s.state), dest ? roomIn(game, dest, s.piece) : Infinity);
       const byState = {};
       const put = (st, k) => { if (dest) addPieces(dest, s.piece, st, k); else poolOf(state, s.piece)[s.to] += k; byState[st] = (byState[st] ?? 0) + k; };
-      if (isPool(s.from)) { poolOf(state, s.piece)[s.from] -= left; put(s.state ?? statesOf(game, s.piece)[0], left); left = 0; }
+      if (isPool(s.from)) { poolOf(state, s.piece)[s.from] -= left; put(s.state ?? defaultOf(game, s.piece), left); left = 0; }
       for (const sp of sources.filter(ok)) {
         if (!left) break;
         for (const [st, k] of takePieces(game, sp, s.piece, s.state, left)) { put(st, k); left -= k; }
@@ -151,13 +157,18 @@ function runStep(game, s, ctx) {
   }
 }
 
-// Pays the action's cost, then runs its steps once per chosen space (in the chosen order).
-// Changes state in place. extra: { $target } when the action picked an enemy.
-export function applyAction(game, state, action, spaceIds, extra = {}) {
-  const c = action.cost;
-  if (c.amount > 0) {
-    const total = c.per === "space" ? c.amount * spaceIds.length : c.amount;
-    setTrack(game, state, c.track, trackValue(game, state, c.track) - total);
-  }
+// The cost of an action in the chosen spaces.
+export const costOf = (action, spaceIds) => (action.cost.amount > 0 ? (action.cost.per === "space" ? action.cost.amount * spaceIds.length : action.cost.amount) : 0);
+
+// Pays the cost of an action (in place).
+export function payCost(game, state, action, spaceIds) {
+  const total = costOf(action, spaceIds);
+  if (total) setTrack(game, state, action.cost.track, trackValue(game, state, action.cost.track) - total);
+}
+
+// Pays the action's cost (unless pay is false), then runs its steps once per chosen space
+// (in the chosen order). Changes state in place. extra: { $target } when the action picked an enemy.
+export function applyAction(game, state, action, spaceIds, extra = {}, { pay = true } = {}) {
+  if (pay) payCost(game, state, action, spaceIds);
   for (const id of spaceIds) runSteps(game, action.steps, { state, links: game.board.links, $space: state.spaces[id], ...extra });
 }

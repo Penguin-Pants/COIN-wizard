@@ -125,3 +125,13 @@ test("a linked Special Activity with timing before sees the board before its Ope
   const r = runDry(g, g.bots[0], d);
   assert.equal(r.linked, "crown.martial-law:limerick");
 });
+
+test("a before-timed Special Activity is skipped when it would leave too little for the Operation", () => {
+  const g = example();
+  g.bots[0].nodes.find((n) => n.id === "cw.garrison").linked.timing = "before";
+  g.bots[0].nodes.find((n) => n.id === "cw.garrison").linked.trigger = true;
+  const d = { id: "x", case: "linked-sa", patch: { resources: { crown: 3 }, spaces: { limerick: { pieces: { "crown.army": { normal: 2 } } } } }, expect: { outcome: "none" } };
+  const r = runDry(g, g.bots[0], d);
+  assert.deepEqual(r.chosen, ["cork-city"]);
+  assert.equal(r.linked, "skipped", "Martial Law (2) plus Garrison (2) is more than 3 Resources");
+});

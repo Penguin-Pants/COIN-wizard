@@ -127,3 +127,25 @@ test("remove with count moved and no state removes the moved pieces in their own
   ]);
   assert.deepEqual(s.spaces["cork-city"].pieces["ira.volunteer"], { underground: 1 });
 });
+
+test("place without a state uses the piece's default state", () => {
+  const g = game(), s = deriveState(g, "ira");
+  g.factions[1].pieces[0].defaultState = "active";
+  run(g, s, "ira.rally", ["kerry"], [{ op: "place", piece: "ira.volunteer", count: 1, from: "available", to: "$space" }]);
+  assert.deepEqual(s.spaces.kerry.pieces["ira.volunteer"], { underground: 1, active: 1 });
+});
+
+test("place and move stop at the piece's limit per space", () => {
+  const g = game(), s = deriveState(g, "ira");
+  g.factions[1].pieces.find((p) => p.id === "ira.hq").maxPerSpace = 1;
+  run(g, s, "ira.rally", ["tipperary"], [{ op: "place", piece: "ira.hq", count: 1, from: "available", to: "$space" }]);
+  assert.deepEqual(s.spaces.tipperary.pieces["ira.hq"], { normal: 1 });
+  assert.equal(s.pools["ira.hq"].available, 3, "no piece leaves the pool");
+});
+
+test("count moved follows the moved pieces after they flip", () => {
+  const g = game(), s = deriveState(g, "ira");
+  const march = act(g, "ira.march");
+  run(g, s, "ira.march", ["cork-city"], [...march.steps, { op: "remove", piece: "ira.volunteer", count: "moved", to: "available" }]);
+  assert.deepEqual(s.spaces["cork-city"].pieces["ira.volunteer"], { underground: 1 });
+});

@@ -2,7 +2,7 @@
 // effect steps on the dry-run state (src/effects.mjs) before its linked Special Activity
 // and before the next node, so each sees the board the action left.
 import { evalExpr } from "./expr.mjs";
-import { applyAction } from "./effects.mjs";
+import { applyAction, payCost } from "./effects.mjs";
 
 
 function affordable(state, action, game) {
@@ -113,8 +113,11 @@ export function runBot(game, bot, startState) {
       if (target) result.target = target;
       // A linked Special Activity with timing "before" resolves on the board before the Operation;
       // "after" and "during" resolve after the Operation's steps.
+      // A before-timed Special Activity must leave enough for the Operation: the Operation's cost
+      // is paid first, so the Special Activity's affordability check sees what is left.
       const before = node.linked?.timing === "before";
-      if (!before) applyAction(game, state, action, result.chosen, extra);
+      if (before) payCost(game, state, action, result.chosen);
+      else applyAction(game, state, action, result.chosen, extra);
       if (node.linked) {
         const sa = actions[node.linked.action];
         let hit = null;
@@ -124,7 +127,7 @@ export function runBot(game, bot, startState) {
         }
         result.linked = hit ?? "skipped";
       }
-      if (before) applyAction(game, state, action, result.chosen, extra);
+      if (before) applyAction(game, state, action, result.chosen, extra, { pay: false });
       cur = node.then;
     } else if (node.kind === "end") {
       result.path.push(node.id);
