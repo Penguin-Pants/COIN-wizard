@@ -115,3 +115,26 @@ test("a single linked Special Activity keeps its bot aid text", () => {
 test("the policy file lists every linked Special Activity", () => {
   assert.match(toPolicyYaml(withList(), withList().bots[0]), /id: crown\.patrol\n\s+name: Patrol/);
 });
+
+// Non-Player sheet (src/kit.mjs, nonPlayerSheetHtml): Special Activity boxes in list order, with
+// "if none" arrows between them.
+import { buildFiles } from "../src/kit.mjs";
+import { toMermaid, toMarkdown } from "../src/botaid.mjs";
+const np = (g) => { try { return Object.fromEntries(buildFiles(g, { toMermaid, toMarkdown, toPolicyYaml }))[`kit/${g.meta.gameId}.crown.nonplayer.html`] ?? ""; } catch { return ""; } };
+const boxOf = (html, cls, name) => { const i = html.indexOf(`<h3>${name}`, html.indexOf(`class="col ${cls}"`)); return i < 0 ? "" : html.slice(i, html.indexOf("</section>", i)); };
+const label = (g, id) => `CW-${g.bots[0].priorityTables.findIndex((t) => t.id === id) + 1}`;
+
+test("the Operation box names each linked Special Activity, the next ones after if none", () => {
+  const g = withList(), html = np(g);
+  const op = boxOf(html, "ops", "Garrison");
+  assert.match(op, new RegExp(`<b>then</b> → Martial Law \\(${label(g, "cw.t.law")}\\)</p><p class="arr"><b>if none</b> → Patrol \\(${label(g, "cw.t.patrol")}\\)`));
+});
+
+test("Special Activity boxes print in list order with an if none arrow to the next", () => {
+  const g = withList(), html = np(g);
+  const sas = html.slice(html.indexOf('class="col sas"'));
+  assert.ok(sas.indexOf("<h3>Martial Law") >= 0 && sas.indexOf("<h3>Martial Law") < sas.indexOf("<h3>Patrol"), "Martial Law before Patrol");
+  assert.match(boxOf(html, "sas", "Martial Law"), new RegExp(`<p class="arr"><b>if none</b> → Patrol \\(${label(g, "cw.t.patrol")}\\)</p>`));
+  assert.doesNotMatch(boxOf(html, "sas", "Patrol"), /<b>if none<\/b>/);
+  assert.match(boxOf(html, "sas", "Patrol"), /Skip Patrol if Dublin is not legal\./);
+});
