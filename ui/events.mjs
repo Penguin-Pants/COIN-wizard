@@ -26,6 +26,8 @@ function applyBind(el) {
   else if (t === "j") { try { v = JSON.parse(el.value); el.classList.remove("invalid"); } catch { el.classList.add("invalid"); return; } } else v = el.value;
   // An empty claim note is removed, because the schema has no empty conflict note.
   // t "o": an optional field. An empty choice removes the key.
+  // t "on": an optional number. Empty removes the key.
+  if (t === "on") { if (v === "") { const o = getP(S.game, path.split("/").slice(0, -1).join("/")); delete o[path.split("/").pop()]; touch(); return; } v = Number(v); }
   if (t === "o" && v === "") { const o = getP(S.game, path.split("/").slice(0, -1).join("/")); delete o[path.split("/").pop()]; touch(); return; }
   if (/^brief\/claims\/\d+\/conflict$/.test(path) && v === "") { const o = getP(S.game, path.split("/").slice(0, -1).join("/")); delete o.conflict; touch(); return; }
   setP(S.game, path, v);

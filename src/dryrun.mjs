@@ -52,7 +52,7 @@ function pick(state, table, items, env, nameOf, limitOf) {
 export function selectByTable(game, state, table, legal, action, extra = {}) {
   const env = (sp) => ({ state, links: game.board.links, $space: sp, ...extra });
   const limitOf = (n) => {
-    let limit = table.limit ?? n;
+    let limit = Math.min(table.limit ?? n, action.maxSpaces ?? Infinity);
     if (action.cost.per === "space" && action.cost.amount > 0) limit = Math.min(limit, Math.floor(state.resources[state.self] / action.cost.amount));
     return limit;
   };

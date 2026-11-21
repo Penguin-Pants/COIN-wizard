@@ -72,14 +72,14 @@ export function rulebookMd(g) {
     `After acting: a faction that chose ${seq.eligibilityAfter.staysEligible.map((x) => CHOICE[x]).join(" or ")} stays Eligible. Every other acting faction is Ineligible for the next card. ${seq.eligibilityAfter.bothIneligibleResult}`, "",
     `Pass: ${g.factions.map((f) => `${f.name} gains ${seq.passGain[f.id]} Resource${seq.passGain[f.id] === 1 ? "" : "s"}`).join("; ")}. An Ineligible faction does not Pass and gains nothing.`, "");
   section(5, "Operations and Special Activities", T.operations);
-  for (const f of g.factions) {
-    L.push(`### ${f.name} (${f.symbol})`, f.role, "");
+  g.factions.forEach((f, fi) => {
+    L.push(`### 5.${fi + 1} ${f.name} (${f.symbol})`, f.role, "");
     for (const id of [...f.operations, ...f.specialActivities]) {
       const a = g.actions.find((x) => x.id === id);
-      L.push(`- **${a.name}** (${a.kind === "operation" ? "Operation" : "Special Activity"}, cost ${a.cost.amount} per ${a.cost.per}${a.limitedAllowed ? ", Limited allowed" : ""}). ${a.plain}`);
+      L.push(`- **${a.name}** (${a.ruleRef ? `${a.ruleRef}, ` : ""}${a.kind === "operation" ? "Operation" : "Special Activity"}, cost ${a.cost.amount} per ${a.cost.per}${a.limitedAllowed ? ", Limited allowed" : ""}). ${a.purpose ? `${a.purpose} ` : ""}${a.plain}`);
     }
     L.push("");
-  }
+  });
   section(6, "Events", T.events);
   section(7, g.rules.scoring.name, T.scoring);
   g.rules.scoring.phases.forEach((p, i) => L.push(`${i + 1}. **${p.name}.** ${p.text}`));
@@ -99,7 +99,7 @@ export function rulebookMd(g) {
 const CSS = "@page{margin:10mm}*{box-sizing:border-box}body{font:9.5pt system-ui,sans-serif;margin:0;color:#111}.page{width:190mm;break-after:page;page-break-after:always}.page:last-of-type{break-after:auto;page-break-after:auto}.note{font-size:8.5pt;margin:0 0 3mm}.draft{font-weight:700;letter-spacing:.08em}"
   + ".cards{display:grid;grid-template-columns:repeat(3,63mm);grid-auto-rows:88mm;gap:0;width:189mm}.card{width:63mm;height:88mm;border:0.3mm dashed #777;padding:3mm;overflow:hidden;break-inside:avoid;page-break-inside:avoid;position:relative;font-size:8pt;display:flex;flex-direction:column;gap:1mm}.card h3{margin:0;font-size:10pt}.ord{display:flex;gap:1mm}.ord svg{width:7mm;height:7mm}.side{border-top:0.3mm solid #999;padding-top:1mm}.shaded{background:#e8e8e8}.i{font-style:italic}.cid{margin-top:auto;font-size:7pt}"
   + ".toks{display:flex;flex-wrap:wrap;gap:1.5mm}.tok svg{width:15mm;height:15mm;display:block}.grp{break-inside:avoid;page-break-inside:avoid;margin:0 0 3mm}.grp h2{font-size:10pt;margin:0 0 1mm}"
-  + ".band{display:flex;gap:3mm;align-items:center;border-left:4mm solid var(--f);padding:2mm 3mm;margin:0 0 3mm;background:#f2f2f2}.band svg{width:10mm;height:10mm}.band h1{font-size:14pt;margin:0}.cols{columns:2;column-gap:6mm}.aidsec{break-inside:avoid;page-break-inside:avoid;margin:0 0 4mm;border-top:0.6mm solid var(--f);padding-top:1.5mm}.aidsec h2{font-size:10.5pt;margin:0 0 1.5mm}.aidsec h3{font-size:9.5pt;margin:2mm 0 0.5mm}.aidsec p{margin:0 0 1mm}.where{font-style:italic}.card-size,.counter-size{border:0.3mm solid #111;flex:none}.card-size{padding:3mm}.counter-size svg{width:100%;height:100%;display:block}.ruler{display:block}table{border-collapse:collapse;width:100%}td,th{border-bottom:0.2mm solid #bbb;text-align:left;padding:0.6mm 1mm;font-size:8.5pt}";
+  + ".band{display:flex;gap:3mm;align-items:center;border-left:4mm solid var(--f);padding:2mm 3mm;margin:0 0 3mm;background:#f2f2f2}.band svg{width:10mm;height:10mm}.band h1{font-size:14pt;margin:0}.cols{columns:2;column-gap:6mm}.aidsec{break-inside:avoid;page-break-inside:avoid;margin:0 0 4mm;border-top:0.6mm solid var(--f);padding-top:1.5mm}.aidsec h2{font-size:10.5pt;margin:0 0 1.5mm}.aidsec h3{font-size:9.5pt;margin:2mm 0 0.5mm}.aidsec p{margin:0 0 1mm}.where{font-style:italic}.sheethead{display:flex;justify-content:center;align-items:center;gap:4mm;margin:0 0 1mm}.sheethead svg{width:11mm;height:11mm}.sheethead h1{font-size:20pt;margin:0}.sheetcols{display:grid;grid-template-columns:1fr 1fr;gap:4mm}.col h2{font-size:12pt;margin:0 0 1.5mm;text-align:center;color:var(--f)}.box{border:0.5mm solid #222;border-radius:2mm;padding:1.5mm 2mm;margin:0 0 3mm;break-inside:avoid;page-break-inside:avoid;font-size:8.5pt}.box p{margin:0 0 0.6mm;padding-left:3mm;text-indent:-3mm}.bt{display:flex;justify-content:space-between;align-items:baseline;gap:2mm;border-bottom:0.5mm solid var(--f);margin:0 0 1mm}.bt h3{font-size:11pt;margin:0}.bt small{font-weight:400;font-size:8pt}.tag{font-weight:700;font-size:8pt;color:var(--f);white-space:nowrap}.box.sa{background:color-mix(in srgb,var(--f) 14%,#fff)}.vic p.mine{background:color-mix(in srgb,var(--f) 28%,#fff);font-weight:600}.vic .i{font-style:italic;text-indent:0}.card-size,.counter-size{border:0.3mm solid #111;flex:none}.card-size{padding:3mm}.counter-size svg{width:100%;height:100%;display:block}.ruler{display:block}table{border-collapse:collapse;width:100%}td,th{border-bottom:0.2mm solid #bbb;text-align:left;padding:0.6mm 1mm;font-size:8.5pt}";
 
 // Each faction has a shape by its position in the faction list, so printed pieces read in grayscale too.
 const SHAPE = ["sq", "circ", "hex", "oct"];
@@ -159,25 +159,47 @@ export function countersHtml(g) {
   return doc(g, "counters", `<section class="page">${head(g, "counters")}${groups}<div class="grp"><h2>Markers</h2><ul>${markers}</ul></div></section>`);
 }
 
-// Faction player aid, in the order of a printed GMT faction aid (checked against the Colonial
-// Twilight FLN sheet): Operations (3.0), Special Activities (4.0), then Victory (7.0) for every
-// faction with the final-scoring rule. Each action reads Location, Cost, Procedure. Forces, the
-// sequence of play and scoring follow; that sheet does not show them.
+// Joins names as "A", "A or B", "A, B or C".
+const orList = (xs) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, -1).join(", ")} or ${xs.at(-1)}`);
+
+// The Special Activities of a faction that may go with an Operation. null: not known.
+export function pairingOf(g, f, op) {
+  const sas = f.specialActivities.map((id) => g.actions.find((a) => a.id === id)).filter(Boolean);
+  // Unknown while any Special Activity leaves its pairing unstated: print no tag rather than a wrong one.
+  if (!sas.length || sas.some((s) => s.accompanies === undefined)) return null;
+  const ok = sas.filter((s) => s.accompanies === "any" || (Array.isArray(s.accompanies) && s.accompanies.includes(op.id)));
+  return { all: ok.length === sas.length, names: ok.map((s) => s.name) };
+}
+
+// Player faction sheet. Front page mirrors the printed GMT faction sheets (examples/player-faction-sheets/):
+// an Operations column and a Special Activities column of boxes, then a Victory box for every faction
+// with this faction's row marked. Rule sections follow this kit's rulebook (5: actions, 8: Victory).
+// The back page holds forces, the sequence of play and scoring, which the front sheet does not show.
 export function factionAidHtml(g, f) {
   const acts = (kind) => f[kind === "operation" ? "operations" : "specialActivities"].map((id) => g.actions.find((a) => a.id === id)).filter(Boolean);
   const track = (id) => g.tracks.find((t) => t.id === id)?.name ?? id;
-  const act = (a) => `<h3>${h(a.name)}</h3><p class="where"><b>Location:</b> ${h(condTextOf(g, a.targets))}.</p><p><b>Cost:</b> ${a.cost.amount ? `${a.cost.amount} ${h(track(a.cost.track))} per ${a.cost.per}` : "free"}${a.kind === "operation" ? `. ${a.limitedAllowed ? "Allowed" : "Not allowed"} as a Limited Operation` : `. Timing: ${h(a.timing ?? "after")} the Operation`}.</p><p><b>Procedure:</b> ${h(a.plain)}</p>`;
+  const name = (id) => g.actions.find((a) => a.id === id)?.name ?? id;
+  const cost = (a) => `${a.cost.amount ? `${a.cost.amount} ${h(track(a.cost.track))} per ${a.cost.per === "space" ? "space selected" : "use"}` : "free"}${a.kind === "operation" ? `. ${a.limitedAllowed ? "Allowed" : "Not allowed"} as a Limited Operation` : `. Timing: ${h(a.timing ?? "after")} the Operation`}.`;
+  const title = (a, tag) => `<div class="bt"><h3>${h(a.name)}${a.ruleRef ? ` <small>(${h(a.ruleRef)})</small>` : ""}</h3>${tag ? `<span class="tag">${h(tag)}</span>` : ""}</div>`;
+  const line = (k, v) => `<p><b>${k}:</b> ${v}</p>`;
+  const where = (a) => (a.targets === true ? "Any space." : `${h(condTextOf(g, a.targets))}.`);
+  const opTag = (a) => { const p = pairingOf(g, f, a); return !p ? "" : p.all ? "+ any Special Activity?" : p.names.length ? `+ ${orList(p.names)}?` : "no Special Activity"; };
+  const op = (a) => `<section class="box">${title(a, opTag(a))}${a.purpose ? line("Purpose", h(a.purpose)) : ""}${line("Location", where(a))}${line("Cost", cost(a))}${line("Procedure", h(a.plain))}</section>`;
+  const accOf = (a) => (a.accompanies === "any" ? "Any." : Array.isArray(a.accompanies) ? `${h(orList(a.accompanies.map(name)))}.` : "");
+  const sa = (a) => `<section class="box sa">${title(a, a.maxSpaces ? `max ${a.maxSpaces} space${a.maxSpaces === 1 ? "" : "s"}` : "")}${a.purpose ? line("Purpose", h(a.purpose)) : ""}${a.accompanies !== undefined ? line("Accompanying Op", accOf(a)) : ""}${line("Location", where(a))}${line("Cost", cost(a))}${line("Procedure", h(a.plain))}</section>`;
+  const victory = `<section class="box vic"><div class="bt"><h3>Victory (8)</h3></div>${g.victory.perFaction.map((v) => `<p${v.factionId === f.id ? ' class="mine"' : ""}><b>${h(faction(g, v.factionId).name)}:</b> ${h(v.plain)} Threshold: ${v.threshold}.</p>`).join("") || "<p>No victory rule yet.</p>"}<p class="i">${h(g.victory.checkAt)} ${h(g.victory.finalScoring)}</p></section>`;
   const seq = g.rules.sequence;
   const mine = new Set([f.resourceTrack, ...f.pieces.map((p) => p.id)]);
   const scoring = g.rules.scoring.phases.flatMap((p) => p.steps.filter((st) => [...mine].some((id) => JSON.stringify(st).includes(`"${id}"`))).map((st) => `<li>${h(p.name)}: ${h(stepTextOf(g, st))}</li>`));
-  const body = `<section class="page" style="--f:${f.color}"><div class="band">${shapeSvg(g, f)}<div><h1>${h(f.name)}: faction aid</h1>${head(g, "player aid")}</div></div><div class="cols">
-    <section class="aidsec"><h2>3.0 Operations</h2>${acts("operation").map(act).join("") || "<p>None yet.</p>"}</section>
-    <section class="aidsec"><h2>4.0 Special Activities</h2>${acts("specialActivity").map(act).join("") || "<p>None yet.</p>"}</section>
-    <section class="aidsec"><h2>7.0 Victory</h2>${g.victory.perFaction.map((v) => `<p><b>${h(faction(g, v.factionId).name)}:</b> ${h(v.plain)} Threshold: ${v.threshold}.</p>`).join("") || "<p>No victory rule yet.</p>"}<p>${h(g.victory.checkAt)} ${h(g.victory.finalScoring)}</p></section>
+  const sym = shapeSvg(g, f);
+  const body = `<section class="page sheet" style="--f:${f.color}"><div class="sheethead">${sym}<h1>${h(f.name)}</h1>${sym}</div>${head(g, "faction sheet")}
+    <div class="sheetcols"><div class="col ops"><h2>${f.type === "state" ? "COIN Operations" : "Insurgent Operations"}</h2>${acts("operation").map(op).join("") || "<p>None yet.</p>"}</div>
+    <div class="col sas"><h2>Special Activities</h2>${acts("specialActivity").map(sa).join("") || "<p>None yet.</p>"}${victory}</div></div></section>
+    <section class="page back" style="--f:${f.color}"><div class="band">${sym}<div><h1>${h(f.name)}: reference</h1>${head(g, "faction sheet, back")}</div></div><div class="cols">
     <section class="aidsec"><h2>Forces</h2><table><tr><th>Piece</th><th>Sides</th><th>Supply</th></tr>${f.pieces.map((p) => `<tr><td>${h(p.name)}${p.isBase ? " (base)" : ""}</td><td>${p.states.map(h).join(" / ")}</td><td>${p.supply}</td></tr>`).join("")}</table><p>Resources: ${h(track(f.resourceTrack))}. Pass: gain ${seq.passGain[f.id] ?? 0}.</p></section>
     <section class="aidsec"><h2>Sequence of play</h2><p>${h(seq.firstActor)}</p><table><tr><th>1st Eligible chose</th><th>2nd Eligible may choose</th></tr>${Object.entries(seq.secondActorOptions).map(([k, v]) => `<tr><td>${CHOICE[k]}</td><td>${v.map((x) => CHOICE[x]).join(", ")}</td></tr>`).join("")}</table></section>
     <section class="aidsec"><h2>At each ${h(g.rules.scoring.name)} card</h2>${scoring.length ? `<ul>${scoring.join("")}</ul>` : "<p>Nothing specific to this faction.</p>"}</section></div></section>`;
-  return doc(g, `${f.name} aid`, body);
+  return doc(g, `${f.name} faction sheet`, body);
 }
 
 export function checklistMd(g) {

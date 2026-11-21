@@ -23,7 +23,7 @@ async function check(html) {
     const boxes = await page.$$eval(".page", (els) => els.map((e) => e.getBoundingClientRect()).map((r) => ({ w: r.width, h: r.height })));
     const counts = {};
     for (const format of ["Letter", "A4"]) counts[format] = pdfPages(await page.pdf({ format, preferCSSPageSize: false }));
-    const units = await page.$$eval(".card, .aidsec", (els) => els.map((e) => getComputedStyle(e).breakInside));
+    const units = await page.$$eval(".card, .aidsec, .box", (els) => els.map((e) => getComputedStyle(e).breakInside));
     return { boxes, counts, units };
   } finally { await page.close(); }
 }
@@ -36,12 +36,13 @@ for (const [g, out] of kits) {
     assert.deepEqual(r.counts, { Letter: r.boxes.length, A4: r.boxes.length });
     assert.ok(r.units.every((x) => x === "avoid"));
   });
-  test(`${g.meta.gameId}: every faction aid fits one page at Letter and A4 and never splits a section`, async () => {
+  // The faction sheet is two pages: the GMT-style front and a reference back.
+  test(`${g.meta.gameId}: every faction sheet prints front and back at Letter and A4 and never splits a section`, async () => {
     for (const f of g.factions) {
       const r = await check(out[`kit/${g.meta.gameId}.${f.id}.aid.html`]);
-      assert.equal(r.boxes.length, 1);
-      assert.ok(r.boxes[0].w <= 190 * MM + 1);
-      assert.deepEqual(r.counts, { Letter: 1, A4: 1 }, f.id);
+      assert.equal(r.boxes.length, 2);
+      for (const b of r.boxes) { assert.ok(b.w <= 190 * MM + 1); assert.ok(b.h <= 259 * MM + 1, `${f.id} page height ${b.h / MM} mm`); }
+      assert.deepEqual(r.counts, { Letter: 2, A4: 2 }, f.id);
       assert.ok(r.units.every((x) => x === "avoid"));
     }
   });

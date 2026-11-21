@@ -82,3 +82,22 @@ test("a shape the rows cannot show opens as data and stays editable", () => {
     assert.deepEqual(out.actions[0].targets, { op: "gte", args: [{ op: "mul", args: [3, { var: "$space.pop" }] }, 2] });
   }, opts);
 });
+
+// Schema 1.4.0 sheet fields: Purpose, Rule section, Accompanies and Max spaces.
+test("sheet fields of an action are set without JSON and an empty one is removed", () => withApp(async ({ page, db }) => {
+  await goStep(page, 1); await openAction(page, "crown.martial-law");
+  const law = 'details.act[data-k="act-crown.martial-law"]';
+  await page.fill(`${law} input[data-b="actions/3/purpose"]`, "Tighten control.");
+  await page.fill(`${law} input[data-b="actions/3/ruleRef"]`, "4.2.1");
+  await page.fill(`${law} input[data-b="actions/3/maxSpaces"]`, "1");
+  await page.click(`${law} input[data-a="acc-toggle"][data-op="crown.garrison"]`); await frames(page);
+  await page.click(`${law} input[data-a="acc-toggle"][data-op="crown.crackdown"]`); await frames(page);
+  let a = (await saved(page, db)).actions[3];
+  assert.deepEqual([a.purpose, a.ruleRef, a.maxSpaces, a.accompanies], ["Tighten control.", "4.2.1", 1, ["crown.garrison", "crown.crackdown"]]);
+  assert.equal(await page.innerText("#blockers"), "No blockers");
+  await page.fill(`${law} input[data-b="actions/3/maxSpaces"]`, "");
+  await page.click(`${law} input[data-a="acc-toggle"][data-op="any"]`); await frames(page);
+  a = (await saved(page, db)).actions[3];
+  assert.equal("maxSpaces" in a, false);
+  assert.equal(a.accompanies, "any");
+}));

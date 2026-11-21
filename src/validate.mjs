@@ -151,6 +151,11 @@ export function validate(game) {
     if (!trackIds.has(a.cost.track)) err("missing-ref", `${p}/cost`, `Cost track not found: ${a.cost.track}`);
     else if (a.faction && game.factions.find((f) => f.id === a.faction)?.resourceTrack !== a.cost.track) warn("cost-track", `${p}/cost`, `Action ${a.id} is paid from ${a.cost.track}, not its faction's resource track`);
     if (a.kind === "specialActivity" && !a.timing) err("no-timing", p, `Special Activity ${a.id} needs a timing`);
+    if (a.kind !== "specialActivity") for (const k of ["accompanies", "maxSpaces"]) if (a[k] !== undefined) err("sa-only", `${p}/${k}`, `${k} is for Special Activities only (${a.id})`);
+    if (a.kind === "specialActivity" && Array.isArray(a.accompanies)) for (const id of a.accompanies) {
+      const o = actionById[id];
+      if (!o || o.kind !== "operation" || o.faction !== a.faction) err("missing-ref", `${p}/accompanies`, `${a.id} accompanies ${id}, which is not an Operation of ${a.faction}`);
+    }
     checkExpr(a.targets, `${p}/targets`);
     checkSteps(a.steps, `${p}/steps`);
     for (const d of a.dependsOn ?? []) {
@@ -290,6 +295,7 @@ function validateBot(game, bot, p, { err, warn, checkExpr, actionById, cardById,
         const s = actionById[n.linked.action];
         if (!s || s.kind !== "specialActivity" || s.faction !== bot.factionId) err("wrong-owner", np, `Linked action ${n.linked.action} must be a Special Activity of ${bot.factionId}`);
         else if (s.timing && s.timing !== "any" && s.timing !== n.linked.timing) err("timing", np, `Linked timing ${n.linked.timing} conflicts with ${s.id} timing ${s.timing}`);
+        if (s && Array.isArray(s.accompanies) && !s.accompanies.includes(n.action)) err("not-accompanying", np, `${s.id} does not accompany ${n.action}`);
         if (!tables[n.linked.table]) err("missing-ref", np, `Linked table not found: ${n.linked.table}`); else used.add(n.linked.table);
         checkExpr(n.linked.trigger, `${np}/linked/trigger`, { target: n.target !== undefined });
       }
