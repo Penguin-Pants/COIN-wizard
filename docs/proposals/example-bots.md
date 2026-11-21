@@ -33,7 +33,7 @@ Other cases of these bots: only `outcome` can change, from `operation` to `opera
 
 - Ambush (`f2.ambush`, `f3.ambush`) accompanies Strike only, and both bots have no Strike node. So a Strike node must come first (Strike, then Recruit on `onEmpty`).
 - **Limit (verified):** Ambush needs an Underground Guerrilla. Strike flips every Guerrilla in its space to Active. A dry run resolves a `during` Special Activity after the Operation's steps (`src/dryrun.mjs:120`), so Ambush can never hit the Strike space. Scratch run of `rh.d5` with 2 Troops in Tenements only: Ambush `skipped` with die 1 and with die 3.
-- Ambush can hit a second space: the linked table picks from every legal space (`src/dryrun.mjs:125`). Scratch run with 2 Troops and 2 Underground Guerrillas in Tenements and in Rail Yards, dice 3, 3, 3: Strike in Tenements, then `f2.ambush:space3` (Rail Yards), operationSpecial, timing `during` unchanged. (Found by the Codex review of this PR.) The printed rule says Ambush is in the Strike space, so this result does not test the rule as printed.
+- Ambush can hit a second space: the linked table picks from every legal space (`src/dryrun.mjs:125`). Scratch run with 2 Troops and 2 Underground Guerrillas in Tenements and in Rail Yards, dice 3, 3, 3: Strike in Tenements, then `f2.ambush:space3` (Rail Yards), operationSpecial, timing `during` unchanged. (Found by the Codex review of this PR.) The example Ambush rule does not require the Strike space (`plain`: "In one space with an Underground Guerrilla and an enemy Troops"), so this result follows the printed rule.
 - `before` timing also works (scratch run: operationSpecial, linked `f2.ambush:space7`), but the validator requires the linked timing to equal the Special Activity's timing (`src/validate.mjs:297`). So Ambush's own timing must change from `during` to `before`: a game-rule change.
 - With a Strike node, the other `rh` cases keep their outcome and chosen spaces; their stored `path` gains `rh.strike:empty` (scratch run of all 6 cases).
 
@@ -46,7 +46,7 @@ Other cases of these bots: only `outcome` can change, from `operation` to `opera
 ## Decisions needed
 
 1. Part 1 for `pa`, `du`, `ra`, `vm`, `rb`: approve or decline.
-2. Part 2: change Ambush timing to `before` in both games, link Ambush with `during` and accept a second-space Ambush, or leave `rh` and `mf` with no linked Special Activity (document as a model limit).
+2. Part 2: change Ambush timing to `before` in both games, link Ambush with `during` (it can hit any other legal space, as the example rule allows), or leave `rh` and `mf` with no linked Special Activity (document as a model limit).
 3. Part 3: `ignore` overrides as above, or another directive per bot.
 
 ## Decisions (owner, 2026-11-21)
