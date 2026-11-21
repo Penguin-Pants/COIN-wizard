@@ -143,3 +143,14 @@ test("a markerSet step in a scoring phase also prints its marker", async () => {
   g.rules.scoring.phases[0].steps.push({ op: "markerSet", marker: "truce", value: true, space: "dublin" });
   assert.deepEqual(spaceMarkers(g).map((m) => m.id).sort(), ["curfew", "truce"]);
 });
+
+test("no pairing tag prints while any Special Activity of the faction leaves its pairing unstated", () => {
+  const g = example(), f = g.factions[0];
+  g.actions.find((a) => a.id === "crown.martial-law").accompanies = ["crown.garrison"];
+  const raid = { ...structuredClone(g.actions.find((a) => a.id === "crown.martial-law")), id: "crown.raid", name: "Raid" };
+  delete raid.accompanies;
+  g.actions.push(raid); f.specialActivities.push("crown.raid");
+  const fr = front(sheet(g, f));
+  assert.doesNotMatch(box(fr, "Sweep"), /class="tag"/);
+  assert.doesNotMatch(box(fr, "Garrison"), /class="tag"/);
+});

@@ -199,3 +199,13 @@ test("the recheck view stays inside the track range", () => {
   const r = runDry(g, bot, corkArmy);
   assert.deepEqual(r.chosen, ["cork-city"]);
 });
+
+test("a linked Special Activity never takes more spaces than its maxSpaces", () => {
+  const g = example();
+  const t = g.bots[0].priorityTables.find((x) => x.id === "cw.t.law");
+  t.select = "all"; t.limit = 2;
+  // Belfast at Neutral with 2 Army, and Cork City after Garrison: both match CW-4 step 1.
+  const d = { id: "x", case: "linked-sa", patch: { spaces: { belfast: { opinion: 0, pieces: { "crown.army": { normal: 2 } } } } }, expect: { outcome: "none" } };
+  const r = runDry(g, g.bots[0], d);
+  assert.equal(r.linked.split(":")[1].split(",").length, 1, r.linked);
+});

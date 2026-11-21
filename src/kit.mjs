@@ -162,10 +162,11 @@ export function countersHtml(g) {
 // Joins names as "A", "A or B", "A, B or C".
 const orList = (xs) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, -1).join(", ")} or ${xs.at(-1)}`);
 
-// The Special Activities of a faction that may go with an Operation. null: no Special Activity says.
+// The Special Activities of a faction that may go with an Operation. null: not known.
 export function pairingOf(g, f, op) {
   const sas = f.specialActivities.map((id) => g.actions.find((a) => a.id === id)).filter(Boolean);
-  if (!sas.some((s) => s.accompanies !== undefined)) return null;
+  // Unknown while any Special Activity leaves its pairing unstated: print no tag rather than a wrong one.
+  if (!sas.length || sas.some((s) => s.accompanies === undefined)) return null;
   const ok = sas.filter((s) => s.accompanies === "any" || (Array.isArray(s.accompanies) && s.accompanies.includes(op.id)));
   return { all: ok.length === sas.length, names: ok.map((s) => s.name) };
 }
