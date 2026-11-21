@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coin-wizard.local/schema/coin-game/1.4.0",
+  "$id": "https://coin-wizard.local/schema/coin-game/1.5.0",
   "title": "COIN game definition",
   "description": "Single source of truth for one COIN-style prototype. All printable text and diagrams are generated from a confirmed revision of this document.",
   "type": "object",
@@ -32,7 +32,7 @@
       "additionalProperties": false,
       "properties": {
         "schemaVersion": {
-          "const": "coin-game/1.4.0"
+          "const": "coin-game/1.5.0"
         },
         "gameId": {
           "$ref": "#/$defs/id"
