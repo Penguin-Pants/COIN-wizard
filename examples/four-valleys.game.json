@@ -1,0 +1,3492 @@
+{
+  "meta": {
+    "schemaVersion": "coin-game/1.3.0",
+    "gameId": "four-valleys",
+    "title": "Four Valleys",
+    "revision": 1,
+    "status": "draft",
+    "factionCount": 4,
+    "supplies": [
+      "One six-sided die",
+      "Pencil and paper, or markers for tracks",
+      "Small tokens or the printed counter sheet"
+    ],
+    "credits": [
+      {
+        "what": "Setting and names",
+        "source": "Original fictional setting for this example",
+        "license": "Same as the tool"
+      }
+    ],
+    "progress": {}
+  },
+  "brief": {
+    "conflict": "A fictional mountain republic where the Republic Army and the Valley Militia fight the Mountain Front and the River Brigades.",
+    "wikipedia": {
+      "url": "",
+      "title": "",
+      "method": "supplied"
+    },
+    "overview": {
+      "period": "A fictional civil war of about three years.",
+      "actors": [
+        "Republic Army",
+        "Valley Militia",
+        "Mountain Front",
+        "River Brigades"
+      ],
+      "places": [
+        "Capital",
+        "High Pass",
+        "River Delta"
+      ],
+      "turningPoints": [
+        "The pass is closed",
+        "The dam is taken",
+        "The ceasefire talks"
+      ]
+    },
+    "sources": [],
+    "claims": [
+      {
+        "id": "d1",
+        "kind": "design",
+        "text": "The setting is fictional. It shows the tool with more than two factions."
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "f1",
+      "name": "Republic Army",
+      "type": "state",
+      "preset": "state",
+      "color": "#2b6cc4",
+      "symbol": "A",
+      "role": "Holds the capital and the roads. Wins by keeping valleys loyal.",
+      "pieces": [
+        {
+          "id": "f1.troops",
+          "name": "Troops",
+          "states": [
+            "normal"
+          ],
+          "defaultState": "normal",
+          "supply": 15,
+          "isBase": false
+        },
+        {
+          "id": "f1.police",
+          "name": "Police",
+          "states": [
+            "normal"
+          ],
+          "defaultState": "normal",
+          "supply": 12,
+          "isBase": false
+        },
+        {
+          "id": "f1.base",
+          "name": "Base",
+          "states": [
+            "normal"
+          ],
+          "defaultState": "normal",
+          "supply": 6,
+          "isBase": true,
+          "maxPerSpace": 2
+        }
+      ],
+      "operations": [
+        "f1.deploy",
+        "f1.march"
+      ],
+      "specialActivities": [
+        "f1.pressure"
+      ],
+      "resourceTrack": "res.f1"
+    },
+    {
+      "id": "f2",
+      "name": "Valley Militia",
+      "type": "state",
+      "preset": "state",
+      "color": "#b8520a",
+      "symbol": "M",
+      "role": "Local defense units that guard their own villages. Wins by keeping valleys loyal.",
+      "pieces": [
+        {
+          "id": "f2.troops",
+          "name": "Troops",
+          "states": [
+            "normal"
+          ],
+          "defaultState": "normal",
+          "supply": 15,
+          "isBase": false
+        },
+        {
+          "id": "f2.police",
+          "name": "Police",
+          "states": [
+            "normal"
+          ],
+          "defaultState": "normal",
+          "supply": 12,
+          "isBase": false
+        },
+        {
+          "id": "f2.base",
+          "name": "Base",
+          "states": [
+            "normal"
+          ],
+          "defaultState": "normal",
+          "supply": 6,
+          "isBase": true,
+          "maxPerSpace": 2
+        }
+      ],
+      "operations": [
+        "f2.deploy",
+        "f2.build"
+      ],
+      "specialActivities": [
+        "f2.fortify"
+      ],
+      "resourceTrack": "res.f2"
+    },
+    {
+      "id": "f3",
+      "name": "Mountain Front",
+      "type": "guerrilla",
+      "preset": "guerrilla",
+      "color": "#2f8a4e",
+      "symbol": "F",
+      "role": "Guerrillas in the high passes. Wins by turning valleys and holding camps.",
+      "pieces": [
+        {
+          "id": "f3.guerrilla",
+          "name": "Guerrillas",
+          "states": [
+            "underground",
+            "active"
+          ],
+          "defaultState": "underground",
+          "supply": 20,
+          "isBase": false
+        },
+        {
+          "id": "f3.base",
+          "name": "Base",
+          "states": [
+            "normal"
+          ],
+          "defaultState": "normal",
+          "supply": 8,
+          "isBase": true,
+          "maxPerSpace": 2
+        }
+      ],
+      "operations": [
+        "f3.recruit",
+        "f3.strike"
+      ],
+      "specialActivities": [
+        "f3.ambush"
+      ],
+      "resourceTrack": "res.f3"
+    },
+    {
+      "id": "f4",
+      "name": "River Brigades",
+      "type": "guerrilla",
+      "preset": "guerrilla",
+      "color": "#7a4fb5",
+      "symbol": "B",
+      "role": "Guerrillas along the rivers. Wins by turning valleys and holding camps.",
+      "pieces": [
+        {
+          "id": "f4.guerrilla",
+          "name": "Guerrillas",
+          "states": [
+            "underground",
+            "active"
+          ],
+          "defaultState": "underground",
+          "supply": 20,
+          "isBase": false
+        },
+        {
+          "id": "f4.base",
+          "name": "Base",
+          "states": [
+            "normal"
+          ],
+          "defaultState": "normal",
+          "supply": 8,
+          "isBase": true,
+          "maxPerSpace": 2
+        }
+      ],
+      "operations": [
+        "f4.recruit",
+        "f4.build"
+      ],
+      "specialActivities": [
+        "f4.raid"
+      ],
+      "resourceTrack": "res.f4"
+    }
+  ],
+  "board": {
+    "spaces": [
+      {
+        "id": "space1",
+        "name": "Capital",
+        "type": "city",
+        "attrs": {
+          "pop": 3
+        }
+      },
+      {
+        "id": "space2",
+        "name": "High Pass",
+        "type": "province",
+        "attrs": {
+          "pop": 1
+        }
+      },
+      {
+        "id": "space3",
+        "name": "North Valley",
+        "type": "province",
+        "attrs": {
+          "pop": 2
+        }
+      },
+      {
+        "id": "space4",
+        "name": "East Valley",
+        "type": "province",
+        "attrs": {
+          "pop": 2
+        }
+      },
+      {
+        "id": "space5",
+        "name": "River Delta",
+        "type": "province",
+        "attrs": {
+          "pop": 2
+        }
+      },
+      {
+        "id": "space6",
+        "name": "Dam",
+        "type": "province",
+        "attrs": {
+          "pop": 1
+        }
+      },
+      {
+        "id": "space7",
+        "name": "West Valley",
+        "type": "province",
+        "attrs": {
+          "pop": 1
+        }
+      },
+      {
+        "id": "space8",
+        "name": "Lake Shore",
+        "type": "province",
+        "attrs": {
+          "pop": 1
+        }
+      },
+      {
+        "id": "space9",
+        "name": "South Ridge",
+        "type": "province",
+        "attrs": {
+          "pop": 1
+        }
+      },
+      {
+        "id": "space10",
+        "name": "Market Town",
+        "type": "province",
+        "attrs": {
+          "pop": 2
+        }
+      }
+    ],
+    "links": [
+      {
+        "id": "l1",
+        "from": "space2",
+        "to": "space3"
+      },
+      {
+        "id": "l2",
+        "from": "space1",
+        "to": "space2"
+      },
+      {
+        "id": "l3",
+        "from": "space3",
+        "to": "space4"
+      },
+      {
+        "id": "l4",
+        "from": "space4",
+        "to": "space5"
+      },
+      {
+        "id": "l5",
+        "from": "space1",
+        "to": "space4"
+      },
+      {
+        "id": "l6",
+        "from": "space5",
+        "to": "space6"
+      },
+      {
+        "id": "l7",
+        "from": "space6",
+        "to": "space7"
+      },
+      {
+        "id": "l8",
+        "from": "space1",
+        "to": "space6"
+      },
+      {
+        "id": "l9",
+        "from": "space7",
+        "to": "space8"
+      },
+      {
+        "id": "l10",
+        "from": "space8",
+        "to": "space9"
+      },
+      {
+        "id": "l11",
+        "from": "space1",
+        "to": "space8"
+      },
+      {
+        "id": "l12",
+        "from": "space9",
+        "to": "space10"
+      },
+      {
+        "id": "l13",
+        "from": "space10",
+        "to": "space2"
+      },
+      {
+        "id": "l14",
+        "from": "space1",
+        "to": "space10"
+      }
+    ],
+    "presentation": {
+      "style": "schematic",
+      "positions": {
+        "space1": {
+          "x": 360,
+          "y": 240
+        },
+        "space2": {
+          "x": 529,
+          "y": 356
+        },
+        "space3": {
+          "x": 398,
+          "y": 417
+        },
+        "space4": {
+          "x": 250,
+          "y": 396
+        },
+        "space5": {
+          "x": 153,
+          "y": 302
+        },
+        "space6": {
+          "x": 153,
+          "y": 178
+        },
+        "space7": {
+          "x": 250,
+          "y": 84
+        },
+        "space8": {
+          "x": 398,
+          "y": 63
+        },
+        "space9": {
+          "x": 529,
+          "y": 124
+        },
+        "space10": {
+          "x": 580,
+          "y": 240
+        }
+      },
+      "background": null
+    }
+  },
+  "tracks": [
+    {
+      "id": "res.f1",
+      "name": "Republic Army Resources",
+      "min": 0,
+      "max": 30,
+      "start": 5,
+      "owner": "f1"
+    },
+    {
+      "id": "res.f2",
+      "name": "Valley Militia Resources",
+      "min": 0,
+      "max": 30,
+      "start": 5,
+      "owner": "f2"
+    },
+    {
+      "id": "res.f3",
+      "name": "Mountain Front Resources",
+      "min": 0,
+      "max": 30,
+      "start": 5,
+      "owner": "f3"
+    },
+    {
+      "id": "res.f4",
+      "name": "River Brigades Resources",
+      "min": 0,
+      "max": 30,
+      "start": 5,
+      "owner": "f4"
+    }
+  ],
+  "setup": {
+    "placements": [
+      {
+        "space": "space1",
+        "piece": "f1.troops",
+        "state": "normal",
+        "count": 2
+      },
+      {
+        "space": "space2",
+        "piece": "f1.troops",
+        "state": "normal",
+        "count": 2
+      },
+      {
+        "space": "space1",
+        "piece": "f2.troops",
+        "state": "normal",
+        "count": 2
+      },
+      {
+        "space": "space3",
+        "piece": "f2.troops",
+        "state": "normal",
+        "count": 2
+      },
+      {
+        "space": "space4",
+        "piece": "f3.guerrilla",
+        "state": "underground",
+        "count": 2
+      },
+      {
+        "space": "space9",
+        "piece": "f3.guerrilla",
+        "state": "underground",
+        "count": 2
+      },
+      {
+        "space": "space5",
+        "piece": "f4.guerrilla",
+        "state": "underground",
+        "count": 2
+      },
+      {
+        "space": "space10",
+        "piece": "f4.guerrilla",
+        "state": "underground",
+        "count": 2
+      }
+    ],
+    "spaceAttributes": {
+      "space1": {
+        "opinion": 0
+      },
+      "space2": {
+        "opinion": 1
+      },
+      "space3": {
+        "opinion": -1
+      },
+      "space4": {
+        "opinion": 0
+      },
+      "space5": {
+        "opinion": 0
+      },
+      "space6": {
+        "opinion": 0
+      },
+      "space7": {
+        "opinion": 0
+      },
+      "space8": {
+        "opinion": 0
+      },
+      "space9": {
+        "opinion": 0
+      },
+      "space10": {
+        "opinion": 0
+      }
+    },
+    "pools": {
+      "f1.troops": {
+        "available": 11,
+        "outOfPlay": 0
+      },
+      "f1.police": {
+        "available": 12,
+        "outOfPlay": 0
+      },
+      "f1.base": {
+        "available": 6,
+        "outOfPlay": 0
+      },
+      "f2.troops": {
+        "available": 11,
+        "outOfPlay": 0
+      },
+      "f2.police": {
+        "available": 12,
+        "outOfPlay": 0
+      },
+      "f2.base": {
+        "available": 6,
+        "outOfPlay": 0
+      },
+      "f3.guerrilla": {
+        "available": 16,
+        "outOfPlay": 0
+      },
+      "f3.base": {
+        "available": 8,
+        "outOfPlay": 0
+      },
+      "f4.guerrilla": {
+        "available": 16,
+        "outOfPlay": 0
+      },
+      "f4.base": {
+        "available": 8,
+        "outOfPlay": 0
+      }
+    },
+    "tracks": {
+      "res.f1": 5,
+      "res.f2": 5,
+      "res.f3": 5,
+      "res.f4": 5
+    },
+    "eligibility": {
+      "f1": true,
+      "f2": true,
+      "f3": true,
+      "f4": true
+    }
+  },
+  "rules": {
+    "sequence": {
+      "choices": [
+        "event",
+        "operationSpecial",
+        "operation",
+        "limitedOperation",
+        "pass"
+      ],
+      "firstActor": "The first two Eligible factions in the card's faction order act, in that order. If only one faction is Eligible, it acts alone.",
+      "secondActorOptions": {
+        "event": [
+          "operationSpecial",
+          "operation",
+          "pass"
+        ],
+        "operationSpecial": [
+          "limitedOperation",
+          "pass"
+        ],
+        "operation": [
+          "limitedOperation",
+          "event",
+          "pass"
+        ],
+        "pass": [
+          "event",
+          "operationSpecial",
+          "operation",
+          "pass"
+        ]
+      },
+      "eligibilityAfter": {
+        "staysEligible": [
+          "limitedOperation",
+          "pass"
+        ],
+        "bothIneligibleResult": "If every faction would be Ineligible, all factions become Eligible."
+      },
+      "passGain": {
+        "f1": 2,
+        "f2": 2,
+        "f3": 1,
+        "f4": 1
+      }
+    },
+    "scoring": {
+      "name": "Reckoning",
+      "phases": [
+        {
+          "id": "victory",
+          "name": "Victory check",
+          "text": "Compute each faction's victory score. A faction above its threshold wins at once. After the final Reckoning the highest margin wins.",
+          "steps": []
+        },
+        {
+          "id": "income",
+          "name": "Income",
+          "text": "Each faction gains Resources.",
+          "steps": [
+            {
+              "op": "gain",
+              "track": "res.f1",
+              "amount": {
+                "op": "add",
+                "args": [
+                  2,
+                  {
+                    "op": "count",
+                    "args": [
+                      "f1.base",
+                      "*",
+                      "*"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "op": "gain",
+              "track": "res.f2",
+              "amount": {
+                "op": "add",
+                "args": [
+                  2,
+                  {
+                    "op": "count",
+                    "args": [
+                      "f2.base",
+                      "*",
+                      "*"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "op": "gain",
+              "track": "res.f3",
+              "amount": {
+                "op": "add",
+                "args": [
+                  2,
+                  {
+                    "op": "count",
+                    "args": [
+                      "f3.base",
+                      "*",
+                      "*"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "op": "gain",
+              "track": "res.f4",
+              "amount": {
+                "op": "add",
+                "args": [
+                  2,
+                  {
+                    "op": "count",
+                    "args": [
+                      "f4.base",
+                      "*",
+                      "*"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "reset",
+          "name": "Reset",
+          "text": "All factions become Eligible.",
+          "steps": []
+        }
+      ]
+    },
+    "text": {
+      "overview": "A fictional civil war of about three years. A fictional mountain republic where the Republic Army and the Valley Militia fight the Mountain Front and the River Brigades."
+    }
+  },
+  "actions": [
+    {
+      "id": "f1.deploy",
+      "faction": "f1",
+      "kind": "operation",
+      "name": "Deploy",
+      "templateId": "deploy",
+      "plain": "In each chosen space, place up to 2 Troops from Available.",
+      "cost": {
+        "track": "res.f1",
+        "amount": 2,
+        "per": "space"
+      },
+      "limitedAllowed": true,
+      "targets": true,
+      "dependsOn": [
+        "f1.troops",
+        "res.f1"
+      ],
+      "steps": [
+        {
+          "op": "place",
+          "piece": "f1.troops",
+          "count": 2,
+          "from": "available",
+          "to": "$space"
+        }
+      ]
+    },
+    {
+      "id": "f1.march",
+      "faction": "f1",
+      "kind": "operation",
+      "name": "March",
+      "templateId": "march",
+      "plain": "Into each chosen space, move any number of Troops from adjacent spaces.",
+      "cost": {
+        "track": "res.f1",
+        "amount": 1,
+        "per": "space"
+      },
+      "limitedAllowed": true,
+      "targets": {
+        "op": "gte",
+        "args": [
+          {
+            "op": "adjCount",
+            "args": [
+              "f1.troops",
+              {
+                "var": "$space.id"
+              },
+              "*"
+            ]
+          },
+          1
+        ]
+      },
+      "dependsOn": [
+        "f1.troops",
+        "board.links",
+        "res.f1"
+      ],
+      "steps": [
+        {
+          "op": "move",
+          "piece": "f1.troops",
+          "count": "any",
+          "from": "adjacent",
+          "to": "$space"
+        }
+      ]
+    },
+    {
+      "id": "f1.pressure",
+      "faction": "f1",
+      "kind": "specialActivity",
+      "name": "Pressure",
+      "templateId": "pressure",
+      "plain": "In one space with 2 or more Troops, shift opinion one step toward Support.",
+      "cost": {
+        "track": "res.f1",
+        "amount": 1,
+        "per": "use"
+      },
+      "timing": "after",
+      "targets": {
+        "op": "gte",
+        "args": [
+          {
+            "op": "count",
+            "args": [
+              "f1.troops",
+              {
+                "var": "$space.id"
+              },
+              "*"
+            ]
+          },
+          2
+        ]
+      },
+      "dependsOn": [
+        "f1.troops",
+        "board.opinion",
+        "res.f1"
+      ],
+      "steps": [
+        {
+          "op": "shift",
+          "attr": "opinion",
+          "toward": "support",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "f2.deploy",
+      "faction": "f2",
+      "kind": "operation",
+      "name": "Deploy",
+      "templateId": "deploy",
+      "plain": "In each chosen space, place up to 2 Troops from Available.",
+      "cost": {
+        "track": "res.f2",
+        "amount": 2,
+        "per": "space"
+      },
+      "limitedAllowed": true,
+      "targets": true,
+      "dependsOn": [
+        "f2.troops",
+        "res.f2"
+      ],
+      "steps": [
+        {
+          "op": "place",
+          "piece": "f2.troops",
+          "count": 2,
+          "from": "available",
+          "to": "$space"
+        }
+      ]
+    },
+    {
+      "id": "f2.build",
+      "faction": "f2",
+      "kind": "operation",
+      "name": "Build",
+      "templateId": "build",
+      "plain": "In one chosen space with 2 or more Troops, remove 2 Troops and place 1 Base from Available.",
+      "cost": {
+        "track": "res.f2",
+        "amount": 2,
+        "per": "space"
+      },
+      "limitedAllowed": false,
+      "targets": {
+        "op": "and",
+        "args": [
+          {
+            "op": "gte",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "f2.troops",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              },
+              2
+            ]
+          },
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "f2.base",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              },
+              0
+            ]
+          }
+        ]
+      },
+      "dependsOn": [
+        "f2.troops",
+        "f2.base",
+        "res.f2"
+      ],
+      "steps": [
+        {
+          "op": "remove",
+          "piece": "f2.troops",
+          "count": 2,
+          "to": "available"
+        },
+        {
+          "op": "place",
+          "piece": "f2.base",
+          "count": 1,
+          "from": "available",
+          "to": "$space"
+        }
+      ]
+    },
+    {
+      "id": "f2.fortify",
+      "faction": "f2",
+      "kind": "specialActivity",
+      "name": "Fortify",
+      "templateId": "fortify",
+      "plain": "In one space with 3 or more Troops and no Base, place 1 Base from Available.",
+      "cost": {
+        "track": "res.f2",
+        "amount": 2,
+        "per": "use"
+      },
+      "timing": "after",
+      "targets": {
+        "op": "and",
+        "args": [
+          {
+            "op": "gte",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "f2.troops",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              },
+              3
+            ]
+          },
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "f2.base",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              },
+              0
+            ]
+          }
+        ]
+      },
+      "dependsOn": [
+        "f2.troops",
+        "f2.base",
+        "res.f2"
+      ],
+      "steps": [
+        {
+          "op": "place",
+          "piece": "f2.base",
+          "count": 1,
+          "from": "available",
+          "to": "$space"
+        }
+      ]
+    },
+    {
+      "id": "f3.recruit",
+      "faction": "f3",
+      "kind": "operation",
+      "name": "Recruit",
+      "templateId": "recruit",
+      "plain": "In each chosen space with a Guerrillas or Base, place 2 Guerrillas if a Base is there, otherwise 1.",
+      "cost": {
+        "track": "res.f3",
+        "amount": 1,
+        "per": "space"
+      },
+      "limitedAllowed": true,
+      "targets": {
+        "op": "or",
+        "args": [
+          {
+            "op": "gte",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "f3.base",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              },
+              1
+            ]
+          },
+          {
+            "op": "gte",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "f3.guerrilla",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              },
+              1
+            ]
+          }
+        ]
+      },
+      "dependsOn": [
+        "f3.guerrilla",
+        "f3.base",
+        "res.f3"
+      ],
+      "steps": [
+        {
+          "op": "if",
+          "test": {
+            "op": "gte",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "f3.base",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              },
+              1
+            ]
+          },
+          "then": [
+            {
+              "op": "place",
+              "piece": "f3.guerrilla",
+              "count": 2,
+              "from": "available",
+              "to": "$space",
+              "state": "underground"
+            }
+          ],
+          "else": [
+            {
+              "op": "place",
+              "piece": "f3.guerrilla",
+              "count": 1,
+              "from": "available",
+              "to": "$space",
+              "state": "underground"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "f3.strike",
+      "faction": "f3",
+      "kind": "operation",
+      "name": "Strike",
+      "templateId": "strike",
+      "plain": "In one chosen space with Guerrillas and Troops, roll one die. On a roll at or below the number of Guerrillas there, remove 1 Troops. Then flip all underground Guerrillas there to active.",
+      "cost": {
+        "track": "res.f3",
+        "amount": 0,
+        "per": "space"
+      },
+      "limitedAllowed": true,
+      "targets": {
+        "op": "and",
+        "args": [
+          {
+            "op": "gte",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "f3.guerrilla",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              },
+              1
+            ]
+          },
+          {
+            "op": "gte",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "f1.troops",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              },
+              1
+            ]
+          }
+        ]
+      },
+      "dependsOn": [
+        "f3.guerrilla",
+        "f1.troops",
+        "die.d6",
+        "res.f3"
+      ],
+      "steps": [
+        {
+          "op": "roll",
+          "die": "d6",
+          "store": "r"
+        },
+        {
+          "op": "if",
+          "test": {
+            "op": "lte",
+            "args": [
+              {
+                "var": "var.r"
+              },
+              {
+                "op": "count",
+                "args": [
+                  "f3.guerrilla",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              }
+            ]
+          },
+          "then": [
+            {
+              "op": "remove",
+              "piece": "f1.troops",
+              "count": 1,
+              "to": "available"
+            }
+          ]
+        },
+        {
+          "op": "flip",
+          "piece": "f3.guerrilla",
+          "from": "underground",
+          "to": "active",
+          "count": "all"
+        }
+      ]
+    },
+    {
+      "id": "f3.ambush",
+      "faction": "f3",
+      "kind": "specialActivity",
+      "name": "Ambush",
+      "templateId": "ambush",
+      "plain": "In one space with a underground Guerrillas and an enemy Troops, remove 1 Troops. The Guerrillas stays underground.",
+      "cost": {
+        "track": "res.f3",
+        "amount": 1,
+        "per": "use"
+      },
+      "timing": "during",
+      "targets": {
+        "op": "and",
+        "args": [
+          {
+            "op": "gte",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "f3.guerrilla",
+                  {
+                    "var": "$space.id"
+                  },
+                  "underground"
+                ]
+              },
+              1
+            ]
+          },
+          {
+            "op": "gte",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "f1.troops",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              },
+              1
+            ]
+          }
+        ]
+      },
+      "dependsOn": [
+        "f3.guerrilla",
+        "f1.troops",
+        "res.f3"
+      ],
+      "steps": [
+        {
+          "op": "remove",
+          "piece": "f1.troops",
+          "count": 1,
+          "to": "available"
+        }
+      ]
+    },
+    {
+      "id": "f4.recruit",
+      "faction": "f4",
+      "kind": "operation",
+      "name": "Recruit",
+      "templateId": "recruit",
+      "plain": "In each chosen space with a Guerrillas or Base, place 2 Guerrillas if a Base is there, otherwise 1.",
+      "cost": {
+        "track": "res.f4",
+        "amount": 1,
+        "per": "space"
+      },
+      "limitedAllowed": true,
+      "targets": {
+        "op": "or",
+        "args": [
+          {
+            "op": "gte",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "f4.base",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              },
+              1
+            ]
+          },
+          {
+            "op": "gte",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "f4.guerrilla",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              },
+              1
+            ]
+          }
+        ]
+      },
+      "dependsOn": [
+        "f4.guerrilla",
+        "f4.base",
+        "res.f4"
+      ],
+      "steps": [
+        {
+          "op": "if",
+          "test": {
+            "op": "gte",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "f4.base",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              },
+              1
+            ]
+          },
+          "then": [
+            {
+              "op": "place",
+              "piece": "f4.guerrilla",
+              "count": 2,
+              "from": "available",
+              "to": "$space",
+              "state": "underground"
+            }
+          ],
+          "else": [
+            {
+              "op": "place",
+              "piece": "f4.guerrilla",
+              "count": 1,
+              "from": "available",
+              "to": "$space",
+              "state": "underground"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "f4.build",
+      "faction": "f4",
+      "kind": "operation",
+      "name": "Build",
+      "templateId": "build",
+      "plain": "In one chosen space with 2 or more Guerrillas, remove 2 Guerrillas and place 1 Base from Available.",
+      "cost": {
+        "track": "res.f4",
+        "amount": 2,
+        "per": "space"
+      },
+      "limitedAllowed": false,
+      "targets": {
+        "op": "and",
+        "args": [
+          {
+            "op": "gte",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "f4.guerrilla",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              },
+              2
+            ]
+          },
+          {
+            "op": "eq",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "f4.base",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              },
+              0
+            ]
+          }
+        ]
+      },
+      "dependsOn": [
+        "f4.guerrilla",
+        "f4.base",
+        "res.f4"
+      ],
+      "steps": [
+        {
+          "op": "remove",
+          "piece": "f4.guerrilla",
+          "count": 2,
+          "to": "available"
+        },
+        {
+          "op": "place",
+          "piece": "f4.base",
+          "count": 1,
+          "from": "available",
+          "to": "$space"
+        }
+      ]
+    },
+    {
+      "id": "f4.raid",
+      "faction": "f4",
+      "kind": "specialActivity",
+      "name": "Raid",
+      "templateId": "raid",
+      "plain": "In one space with a Guerrillas, gain 2 resources.",
+      "cost": {
+        "track": "res.f4",
+        "amount": 0,
+        "per": "use"
+      },
+      "timing": "after",
+      "targets": {
+        "op": "gte",
+        "args": [
+          {
+            "op": "count",
+            "args": [
+              "f4.guerrilla",
+              {
+                "var": "$space.id"
+              },
+              "*"
+            ]
+          },
+          1
+        ]
+      },
+      "dependsOn": [
+        "f4.guerrilla",
+        "res.f4"
+      ],
+      "steps": [
+        {
+          "op": "gain",
+          "track": "res.f4",
+          "amount": 2
+        }
+      ]
+    }
+  ],
+  "deck": {
+    "cards": [
+      {
+        "id": "e01",
+        "type": "event",
+        "title": "Air Drop",
+        "order": [
+          "f1",
+          "f2",
+          "f3",
+          "f4"
+        ],
+        "sides": [
+          {
+            "id": "unshaded",
+            "label": "Supplies arrive",
+            "text": "Republic Army Resources gains 3.",
+            "steps": [
+              {
+                "op": "gain",
+                "track": "res.f1",
+                "amount": 3
+              }
+            ],
+            "plainOf": "x76d7w"
+          },
+          {
+            "id": "shaded",
+            "label": "Supplies lost",
+            "text": "Mountain Front Resources gains 3.",
+            "steps": [
+              {
+                "op": "gain",
+                "track": "res.f3",
+                "amount": 3
+              }
+            ],
+            "plainOf": "23fjou"
+          }
+        ]
+      },
+      {
+        "id": "e02",
+        "type": "event",
+        "title": "Village Guard",
+        "order": [
+          "f2",
+          "f3",
+          "f4",
+          "f1"
+        ],
+        "sides": [
+          {
+            "id": "unshaded",
+            "label": "Militia muster",
+            "text": "Place 2 Troops from Available in a chosen space.",
+            "steps": [
+              {
+                "op": "place",
+                "piece": "f2.troops",
+                "count": 2,
+                "from": "available",
+                "to": "choose"
+              }
+            ],
+            "plainOf": "1u39bye"
+          },
+          {
+            "id": "shaded",
+            "label": "Guards desert",
+            "text": "River Brigades Resources gains 2.",
+            "steps": [
+              {
+                "op": "gain",
+                "track": "res.f4",
+                "amount": 2
+              }
+            ],
+            "plainOf": "1snimi0"
+          }
+        ]
+      },
+      {
+        "id": "e03",
+        "type": "event",
+        "title": "Pass Closed",
+        "order": [
+          "f3",
+          "f4",
+          "f1",
+          "f2"
+        ],
+        "sides": [
+          {
+            "id": "unshaded",
+            "label": "Roads secured",
+            "text": "Shift opinion 1 step toward Support in a chosen space.",
+            "steps": [
+              {
+                "op": "shift",
+                "attr": "opinion",
+                "toward": "support",
+                "amount": 1,
+                "space": "choose"
+              }
+            ],
+            "plainOf": "uh5qoj"
+          },
+          {
+            "id": "shaded",
+            "label": "Cut off",
+            "text": "Shift opinion 1 step toward Opposition in a chosen space.",
+            "steps": [
+              {
+                "op": "shift",
+                "attr": "opinion",
+                "toward": "opposition",
+                "amount": 1,
+                "space": "choose"
+              }
+            ],
+            "plainOf": "1u0p53u"
+          }
+        ]
+      },
+      {
+        "id": "e04",
+        "type": "event",
+        "title": "Dam Taken",
+        "order": [
+          "f4",
+          "f1",
+          "f2",
+          "f3"
+        ],
+        "sides": [
+          {
+            "id": "unshaded",
+            "label": "Dam retaken",
+            "text": "Remove 2 Guerrillas in a chosen space to Available.",
+            "steps": [
+              {
+                "op": "remove",
+                "piece": "f4.guerrilla",
+                "count": 2,
+                "to": "available",
+                "space": "choose"
+              }
+            ],
+            "plainOf": "1x889yt"
+          },
+          {
+            "id": "shaded",
+            "label": "Flood the delta",
+            "text": "Place 2 Guerrillas from Available in a chosen space.",
+            "steps": [
+              {
+                "op": "place",
+                "piece": "f4.guerrilla",
+                "count": 2,
+                "from": "available",
+                "to": "choose"
+              }
+            ],
+            "plainOf": "1tqe9x6"
+          }
+        ]
+      },
+      {
+        "id": "e05",
+        "type": "event",
+        "title": "Ceasefire Talks",
+        "order": [
+          "f1",
+          "f2",
+          "f3",
+          "f4"
+        ],
+        "sides": [
+          {
+            "id": "unshaded",
+            "label": "Amnesty",
+            "text": "Valley Militia Resources gains 2.",
+            "steps": [
+              {
+                "op": "gain",
+                "track": "res.f2",
+                "amount": 2
+              }
+            ],
+            "plainOf": "1we9y0e"
+          },
+          {
+            "id": "shaded",
+            "label": "Talks fail",
+            "text": "Mountain Front Resources gains 2.",
+            "steps": [
+              {
+                "op": "gain",
+                "track": "res.f3",
+                "amount": 2
+              }
+            ],
+            "plainOf": "23fir3"
+          }
+        ]
+      },
+      {
+        "id": "e06",
+        "type": "event",
+        "title": "Mountain Winter",
+        "order": [
+          "f2",
+          "f3",
+          "f4",
+          "f1"
+        ],
+        "sides": [
+          {
+            "id": "unshaded",
+            "label": "Front starves",
+            "text": "Remove 2 Guerrillas in a chosen space to Available.",
+            "steps": [
+              {
+                "op": "remove",
+                "piece": "f3.guerrilla",
+                "count": 2,
+                "to": "available",
+                "space": "choose"
+              }
+            ],
+            "plainOf": "ypklxu"
+          },
+          {
+            "id": "shaded",
+            "label": "Hidden camps",
+            "text": "Place 2 Guerrillas from Available in a chosen space.",
+            "steps": [
+              {
+                "op": "place",
+                "piece": "f3.guerrilla",
+                "count": 2,
+                "from": "available",
+                "to": "choose"
+              }
+            ],
+            "plainOf": "14a2pfh"
+          }
+        ]
+      },
+      {
+        "id": "e07",
+        "type": "event",
+        "title": "Foreign Advisers",
+        "order": [
+          "f3",
+          "f4",
+          "f1",
+          "f2"
+        ],
+        "sides": [
+          {
+            "id": "unshaded",
+            "label": "Training",
+            "text": "Republic Army Resources gains 2.",
+            "steps": [
+              {
+                "op": "gain",
+                "track": "res.f1",
+                "amount": 2
+              }
+            ],
+            "plainOf": "x76ist"
+          },
+          {
+            "id": "shaded",
+            "label": "Arms smuggled",
+            "text": "River Brigades Resources gains 3.",
+            "steps": [
+              {
+                "op": "gain",
+                "track": "res.f4",
+                "amount": 3
+              }
+            ],
+            "plainOf": "1snis2x"
+          }
+        ]
+      },
+      {
+        "id": "e08",
+        "type": "event",
+        "title": "Market Riot",
+        "order": [
+          "f4",
+          "f1",
+          "f2",
+          "f3"
+        ],
+        "sides": [
+          {
+            "id": "unshaded",
+            "label": "Curfew",
+            "text": "Shift opinion 1 step toward Support in a chosen space.",
+            "steps": [
+              {
+                "op": "shift",
+                "attr": "opinion",
+                "toward": "support",
+                "amount": 1,
+                "space": "choose"
+              }
+            ],
+            "plainOf": "uh5qoj"
+          },
+          {
+            "id": "shaded",
+            "label": "Riot spreads",
+            "text": "Shift opinion 1 step toward Opposition in a chosen space.",
+            "steps": [
+              {
+                "op": "shift",
+                "attr": "opinion",
+                "toward": "opposition",
+                "amount": 1,
+                "space": "choose"
+              }
+            ],
+            "plainOf": "1u0p53u"
+          }
+        ]
+      },
+      {
+        "id": "s01",
+        "type": "scoring",
+        "title": "Reckoning",
+        "order": [
+          "f1",
+          "f2",
+          "f3",
+          "f4"
+        ]
+      },
+      {
+        "id": "s02",
+        "type": "scoring",
+        "title": "Final Reckoning",
+        "order": [
+          "f2",
+          "f3",
+          "f4",
+          "f1"
+        ],
+        "final": true
+      }
+    ],
+    "preparation": {
+      "piles": [
+        {
+          "id": "p1",
+          "events": [
+            "e01",
+            "e02",
+            "e03",
+            "e04"
+          ],
+          "scoring": "s01",
+          "scoringPlacement": {
+            "fromPosition": 3,
+            "toPosition": 5
+          }
+        },
+        {
+          "id": "p2",
+          "events": [
+            "e05",
+            "e06",
+            "e07",
+            "e08"
+          ],
+          "scoring": "s02",
+          "scoringPlacement": {
+            "fromPosition": 5,
+            "toPosition": 5
+          }
+        }
+      ],
+      "text": "Make two piles of Event cards. Shuffle Reckoning into the bottom half of pile 1. Put Final Reckoning at the bottom of pile 2. Put pile 1 on top of pile 2."
+    }
+  },
+  "victory": {
+    "perFaction": [
+      {
+        "factionId": "f1",
+        "plain": "Support Pop: total Pop of spaces at Support.",
+        "formula": {
+          "op": "sumSpaces",
+          "args": [
+            {
+              "op": "mul",
+              "args": [
+                {
+                  "op": "eq",
+                  "args": [
+                    {
+                      "var": "$space.opinion"
+                    },
+                    1
+                  ]
+                },
+                {
+                  "var": "$space.pop"
+                }
+              ]
+            }
+          ]
+        },
+        "threshold": 8
+      },
+      {
+        "factionId": "f2",
+        "plain": "Support Pop: total Pop of spaces at Support.",
+        "formula": {
+          "op": "sumSpaces",
+          "args": [
+            {
+              "op": "mul",
+              "args": [
+                {
+                  "op": "eq",
+                  "args": [
+                    {
+                      "var": "$space.opinion"
+                    },
+                    1
+                  ]
+                },
+                {
+                  "var": "$space.pop"
+                }
+              ]
+            }
+          ]
+        },
+        "threshold": 8
+      },
+      {
+        "factionId": "f3",
+        "plain": "Opposition Pop plus Base on the map.",
+        "formula": {
+          "op": "add",
+          "args": [
+            {
+              "op": "sumSpaces",
+              "args": [
+                {
+                  "op": "mul",
+                  "args": [
+                    {
+                      "op": "eq",
+                      "args": [
+                        {
+                          "var": "$space.opinion"
+                        },
+                        -1
+                      ]
+                    },
+                    {
+                      "var": "$space.pop"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "op": "count",
+              "args": [
+                "f3.base",
+                "*",
+                "*"
+              ]
+            }
+          ]
+        },
+        "threshold": 8
+      },
+      {
+        "factionId": "f4",
+        "plain": "Opposition Pop plus Base on the map.",
+        "formula": {
+          "op": "add",
+          "args": [
+            {
+              "op": "sumSpaces",
+              "args": [
+                {
+                  "op": "mul",
+                  "args": [
+                    {
+                      "op": "eq",
+                      "args": [
+                        {
+                          "var": "$space.opinion"
+                        },
+                        -1
+                      ]
+                    },
+                    {
+                      "var": "$space.pop"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "op": "count",
+              "args": [
+                "f4.base",
+                "*",
+                "*"
+              ]
+            }
+          ]
+        },
+        "threshold": 8
+      }
+    ],
+    "checkAt": "Each Reckoning card, in the victory check phase.",
+    "finalScoring": "After the final Reckoning card, the faction with the highest margin (score minus threshold) wins.",
+    "tieBreaks": [
+      "The faction earlier in the faction list wins a tie."
+    ]
+  },
+  "bots": [
+    {
+      "id": "bot.f1",
+      "factionId": "f1",
+      "code": "RA",
+      "objective": "Win as Republic Army.",
+      "measures": [
+        {
+          "id": "lead",
+          "name": "Leading enemy margin",
+          "plain": "The highest victory margin among the enemies. Near 0 means an enemy is close to winning.",
+          "expr": {
+            "var": "rivals.maxMargin"
+          }
+        }
+      ],
+      "eventPolicy": {
+        "plain": "Play the unshaded side if the Event has an effect.",
+        "playIf": {
+          "var": "card.hasEffect"
+        },
+        "side": "unshaded",
+        "overrides": [
+          {
+            "cardId": "e03",
+            "directive": "ignore",
+            "plain": "Never play this Event: it helps the other side more."
+          }
+        ]
+      },
+      "start": "ra.start",
+      "nodes": [
+        {
+          "id": "ra.start",
+          "kind": "condition",
+          "text": "Is Republic Army Eligible?",
+          "test": {
+            "var": "eligible"
+          },
+          "yes": "ra.event",
+          "no": "ra.end-none"
+        },
+        {
+          "id": "ra.end-none",
+          "kind": "end",
+          "text": "Ineligible: take no action.",
+          "outcome": "none"
+        },
+        {
+          "id": "ra.event",
+          "kind": "event-check",
+          "text": "Event: apply the Event rules.",
+          "yes": "ra.end-event",
+          "no": "ra.op"
+        },
+        {
+          "id": "ra.end-event",
+          "kind": "end",
+          "text": "Execute the Event.",
+          "outcome": "event"
+        },
+        {
+          "id": "ra.op",
+          "kind": "action",
+          "text": "Deploy in 1 space (priority table RA-1), against the enemy chosen by its enemy table.",
+          "action": "f1.deploy",
+          "table": "ra.t1",
+          "then": "ra.end-op",
+          "onEmpty": "ra.pass",
+          "target": "ra.enemy"
+        },
+        {
+          "id": "ra.end-op",
+          "kind": "end",
+          "text": "Operation done.",
+          "outcome": "operation"
+        },
+        {
+          "id": "ra.pass",
+          "kind": "end",
+          "text": "Pass.",
+          "outcome": "pass"
+        }
+      ],
+      "priorityTables": [
+        {
+          "id": "ra.t1",
+          "scope": "space",
+          "select": "one",
+          "steps": [
+            {
+              "n": 1,
+              "text": "A space with the target's pieces.",
+              "filter": {
+                "op": "gte",
+                "args": [
+                  {
+                    "op": "factionCount",
+                    "args": [
+                      {
+                        "var": "$target.id"
+                      },
+                      {
+                        "var": "$space.id"
+                      },
+                      "*"
+                    ]
+                  },
+                  1
+                ]
+              }
+            },
+            {
+              "n": 2,
+              "text": "Any legal space.",
+              "filter": true
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Highest Pop.",
+              "key": {
+                "var": "$space.pop"
+              },
+              "order": "max"
+            }
+          ]
+        },
+        {
+          "id": "ra.enemy",
+          "scope": "opponent",
+          "select": "one",
+          "steps": [
+            {
+              "n": 1,
+              "text": "An enemy that is not on the state side.",
+              "filter": {
+                "op": "ne",
+                "args": [
+                  {
+                    "var": "$faction.type"
+                  },
+                  "state"
+                ]
+              }
+            },
+            {
+              "n": 2,
+              "text": "Any enemy.",
+              "filter": true
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Highest victory margin.",
+              "key": {
+                "var": "$faction.margin"
+              },
+              "order": "max"
+            },
+            {
+              "letter": "b",
+              "text": "Most pieces on the map.",
+              "key": {
+                "op": "factionCount",
+                "args": [
+                  {
+                    "var": "$faction.id"
+                  },
+                  "*",
+                  "*"
+                ]
+              },
+              "order": "max"
+            }
+          ]
+        }
+      ],
+      "randomization": {
+        "die": "d6",
+        "eligibleSet": "All spaces still tied after the lettered tie-breaks, in alphabetical order of space name.",
+        "procedure": "Roll one die. With N tied spaces, divide the faces into N equal groups in list order and use the group the roll falls in."
+      },
+      "maxSteps": 12,
+      "dryRuns": [
+        {
+          "id": "ra.d1",
+          "case": "ineligible",
+          "patch": {
+            "eligible": {
+              "f1": false
+            }
+          },
+          "expect": {
+            "outcome": "none",
+            "path": [
+              "ra.start",
+              "ra.end-none"
+            ]
+          }
+        },
+        {
+          "id": "ra.d2",
+          "case": "event-override",
+          "patch": {
+            "card": {
+              "id": "e03",
+              "hasEffect": true,
+              "raisesSelf": true,
+              "lowersEnemy": false
+            },
+            "dice": [
+              3,
+              3,
+              3
+            ]
+          },
+          "expect": {
+            "outcome": "operation",
+            "path": [
+              "ra.start",
+              "ra.event",
+              "ra.op",
+              "ra.end-op"
+            ],
+            "chosen": [
+              "space4"
+            ],
+            "target": "f3"
+          }
+        },
+        {
+          "id": "ra.d3",
+          "case": "no-target",
+          "patch": {
+            "resources": {
+              "f1": 0
+            },
+            "dice": [
+              3,
+              3,
+              3
+            ],
+            "card": {
+              "id": "e01",
+              "hasEffect": false,
+              "raisesSelf": false,
+              "lowersEnemy": false
+            }
+          },
+          "expect": {
+            "outcome": "pass",
+            "path": [
+              "ra.start",
+              "ra.event",
+              "ra.op:empty",
+              "ra.pass"
+            ]
+          }
+        },
+        {
+          "id": "ra.d4",
+          "case": "tie",
+          "patch": {
+            "spaces": {
+              "space2": {
+                "opinion": 0
+              },
+              "space3": {
+                "opinion": 0
+              }
+            },
+            "dice": [
+              3,
+              3,
+              3
+            ],
+            "card": {
+              "id": "e01",
+              "hasEffect": false,
+              "raisesSelf": false,
+              "lowersEnemy": false
+            }
+          },
+          "expect": {
+            "outcome": "operation",
+            "path": [
+              "ra.start",
+              "ra.event",
+              "ra.op",
+              "ra.end-op"
+            ],
+            "chosen": [
+              "space4"
+            ],
+            "target": "f3"
+          }
+        },
+        {
+          "id": "ra.d5",
+          "case": "linked-sa",
+          "patch": {
+            "dice": [
+              3,
+              3,
+              3
+            ],
+            "card": {
+              "id": "e01",
+              "hasEffect": false,
+              "raisesSelf": false,
+              "lowersEnemy": false
+            }
+          },
+          "expect": {
+            "outcome": "operation",
+            "path": [
+              "ra.start",
+              "ra.event",
+              "ra.op",
+              "ra.end-op"
+            ],
+            "chosen": [
+              "space4"
+            ],
+            "target": "f3"
+          }
+        },
+        {
+          "id": "ra.d6",
+          "case": "fallback",
+          "patch": {
+            "dice": [
+              3,
+              3,
+              3
+            ],
+            "card": {
+              "id": "e01",
+              "hasEffect": false,
+              "raisesSelf": false,
+              "lowersEnemy": false
+            }
+          },
+          "expect": {
+            "outcome": "operation",
+            "path": [
+              "ra.start",
+              "ra.event",
+              "ra.op",
+              "ra.end-op"
+            ],
+            "chosen": [
+              "space4"
+            ],
+            "target": "f3"
+          }
+        }
+      ]
+    },
+    {
+      "id": "bot.f2",
+      "factionId": "f2",
+      "code": "VM",
+      "objective": "Win as Valley Militia.",
+      "measures": [
+        {
+          "id": "lead",
+          "name": "Leading enemy margin",
+          "plain": "The highest victory margin among the enemies. Near 0 means an enemy is close to winning.",
+          "expr": {
+            "var": "rivals.maxMargin"
+          }
+        }
+      ],
+      "eventPolicy": {
+        "plain": "Play the unshaded side if the Event has an effect.",
+        "playIf": {
+          "var": "card.hasEffect"
+        },
+        "side": "unshaded",
+        "overrides": []
+      },
+      "start": "vm.start",
+      "nodes": [
+        {
+          "id": "vm.start",
+          "kind": "condition",
+          "text": "Is Valley Militia Eligible?",
+          "test": {
+            "var": "eligible"
+          },
+          "yes": "vm.event",
+          "no": "vm.end-none"
+        },
+        {
+          "id": "vm.end-none",
+          "kind": "end",
+          "text": "Ineligible: take no action.",
+          "outcome": "none"
+        },
+        {
+          "id": "vm.event",
+          "kind": "event-check",
+          "text": "Event: apply the Event rules.",
+          "yes": "vm.end-event",
+          "no": "vm.op"
+        },
+        {
+          "id": "vm.end-event",
+          "kind": "end",
+          "text": "Execute the Event.",
+          "outcome": "event"
+        },
+        {
+          "id": "vm.op",
+          "kind": "action",
+          "text": "Deploy in 1 space (priority table VM-1), against the enemy chosen by its enemy table.",
+          "action": "f2.deploy",
+          "table": "vm.t1",
+          "then": "vm.end-op",
+          "onEmpty": "vm.pass",
+          "target": "vm.enemy"
+        },
+        {
+          "id": "vm.end-op",
+          "kind": "end",
+          "text": "Operation done.",
+          "outcome": "operation"
+        },
+        {
+          "id": "vm.pass",
+          "kind": "end",
+          "text": "Pass.",
+          "outcome": "pass"
+        }
+      ],
+      "priorityTables": [
+        {
+          "id": "vm.t1",
+          "scope": "space",
+          "select": "one",
+          "steps": [
+            {
+              "n": 1,
+              "text": "A space with the target's pieces.",
+              "filter": {
+                "op": "gte",
+                "args": [
+                  {
+                    "op": "factionCount",
+                    "args": [
+                      {
+                        "var": "$target.id"
+                      },
+                      {
+                        "var": "$space.id"
+                      },
+                      "*"
+                    ]
+                  },
+                  1
+                ]
+              }
+            },
+            {
+              "n": 2,
+              "text": "Any legal space.",
+              "filter": true
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Highest Pop.",
+              "key": {
+                "var": "$space.pop"
+              },
+              "order": "max"
+            }
+          ]
+        },
+        {
+          "id": "vm.enemy",
+          "scope": "opponent",
+          "select": "one",
+          "steps": [
+            {
+              "n": 1,
+              "text": "An enemy that is not on the state side.",
+              "filter": {
+                "op": "ne",
+                "args": [
+                  {
+                    "var": "$faction.type"
+                  },
+                  "state"
+                ]
+              }
+            },
+            {
+              "n": 2,
+              "text": "Any enemy.",
+              "filter": true
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Highest victory margin.",
+              "key": {
+                "var": "$faction.margin"
+              },
+              "order": "max"
+            },
+            {
+              "letter": "b",
+              "text": "Most pieces on the map.",
+              "key": {
+                "op": "factionCount",
+                "args": [
+                  {
+                    "var": "$faction.id"
+                  },
+                  "*",
+                  "*"
+                ]
+              },
+              "order": "max"
+            }
+          ]
+        }
+      ],
+      "randomization": {
+        "die": "d6",
+        "eligibleSet": "All spaces still tied after the lettered tie-breaks, in alphabetical order of space name.",
+        "procedure": "Roll one die. With N tied spaces, divide the faces into N equal groups in list order and use the group the roll falls in."
+      },
+      "maxSteps": 12,
+      "dryRuns": [
+        {
+          "id": "vm.d1",
+          "case": "ineligible",
+          "patch": {
+            "eligible": {
+              "f2": false
+            }
+          },
+          "expect": {
+            "outcome": "none",
+            "path": [
+              "vm.start",
+              "vm.end-none"
+            ]
+          }
+        },
+        {
+          "id": "vm.d2",
+          "case": "event-override",
+          "patch": {
+            "card": {
+              "id": "e03",
+              "hasEffect": true,
+              "raisesSelf": true,
+              "lowersEnemy": false
+            }
+          },
+          "expect": {
+            "outcome": "event",
+            "path": [
+              "vm.start",
+              "vm.event",
+              "vm.end-event"
+            ],
+            "side": "unshaded"
+          }
+        },
+        {
+          "id": "vm.d3",
+          "case": "no-target",
+          "patch": {
+            "resources": {
+              "f2": 0
+            },
+            "card": {
+              "id": "e01",
+              "hasEffect": false,
+              "raisesSelf": false,
+              "lowersEnemy": false
+            },
+            "dice": [
+              3,
+              3,
+              3
+            ]
+          },
+          "expect": {
+            "outcome": "pass",
+            "path": [
+              "vm.start",
+              "vm.event",
+              "vm.op:empty",
+              "vm.pass"
+            ]
+          }
+        },
+        {
+          "id": "vm.d4",
+          "case": "tie",
+          "patch": {
+            "spaces": {
+              "space2": {
+                "opinion": 0
+              },
+              "space3": {
+                "opinion": 0
+              }
+            },
+            "card": {
+              "id": "e01",
+              "hasEffect": false,
+              "raisesSelf": false,
+              "lowersEnemy": false
+            },
+            "dice": [
+              3,
+              3,
+              3
+            ]
+          },
+          "expect": {
+            "outcome": "operation",
+            "path": [
+              "vm.start",
+              "vm.event",
+              "vm.op",
+              "vm.end-op"
+            ],
+            "chosen": [
+              "space4"
+            ],
+            "target": "f3"
+          }
+        },
+        {
+          "id": "vm.d5",
+          "case": "linked-sa",
+          "patch": {
+            "card": {
+              "id": "e01",
+              "hasEffect": false,
+              "raisesSelf": false,
+              "lowersEnemy": false
+            },
+            "dice": [
+              3,
+              3,
+              3
+            ]
+          },
+          "expect": {
+            "outcome": "operation",
+            "path": [
+              "vm.start",
+              "vm.event",
+              "vm.op",
+              "vm.end-op"
+            ],
+            "chosen": [
+              "space4"
+            ],
+            "target": "f3"
+          }
+        },
+        {
+          "id": "vm.d6",
+          "case": "fallback",
+          "patch": {
+            "card": {
+              "id": "e01",
+              "hasEffect": false,
+              "raisesSelf": false,
+              "lowersEnemy": false
+            },
+            "dice": [
+              3,
+              3,
+              3
+            ]
+          },
+          "expect": {
+            "outcome": "operation",
+            "path": [
+              "vm.start",
+              "vm.event",
+              "vm.op",
+              "vm.end-op"
+            ],
+            "chosen": [
+              "space4"
+            ],
+            "target": "f3"
+          }
+        }
+      ]
+    },
+    {
+      "id": "bot.f3",
+      "factionId": "f3",
+      "code": "MF",
+      "objective": "Win as Mountain Front.",
+      "measures": [
+        {
+          "id": "lead",
+          "name": "Leading enemy margin",
+          "plain": "The highest victory margin among the enemies. Near 0 means an enemy is close to winning.",
+          "expr": {
+            "var": "rivals.maxMargin"
+          }
+        }
+      ],
+      "eventPolicy": {
+        "plain": "Play the unshaded side if the Event has an effect.",
+        "playIf": {
+          "var": "card.hasEffect"
+        },
+        "side": "unshaded",
+        "overrides": []
+      },
+      "start": "mf.start",
+      "nodes": [
+        {
+          "id": "mf.start",
+          "kind": "condition",
+          "text": "Is Mountain Front Eligible?",
+          "test": {
+            "var": "eligible"
+          },
+          "yes": "mf.event",
+          "no": "mf.end-none"
+        },
+        {
+          "id": "mf.end-none",
+          "kind": "end",
+          "text": "Ineligible: take no action.",
+          "outcome": "none"
+        },
+        {
+          "id": "mf.event",
+          "kind": "event-check",
+          "text": "Event: apply the Event rules.",
+          "yes": "mf.end-event",
+          "no": "mf.op"
+        },
+        {
+          "id": "mf.end-event",
+          "kind": "end",
+          "text": "Execute the Event.",
+          "outcome": "event"
+        },
+        {
+          "id": "mf.op",
+          "kind": "action",
+          "text": "Recruit in 1 space (priority table MF-1), against the enemy chosen by its enemy table.",
+          "action": "f3.recruit",
+          "table": "mf.t1",
+          "then": "mf.end-op",
+          "onEmpty": "mf.pass",
+          "target": "mf.enemy"
+        },
+        {
+          "id": "mf.end-op",
+          "kind": "end",
+          "text": "Operation done.",
+          "outcome": "operation"
+        },
+        {
+          "id": "mf.pass",
+          "kind": "end",
+          "text": "Pass.",
+          "outcome": "pass"
+        }
+      ],
+      "priorityTables": [
+        {
+          "id": "mf.t1",
+          "scope": "space",
+          "select": "one",
+          "steps": [
+            {
+              "n": 1,
+              "text": "A space with the target's pieces.",
+              "filter": {
+                "op": "gte",
+                "args": [
+                  {
+                    "op": "factionCount",
+                    "args": [
+                      {
+                        "var": "$target.id"
+                      },
+                      {
+                        "var": "$space.id"
+                      },
+                      "*"
+                    ]
+                  },
+                  1
+                ]
+              }
+            },
+            {
+              "n": 2,
+              "text": "Any legal space.",
+              "filter": true
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Highest Pop.",
+              "key": {
+                "var": "$space.pop"
+              },
+              "order": "max"
+            }
+          ]
+        },
+        {
+          "id": "mf.enemy",
+          "scope": "opponent",
+          "select": "one",
+          "steps": [
+            {
+              "n": 1,
+              "text": "A state-side enemy.",
+              "filter": {
+                "op": "eq",
+                "args": [
+                  {
+                    "var": "$faction.type"
+                  },
+                  "state"
+                ]
+              }
+            },
+            {
+              "n": 2,
+              "text": "Any enemy.",
+              "filter": true
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Highest victory margin.",
+              "key": {
+                "var": "$faction.margin"
+              },
+              "order": "max"
+            },
+            {
+              "letter": "b",
+              "text": "Most pieces on the map.",
+              "key": {
+                "op": "factionCount",
+                "args": [
+                  {
+                    "var": "$faction.id"
+                  },
+                  "*",
+                  "*"
+                ]
+              },
+              "order": "max"
+            }
+          ]
+        }
+      ],
+      "randomization": {
+        "die": "d6",
+        "eligibleSet": "All spaces still tied after the lettered tie-breaks, in alphabetical order of space name.",
+        "procedure": "Roll one die. With N tied spaces, divide the faces into N equal groups in list order and use the group the roll falls in."
+      },
+      "maxSteps": 12,
+      "dryRuns": [
+        {
+          "id": "mf.d1",
+          "case": "ineligible",
+          "patch": {
+            "eligible": {
+              "f3": false
+            }
+          },
+          "expect": {
+            "outcome": "none",
+            "path": [
+              "mf.start",
+              "mf.end-none"
+            ]
+          }
+        },
+        {
+          "id": "mf.d2",
+          "case": "event-override",
+          "patch": {
+            "card": {
+              "id": "e03",
+              "hasEffect": true,
+              "raisesSelf": true,
+              "lowersEnemy": false
+            }
+          },
+          "expect": {
+            "outcome": "event",
+            "path": [
+              "mf.start",
+              "mf.event",
+              "mf.end-event"
+            ],
+            "side": "unshaded"
+          }
+        },
+        {
+          "id": "mf.d3",
+          "case": "no-target",
+          "patch": {
+            "resources": {
+              "f3": 0
+            },
+            "card": {
+              "id": "e01",
+              "hasEffect": false,
+              "raisesSelf": false,
+              "lowersEnemy": false
+            },
+            "dice": [
+              3,
+              3,
+              3
+            ]
+          },
+          "expect": {
+            "outcome": "pass",
+            "path": [
+              "mf.start",
+              "mf.event",
+              "mf.op:empty",
+              "mf.pass"
+            ]
+          }
+        },
+        {
+          "id": "mf.d4",
+          "case": "tie",
+          "patch": {
+            "spaces": {
+              "space2": {
+                "opinion": 0
+              },
+              "space3": {
+                "opinion": 0
+              }
+            },
+            "card": {
+              "id": "e01",
+              "hasEffect": false,
+              "raisesSelf": false,
+              "lowersEnemy": false
+            },
+            "dice": [
+              3,
+              3,
+              3
+            ]
+          },
+          "expect": {
+            "outcome": "operation",
+            "path": [
+              "mf.start",
+              "mf.event",
+              "mf.op",
+              "mf.end-op"
+            ],
+            "chosen": [
+              "space4"
+            ],
+            "target": "f1"
+          }
+        },
+        {
+          "id": "mf.d5",
+          "case": "linked-sa",
+          "patch": {
+            "card": {
+              "id": "e01",
+              "hasEffect": false,
+              "raisesSelf": false,
+              "lowersEnemy": false
+            },
+            "dice": [
+              3,
+              3,
+              3
+            ]
+          },
+          "expect": {
+            "outcome": "operation",
+            "path": [
+              "mf.start",
+              "mf.event",
+              "mf.op",
+              "mf.end-op"
+            ],
+            "chosen": [
+              "space4"
+            ],
+            "target": "f1"
+          }
+        },
+        {
+          "id": "mf.d6",
+          "case": "fallback",
+          "patch": {
+            "card": {
+              "id": "e01",
+              "hasEffect": false,
+              "raisesSelf": false,
+              "lowersEnemy": false
+            },
+            "dice": [
+              3,
+              3,
+              3
+            ]
+          },
+          "expect": {
+            "outcome": "operation",
+            "path": [
+              "mf.start",
+              "mf.event",
+              "mf.op",
+              "mf.end-op"
+            ],
+            "chosen": [
+              "space4"
+            ],
+            "target": "f1"
+          }
+        },
+        {
+          "id": "mf.switch",
+          "case": "tie",
+          "patch": {
+            "spaces": {
+              "space2": {
+                "opinion": 0
+              },
+              "space3": {
+                "opinion": 0
+              },
+              "space6": {
+                "pieces": {
+                  "f2.troops": {
+                    "normal": 3
+                  }
+                }
+              }
+            },
+            "card": {
+              "id": "e01",
+              "hasEffect": false,
+              "raisesSelf": false,
+              "lowersEnemy": false
+            },
+            "dice": [
+              3,
+              3,
+              3
+            ]
+          },
+          "expect": {
+            "outcome": "operation",
+            "path": [
+              "mf.start",
+              "mf.event",
+              "mf.op",
+              "mf.end-op"
+            ],
+            "chosen": [
+              "space4"
+            ],
+            "target": "f2"
+          }
+        }
+      ]
+    },
+    {
+      "id": "bot.f4",
+      "factionId": "f4",
+      "code": "RB",
+      "objective": "Win as River Brigades.",
+      "measures": [
+        {
+          "id": "lead",
+          "name": "Leading enemy margin",
+          "plain": "The highest victory margin among the enemies. Near 0 means an enemy is close to winning.",
+          "expr": {
+            "var": "rivals.maxMargin"
+          }
+        }
+      ],
+      "eventPolicy": {
+        "plain": "Play the unshaded side if the Event has an effect.",
+        "playIf": {
+          "var": "card.hasEffect"
+        },
+        "side": "unshaded",
+        "overrides": []
+      },
+      "start": "rb.start",
+      "nodes": [
+        {
+          "id": "rb.start",
+          "kind": "condition",
+          "text": "Is River Brigades Eligible?",
+          "test": {
+            "var": "eligible"
+          },
+          "yes": "rb.event",
+          "no": "rb.end-none"
+        },
+        {
+          "id": "rb.end-none",
+          "kind": "end",
+          "text": "Ineligible: take no action.",
+          "outcome": "none"
+        },
+        {
+          "id": "rb.event",
+          "kind": "event-check",
+          "text": "Event: apply the Event rules.",
+          "yes": "rb.end-event",
+          "no": "rb.op"
+        },
+        {
+          "id": "rb.end-event",
+          "kind": "end",
+          "text": "Execute the Event.",
+          "outcome": "event"
+        },
+        {
+          "id": "rb.op",
+          "kind": "action",
+          "text": "Recruit in 1 space (priority table RB-1), against the enemy chosen by its enemy table.",
+          "action": "f4.recruit",
+          "table": "rb.t1",
+          "then": "rb.end-op",
+          "onEmpty": "rb.pass",
+          "target": "rb.enemy"
+        },
+        {
+          "id": "rb.end-op",
+          "kind": "end",
+          "text": "Operation done.",
+          "outcome": "operation"
+        },
+        {
+          "id": "rb.pass",
+          "kind": "end",
+          "text": "Pass.",
+          "outcome": "pass"
+        }
+      ],
+      "priorityTables": [
+        {
+          "id": "rb.t1",
+          "scope": "space",
+          "select": "one",
+          "steps": [
+            {
+              "n": 1,
+              "text": "A space with the target's pieces.",
+              "filter": {
+                "op": "gte",
+                "args": [
+                  {
+                    "op": "factionCount",
+                    "args": [
+                      {
+                        "var": "$target.id"
+                      },
+                      {
+                        "var": "$space.id"
+                      },
+                      "*"
+                    ]
+                  },
+                  1
+                ]
+              }
+            },
+            {
+              "n": 2,
+              "text": "Any legal space.",
+              "filter": true
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Highest Pop.",
+              "key": {
+                "var": "$space.pop"
+              },
+              "order": "max"
+            }
+          ]
+        },
+        {
+          "id": "rb.enemy",
+          "scope": "opponent",
+          "select": "one",
+          "steps": [
+            {
+              "n": 1,
+              "text": "A state-side enemy.",
+              "filter": {
+                "op": "eq",
+                "args": [
+                  {
+                    "var": "$faction.type"
+                  },
+                  "state"
+                ]
+              }
+            },
+            {
+              "n": 2,
+              "text": "Any enemy.",
+              "filter": true
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Highest victory margin.",
+              "key": {
+                "var": "$faction.margin"
+              },
+              "order": "max"
+            },
+            {
+              "letter": "b",
+              "text": "Most pieces on the map.",
+              "key": {
+                "op": "factionCount",
+                "args": [
+                  {
+                    "var": "$faction.id"
+                  },
+                  "*",
+                  "*"
+                ]
+              },
+              "order": "max"
+            }
+          ]
+        }
+      ],
+      "randomization": {
+        "die": "d6",
+        "eligibleSet": "All spaces still tied after the lettered tie-breaks, in alphabetical order of space name.",
+        "procedure": "Roll one die. With N tied spaces, divide the faces into N equal groups in list order and use the group the roll falls in."
+      },
+      "maxSteps": 12,
+      "dryRuns": [
+        {
+          "id": "rb.d1",
+          "case": "ineligible",
+          "patch": {
+            "eligible": {
+              "f4": false
+            }
+          },
+          "expect": {
+            "outcome": "none",
+            "path": [
+              "rb.start",
+              "rb.end-none"
+            ]
+          }
+        },
+        {
+          "id": "rb.d2",
+          "case": "event-override",
+          "patch": {
+            "card": {
+              "id": "e03",
+              "hasEffect": true,
+              "raisesSelf": true,
+              "lowersEnemy": false
+            }
+          },
+          "expect": {
+            "outcome": "event",
+            "path": [
+              "rb.start",
+              "rb.event",
+              "rb.end-event"
+            ],
+            "side": "unshaded"
+          }
+        },
+        {
+          "id": "rb.d3",
+          "case": "no-target",
+          "patch": {
+            "resources": {
+              "f4": 0
+            },
+            "card": {
+              "id": "e01",
+              "hasEffect": false,
+              "raisesSelf": false,
+              "lowersEnemy": false
+            },
+            "dice": [
+              3,
+              3,
+              3
+            ]
+          },
+          "expect": {
+            "outcome": "pass",
+            "path": [
+              "rb.start",
+              "rb.event",
+              "rb.op:empty",
+              "rb.pass"
+            ]
+          }
+        },
+        {
+          "id": "rb.d4",
+          "case": "tie",
+          "patch": {
+            "spaces": {
+              "space2": {
+                "opinion": 0
+              },
+              "space3": {
+                "opinion": 0
+              }
+            },
+            "card": {
+              "id": "e01",
+              "hasEffect": false,
+              "raisesSelf": false,
+              "lowersEnemy": false
+            },
+            "dice": [
+              3,
+              3,
+              3
+            ]
+          },
+          "expect": {
+            "outcome": "operation",
+            "path": [
+              "rb.start",
+              "rb.event",
+              "rb.op",
+              "rb.end-op"
+            ],
+            "chosen": [
+              "space10"
+            ],
+            "target": "f1"
+          }
+        },
+        {
+          "id": "rb.d5",
+          "case": "linked-sa",
+          "patch": {
+            "card": {
+              "id": "e01",
+              "hasEffect": false,
+              "raisesSelf": false,
+              "lowersEnemy": false
+            },
+            "dice": [
+              3,
+              3,
+              3
+            ]
+          },
+          "expect": {
+            "outcome": "operation",
+            "path": [
+              "rb.start",
+              "rb.event",
+              "rb.op",
+              "rb.end-op"
+            ],
+            "chosen": [
+              "space10"
+            ],
+            "target": "f1"
+          }
+        },
+        {
+          "id": "rb.d6",
+          "case": "fallback",
+          "patch": {
+            "card": {
+              "id": "e01",
+              "hasEffect": false,
+              "raisesSelf": false,
+              "lowersEnemy": false
+            },
+            "dice": [
+              3,
+              3,
+              3
+            ]
+          },
+          "expect": {
+            "outcome": "operation",
+            "path": [
+              "rb.start",
+              "rb.event",
+              "rb.op",
+              "rb.end-op"
+            ],
+            "chosen": [
+              "space10"
+            ],
+            "target": "f1"
+          }
+        }
+      ]
+    }
+  ]
+}

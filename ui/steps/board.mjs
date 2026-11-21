@@ -1,0 +1,75 @@
+import { S, $, esc, nextId, pieces } from "../state.mjs";
+import { fld, inp, sel, btn, chip, bound } from "../components/fields.mjs";
+import { addButton, removeButton, defineList } from "../components/listEditor.mjs";
+import { fvars, fdot } from "../components/faction.mjs";
+import { boardSvg } from "../../src/kit.mjs";
+import { touch, check } from "../store.mjs";
+import { render } from "../shell.mjs";
+
+export function renderBoard() {
+  const g = S.game;
+  const onBoard = (pid) => g.setup.placements.filter((p) => p.piece === pid).reduce((s, p) => s + p.count, 0);
+  const cols = pieces().flatMap((p) => p.states.map((st) => ({ p, st })));
+  const count = (sp, pid, st) => g.setup.placements.filter((x) => x.space === sp && x.piece === pid && x.state === st).reduce((s, x) => s + x.count, 0);
+  const lnk = (id) => g.board.spaces.find((s) => s.id === id)?.name ?? id;
+  return `<h2 tabindex="-1" id="h">Prepare the board and setup</h2><p class="lead">Spaces and legal connections define play. Drawing positions are separate and only change how the board looks.</p>
+  <section class="panel"><h3>Spaces</h3><table class="t"><thead><tr><th>Name</th><th>Type</th><th>Pop</th><th>Starting opinion</th><th><span class="sr">Actions</span></th></tr></thead><tbody>${g.board.spaces.map((s, i) => `<tr><td>${inp(`board/spaces/${i}/name`, s.name)}</td><td>${sel(`board/spaces/${i}/type`, s.type, ["city", "province", "line", "sanctuary", "custom"])}</td><td>${inp(`board/spaces/${i}/attrs/pop`, s.attrs.pop, { t: "n", type: "number", attrs: 'min="0"' })}</td><td>${sel(`setup/spaceAttributes/${s.id}/opinion`, g.setup.spaceAttributes?.[s.id]?.opinion ?? 0, [[-1, "Opposition"], [0, "Neutral"], [1, "Support"]], { t: "n" })}</td><td>${removeButton("spaces", { id: s.id })}</td></tr>`).join("")}</tbody></table>${addButton("spaces", "Add space")}</section>
+  <section class="panel"><h3>Legal connections</h3>
+    <form class="row" onsubmit="return false"><label class="fld"><span>From</span><select id="lk-from">${g.board.spaces.map((s) => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join("")}</select></label><label class="fld"><span>To</span><select id="lk-to">${g.board.spaces.map((s, i) => `<option value="${esc(s.id)}" ${i === 1 ? "selected" : ""}>${esc(s.name)}</option>`).join("")}</select></label>${addButton("links", "Add connection")}</form>
+    ${S.msg.link ? `<p class="err">${esc(S.msg.link)}</p>` : ""}
+    <ul class="links">${g.board.links.map((l, i) => `<li>${esc(lnk(l.from))} to ${esc(lnk(l.to))} ${removeButton("links", { i, label: "Remove" })}</li>`).join("")}</ul></section>
+  <section class="panel"><h3>Schematic board</h3><p><small>Drag a space, or focus it and use the arrow keys. This does not change connections.</small></p><div class="row"><label class="fld inline"><span>Background image (optional, up to 1.5 MB)</span><input type="file" id="boardbg" accept="image/png,image/jpeg,image/webp" data-path="/board/presentation/background"></label>${g.board.presentation.background?.href ? `<label class="fld inline"><span>Image strength</span><input type="range" min="0.1" max="1" step="0.05" ${bound("board/presentation/background/opacity", "n", true)} value="${g.board.presentation.background.opacity ?? 0.35}"></label>${btn("board-bg-clear", "Remove image", { cls: "link" })}` : ""}</div>${S.msg.bg ? `<p class="err">${esc(S.msg.bg)}</p>` : ""}<div id="board">${boardSvg(g, { fixed: true })}</div>
+    <details><summary>Exact positions</summary><table class="t"><tbody>${g.board.spaces.map((s) => `<tr><td>${esc(s.name)}</td><td>${inp(`board/presentation/positions/${s.id}/x`, g.board.presentation.positions[s.id]?.x ?? 0, { t: "n", type: "number" })}</td><td>${inp(`board/presentation/positions/${s.id}/y`, g.board.presentation.positions[s.id]?.y ?? 0, { t: "n", type: "number" })}</td></tr>`).join("")}</tbody></table></details></section>
+  <section class="panel"><h3>Starting pieces on the board</h3><div class="scroll"><table class="t"><thead><tr><th><span class="sr">Faction</span></th>${g.factions.map((f) => `<th class="fgrp" colspan="${cols.filter((c) => c.p.owner === f.id).length}" style="${fvars(f.color)}">${fdot(f)} ${esc(f.name)}</th>`).join("")}</tr><tr><th>Space</th>${cols.map((c) => `<th class="fcol" style="${fvars(S.game.factions.find((f) => f.id === c.p.owner).color)}">${esc(c.p.name)}${c.p.states.length > 1 ? `<br><small>${esc(c.st)}</small>` : ""}</th>`).join("")}</tr></thead><tbody>${g.board.spaces.map((s) => `<tr><td>${esc(s.name)}</td>${cols.map((c) => `<td><input type="number" min="0" aria-label="${esc(s.name)} ${esc(c.p.name)} ${esc(c.st)}" data-pc="${esc(s.id)}|${esc(c.p.id)}|${esc(c.st)}" data-path="/setup/placements" value="${count(s.id, c.p.id, c.st)}"></td>`).join("")}</tr>`).join("")}</tbody></table></div></section>
+  <section class="panel"><h3>Piece counts</h3><table class="t"><thead><tr><th>Piece</th><th>On board</th><th>Available</th><th>Out of Play</th><th>Supply</th><th>Check</th></tr></thead><tbody>${pieces().map((p) => { const pool = g.setup.pools[p.id] ?? { available: 0, outOfPlay: 0 }; const sum = onBoard(p.id) + pool.available + pool.outOfPlay; return `<tr><td>${fdot(g.factions.find((f) => f.id === p.owner))} ${esc(p.name)}</td><td>${onBoard(p.id)}</td><td>${inp(`setup/pools/${p.id}/available`, pool.available, { t: "n", type: "number", attrs: 'min="0"' })}</td><td>${inp(`setup/pools/${p.id}/outOfPlay`, pool.outOfPlay, { t: "n", type: "number", attrs: 'min="0"' })}</td><td>${p.supply}</td><td>${sum === p.supply ? chip("ok", `${sum} = ${p.supply}`) : chip("bad", `${sum} not ${p.supply}`)}</td></tr>`; }).join("")}</tbody></table></section>
+  <section class="panel"><h3>Tracks and eligibility</h3><div class="grid3">${g.tracks.map((t, ti) => fld(`${esc(t.name)} (${t.min} to ${t.max})`, `<input type="number" data-track="${esc(t.id)}" data-path="/tracks/${ti}/start" value="${t.start}" min="${t.min}" max="${t.max}">`)).join("")}</div>
+    <div class="row">${g.factions.map((f) => `<label class="chk"><input type="checkbox" ${bound(`setup/eligibility/${f.id}`, "b")} ${g.setup.eligibility[f.id] ? "checked" : ""}> ${esc(f.name)} starts Eligible</label>`).join("")}</div></section>`;
+}
+
+export function wireBoard() {
+  const wrap = $("#board"); if (!wrap) return;
+  let drag = null;
+  const pos = (id, x, y) => { S.game.board.presentation.positions[id] = { x: Math.max(0, Math.min(640, Math.round(x))), y: Math.max(0, Math.min(480, Math.round(y))) }; wrap.innerHTML = boardSvg(S.game, { fixed: true }); };
+  wrap.addEventListener("pointerdown", (e) => { const g = e.target.closest("[data-space]"); if (!g) return; drag = g.dataset.space; wrap.setPointerCapture(e.pointerId); e.preventDefault(); });
+  wrap.addEventListener("pointermove", (e) => {
+    if (!drag) return; const svg = wrap.querySelector("svg"); const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; const p = pt.matrixTransform(svg.getScreenCTM().inverse()); pos(drag, p.x, p.y);
+  });
+  wrap.addEventListener("pointerup", () => { if (drag) { drag = null; touch(); render(); } });
+  wrap.addEventListener("keydown", (e) => {
+    const g = e.target.closest?.("[data-space]"); if (!g) return; const id = g.dataset.space; const p = S.game.board.presentation.positions[id]; const d = { ArrowLeft: [-10, 0], ArrowRight: [10, 0], ArrowUp: [0, -10], ArrowDown: [0, 10] }[e.key]; if (!d) return; e.preventDefault(); pos(id, p.x + d[0], p.y + d[1]); touch(); wrap.querySelector(`[data-space="${id}"]`)?.focus();
+  });
+}
+
+export function setCount(sp, pid, st, n) {
+  const pl = S.game.setup.placements; const i = pl.findIndex((x) => x.space === sp && x.piece === pid && x.state === st);
+  if (n <= 0) { if (i >= 0) pl.splice(i, 1); } else if (i >= 0) pl[i].count = n; else pl.push({ space: sp, piece: pid, state: st, count: n });
+  touch();
+}
+function delSpace(id) {
+  const g = S.game; g.board.spaces = g.board.spaces.filter((s) => s.id !== id); delete g.board.presentation.positions[id]; delete g.setup.spaceAttributes?.[id];
+  const nl = g.board.links.length, np = g.setup.placements.length;
+  g.board.links = g.board.links.filter((l) => l.from !== id && l.to !== id); g.setup.placements = g.setup.placements.filter((p) => p.space !== id);
+  S.msg.review = `Removed ${nl - g.board.links.length} connections and ${np - g.setup.placements.length} placements that used ${id}. Check piece counts below.`;
+  touch(); check(); render();
+}
+
+defineList("spaces", {
+  add: () => { const g = S.game; const name = `New space ${g.board.spaces.length + 1}`; const id = nextId("space", g.board.spaces); g.board.spaces.push({ id, name, type: "province", attrs: { pop: 1 } }); g.board.presentation.positions[id] = { x: 60 + 20 * g.board.spaces.length, y: 40 }; (g.setup.spaceAttributes ??= {})[id] = { opinion: 0 }; touch(); render(); },
+  remove: (d) => delSpace(d.id)
+});
+defineList("links", {
+  add: () => { const g = S.game; const f = $("#lk-from").value, t = $("#lk-to").value; delete S.msg.link; if (f === t) S.msg.link = "Choose two different spaces."; else if (g.board.links.some((l) => [l.from, l.to].sort().join() === [f, t].sort().join())) S.msg.link = "Those spaces are already connected."; else { g.board.links.push({ id: nextId("l", g.board.links), from: f, to: t }); touch(); } render(); },
+  remove: (d) => { S.game.board.links.splice(d.i, 1); touch(); render(); }
+});
+
+// Reads the chosen image as a data URL, so the kit carries it with no outside link.
+export function onBoardChange(el) {
+  if (el.id !== "boardbg") return false;
+  const file = el.files?.[0]; if (!file) return true;
+  if (file.size > 1.5 * 1024 * 1024) { S.msg.bg = "That image is larger than 1.5 MB. Use a smaller one."; render(); return true; }
+  const rd = new FileReader();
+  rd.onload = () => { delete S.msg.bg; S.game.board.presentation.background = { href: rd.result, opacity: 0.35 }; touch(); render(); };
+  rd.readAsDataURL(file);
+  return true;
+}
+export const boardBgActions = { "board-bg-clear": () => { S.game.board.presentation.background = null; touch(); render(); } };

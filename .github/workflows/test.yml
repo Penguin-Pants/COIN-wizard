@@ -1,0 +1,17 @@
+name: test
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      # The browser tests use the Chrome that ships on GitHub's Ubuntu runners.
+      - run: npm run test:ui
+        env:
+          CHROME_PATH: /usr/bin/google-chrome

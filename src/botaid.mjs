@@ -1,0 +1,134 @@
+// Generate bot exports from the same definition the validator and dry-runs use:
+// Mermaid source, printable aid (Markdown and HTML), policy YAML, structured JSON.
+import YAML from "yaml";
+
+const esc = (s) => String(s).replace(/"/g, "'").replace(/[<>]/g, "");
+const mid = (id) => id.replace(/[^a-z0-9]/gi, "_");
+
+export function tableLabels(bot) {
+  return Object.fromEntries(bot.priorityTables.map((t, i) => [t.id, `${bot.code}-${i + 1}`]));
+}
+
+// Number the steps in breadth-first order from the start node.
+export function stepNumbers(bot) {
+  const nodes = Object.fromEntries(bot.nodes.map((n) => [n.id, n]));
+  const num = {}; let n = 0; const q = [bot.start]; const seen = new Set();
+  while (q.length) {
+    const id = q.shift();
+    if (seen.has(id)) continue; seen.add(id);
+    const node = nodes[id];
+    if (node.kind !== "end") num[id] = ++n;
+    const nx = node.kind === "condition" || node.kind === "event-check" ? [node.yes, node.no] : node.kind === "action" ? [node.then, node.onEmpty] : [];
+    q.push(...nx);
+  }
+  return { num, nodes };
+}
+
+export function toMermaid(bot) {
+  const { num } = stepNumbers(bot);
+  const lines = ["flowchart TD"];
+  for (const n of bot.nodes) {
+    const label = `${n.kind === "end" ? "" : `${num[n.id]}. `}${esc(n.text)}`;
+    const shape = n.kind === "condition" ? `{"${label}"}` : n.kind === "event-check" ? `{{"${label}"}}` : n.kind === "end" ? `(["${label}"])` : `["${label}"]`;
+    lines.push(`  ${mid(n.id)}${shape}`);
+  }
+  for (const n of bot.nodes) {
+    if (n.kind === "condition" || n.kind === "event-check") {
+      lines.push(`  ${mid(n.id)} -->|yes| ${mid(n.yes)}`, `  ${mid(n.id)} -->|no| ${mid(n.no)}`);
+    } else if (n.kind === "action") {
+      lines.push(`  ${mid(n.id)} -->|done| ${mid(n.then)}`, `  ${mid(n.id)} -->|no legal target| ${mid(n.onEmpty)}`);
+    }
+  }
+  return lines.join("\n") + "\n";
+}
+
+function costText(a) {
+  if (a.cost.amount === 0) return "free";
+  return `${a.cost.amount} Resource${a.cost.amount > 1 ? "s" : ""} per ${a.cost.per}`;
+}
+
+// Structured model of one aid. Both renderers read this.
+export function aidModel(game, bot) {
+  const faction = game.factions.find((f) => f.id === bot.factionId);
+  const { num, nodes } = stepNumbers(bot);
+  const labels = tableLabels(bot);
+  const actions = Object.fromEntries(game.actions.map((a) => [a.id, a]));
+  const passGain = game.rules.sequence.passGain[bot.factionId];
+  const endLabel = (n) => ({
+    none: "END, take no action and gain nothing",
+    event: "END, execute the Event",
+    operation: "END, Operation done",
+    operationSpecial: "END, Operation plus Special Activity done",
+    pass: `END, Pass and gain ${passGain} Resource${passGain === 1 ? "" : "s"}`
+  })[n.outcome];
+  const goto = (id) => (nodes[id].kind === "end" ? endLabel(nodes[id]) : `go to step ${num[id]}`);
+  const select = (t) => (t.select === "all" ? `up to ${t.limit} spaces` : "1 space");
+  const tableById = Object.fromEntries(bot.priorityTables.map((t) => [t.id, t]));
+  const steps = bot.nodes.filter((n) => n.kind !== "end").sort((a, b) => num[a.id] - num[b.id]).map((n) => {
+    if (n.kind === "condition") return { n: num[n.id], text: `${n.text} Yes: ${goto(n.yes)}. No: ${goto(n.no)}.` };
+    if (n.kind === "event-check") return { n: num[n.id], text: `${n.text} If you play the Event: ${goto(n.yes)}. If not: ${goto(n.no)}.` };
+    const a = actions[n.action];
+    let t = `${a.name} (cost ${costText(a)}). ${n.target ? `First choose the target: one enemy faction with table ${labels[n.target]}. If no enemy qualifies: ${goto(n.onEmpty)}. ` : ""}Choose ${select(tableById[n.table])} with table ${labels[n.table]}. If no space is legal or affordable: ${goto(n.onEmpty)}. Otherwise resolve it, then ${goto(n.then)}.`;
+    if (n.linked) {
+      const sa = actions[n.linked.action];
+      t += ` Before you end: Special Activity ${sa.name} (cost ${costText(sa)}) may follow, ${n.linked.timing} the Operation. ${n.linked.skipText ?? "Skip it if it cannot be used."} Choose its space with table ${labels[n.linked.table]}.`;
+    }
+    return { n: num[n.id], text: t };
+  });
+  return {
+    title: `${faction.name} bot aid (${faction.symbol})`,
+    game: game.meta.title, revision: game.meta.revision, status: game.meta.status,
+    objective: bot.objective,
+    before: [
+      "Use this aid for the faction no player controls.",
+      "Check Eligibility first. An Ineligible bot takes no action and gains nothing.",
+      `You need one six-sided die. Roll only when a tie-break says so. ${bot.randomization.procedure}`
+    ],
+    measures: bot.measures.map((m) => [m.name, m.plain]),
+    eventRule: bot.eventPolicy.plain,
+    steps,
+    tables: bot.priorityTables.map((t) => ({
+      label: labels[t.id], select: t.scope === "opponent" ? "one enemy faction" : t.select === "all" ? `all matching spaces, up to ${t.limit}` : "one space",
+      what: t.scope === "opponent" ? "Choose an enemy faction that is" : "Choose a space that is",
+      rows: t.steps.map((s) => [String(s.n), s.text]),
+      ties: t.tiebreak.map((tb) => [tb.letter, `${tb.text} (${tb.order === "max" ? "highest" : "lowest"} wins)`])
+    })),
+    tieRandom: `If spaces are still tied after the lettered tie-breaks: ${bot.randomization.eligibleSet} ${bot.randomization.procedure}`,
+    exceptions: bot.eventPolicy.overrides.map((o) => [o.cardId.toUpperCase() + " " + (game.deck.cards.find((c) => c.id === o.cardId)?.title ?? ""), `${o.directive}: ${o.plain}${o.targets ? " Targets: " + o.targets : ""}`]),
+    fallback: `If every action has no legal target, or Resources are too low, Pass and gain ${passGain} Resource${passGain === 1 ? "" : "s"}.`,
+    scoring: "The bot makes no choices in a scoring round. Every phase is automatic.",
+    outcome: "If an Operation runs and its linked Special Activity also runs, count it as Operation plus Special Activity for the sequence of play."
+  };
+}
+
+export function toMarkdown(m) {
+  const L = [`# ${m.title}`, `${m.game}, revision ${m.revision}${m.status === "draft" ? " (DRAFT)" : ""}`, "", `**Goal.** ${m.objective}`, "", "## Before you act", ...m.before.map((b) => `- ${b}`), "", "## Terms", ...m.measures.map(([a, b]) => `- **${a}.** ${b}`), "", "## Events", m.eventRule, "", "### Event exceptions", ...(m.exceptions.length ? m.exceptions.map(([a, b]) => `- **${a}.** ${b}`) : ["- None."]), "", "## Steps (follow in order)", ...m.steps.map((s) => `${s.n}. ${s.text}`), "", "## Priority tables"];
+  for (const t of m.tables) {
+    L.push("", `### Table ${t.label} (choose ${t.select})`, `| Step | ${t.what} |`, "|---|---|", ...t.rows.map(([a, b]) => `| ${a} | ${b} |`), "", "Tie-breaks, in order:", ...t.ties.map(([a, b]) => `- ${a}. ${b}`));
+  }
+  L.push("", "## Ties and dice", m.tieRandom, "", "## Fallback", m.fallback, "", "## Scoring rounds", m.scoring, "", "## Counting the turn", m.outcome, "");
+  return L.join("\n");
+}
+
+const h = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+export function toHtml(m) {
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>${h(m.title)}</title>
+<style>@page{margin:14mm}body{font:11pt/1.35 system-ui,sans-serif;color:#111;max-width:180mm;margin:0 auto}h1{font-size:18pt;margin:0}h2{font-size:12.5pt;border-bottom:1px solid #999;margin:12px 0 4px}h3{font-size:11pt;margin:8px 0 2px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #888;padding:2px 6px;text-align:left;vertical-align:top}ol li{margin:3px 0}.draft{color:#b3261e;font-weight:700}</style></head><body>
+<h1>${h(m.title)}</h1><p>${h(m.game)}, revision ${m.revision}${m.status === "draft" ? ' <span class="draft">DRAFT</span>' : ""}</p>
+<p><b>Goal.</b> ${h(m.objective)}</p>
+<h2>Before you act</h2><ul>${m.before.map((b) => `<li>${h(b)}</li>`).join("")}</ul>
+<h2>Terms</h2><ul>${m.measures.map(([a, b]) => `<li><b>${h(a)}.</b> ${h(b)}</li>`).join("")}</ul>
+<h2>Events</h2><p>${h(m.eventRule)}</p><h3>Event exceptions</h3><ul>${(m.exceptions.length ? m.exceptions : [["None", ""]]).map(([a, b]) => `<li><b>${h(a)}.</b> ${h(b)}</li>`).join("")}</ul>
+<h2>Steps (follow in order)</h2><ol>${m.steps.map((s) => `<li value="${s.n}">${h(s.text)}</li>`).join("")}</ol>
+<h2>Priority tables</h2>${m.tables.map((t) => `<h3>Table ${h(t.label)} (choose ${h(t.select)})</h3><table><tr><th>Step</th><th>${h(t.what)}</th></tr>${t.rows.map(([a, b]) => `<tr><td>${a}</td><td>${h(b)}</td></tr>`).join("")}</table><p>Tie-breaks, in order:</p><ul>${t.ties.map(([a, b]) => `<li>${a}. ${h(b)}</li>`).join("")}</ul>`).join("")}
+<h2>Ties and dice</h2><p>${h(m.tieRandom)}</p><h2>Fallback</h2><p>${h(m.fallback)}</p><h2>Scoring rounds</h2><p>${h(m.scoring)}</p><h2>Counting the turn</h2><p>${h(m.outcome)}</p></body></html>`;
+}
+
+export function toPolicyYaml(game, bot) {
+  const used = new Set();
+  for (const n of bot.nodes) { if (n.action) used.add(n.action); if (n.linked) used.add(n.linked.action); }
+  const actions = game.actions.filter((a) => used.has(a.id)).map((a) => ({ id: a.id, name: a.name, kind: a.kind, cost: a.cost, plain: a.plain, dependsOn: a.dependsOn }));
+  const { dryRuns, ...policy } = bot;
+  const f = game.factions.find((x) => x.id === bot.factionId);
+  return YAML.stringify({ schemaVersion: game.meta.schemaVersion, game: game.meta.gameId, revision: game.meta.revision, faction: { id: bot.factionId, name: f?.name ?? bot.factionId }, policy, actions, dryRuns }, { lineWidth: 100 });
+}

@@ -1,0 +1,24 @@
+{
+  "name": "coin-wizard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test \"test/*.test.mjs\"",
+    "validate": "node src/cli.mjs validate examples/tan-war.game.json",
+    "export": "node src/cli.mjs export examples/tan-war.game.json out",
+    "pretest:ui": "node scripts/build.mjs",
+    "test:ui": "node --test --test-concurrency=1 \"test/ui/*.test.mjs\"",
+    "zip": "node src/cli.mjs zip examples/tan-war.game.json out/tan-war.zip"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "yaml": "^2.6.0"
+  },
+  "devDependencies": {
+    "axe-core": "^4.14.1",
+    "esbuild": "^0.28.2",
+    "playwright-core": "^1.65.1"
+  }
+}

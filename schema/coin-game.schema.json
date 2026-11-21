@@ -1,0 +1,2401 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coin-wizard.local/schema/coin-game/1.3.0",
+  "title": "COIN game definition",
+  "description": "Single source of truth for one COIN-style prototype. All printable text and diagrams are generated from a confirmed revision of this document.",
+  "type": "object",
+  "required": [
+    "meta",
+    "brief",
+    "factions",
+    "board",
+    "tracks",
+    "setup",
+    "rules",
+    "actions",
+    "deck",
+    "victory",
+    "bots"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "gameId",
+        "title",
+        "revision",
+        "status",
+        "factionCount"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": {
+          "const": "coin-game/1.3.0"
+        },
+        "gameId": {
+          "$ref": "#/$defs/id"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "final"
+          ],
+          "description": "final only after explicit confirmation and passing validation"
+        },
+        "confirmedAt": {
+          "type": "string"
+        },
+        "factionCount": {
+          "enum": [
+            2,
+            3,
+            4
+          ]
+        },
+        "supplies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Common supplies the print kit does not include, such as dice."
+        },
+        "credits": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/credit"
+          }
+        },
+        "progress": {
+          "type": "object",
+          "description": "Wizard step progress. Absent steps count as not started.",
+          "additionalProperties": false,
+          "properties": {
+            "brief": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "visited": {
+                  "type": "boolean",
+                  "description": "The designer opened the step."
+                },
+                "touched": {
+                  "type": "boolean",
+                  "description": "The designer edited something in the step."
+                },
+                "done": {
+                  "type": "boolean",
+                  "description": "The designer marked the step done and it had no blockers."
+                }
+              }
+            },
+            "factions": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "visited": {
+                  "type": "boolean",
+                  "description": "The designer opened the step."
+                },
+                "touched": {
+                  "type": "boolean",
+                  "description": "The designer edited something in the step."
+                },
+                "done": {
+                  "type": "boolean",
+                  "description": "The designer marked the step done and it had no blockers."
+                }
+              }
+            },
+            "board": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "visited": {
+                  "type": "boolean",
+                  "description": "The designer opened the step."
+                },
+                "touched": {
+                  "type": "boolean",
+                  "description": "The designer edited something in the step."
+                },
+                "done": {
+                  "type": "boolean",
+                  "description": "The designer marked the step done and it had no blockers."
+                }
+              }
+            },
+            "rules": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "visited": {
+                  "type": "boolean",
+                  "description": "The designer opened the step."
+                },
+                "touched": {
+                  "type": "boolean",
+                  "description": "The designer edited something in the step."
+                },
+                "done": {
+                  "type": "boolean",
+                  "description": "The designer marked the step done and it had no blockers."
+                }
+              }
+            },
+            "review": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "visited": {
+                  "type": "boolean",
+                  "description": "The designer opened the step."
+                },
+                "touched": {
+                  "type": "boolean",
+                  "description": "The designer edited something in the step."
+                },
+                "done": {
+                  "type": "boolean",
+                  "description": "The designer marked the step done and it had no blockers."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "brief": {
+      "type": "object",
+      "required": [
+        "conflict",
+        "wikipedia",
+        "overview",
+        "sources",
+        "claims"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "conflict": {
+          "type": "string",
+          "minLength": 1
+        },
+        "wikipedia": {
+          "type": "object",
+          "required": [
+            "url",
+            "title",
+            "method"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "method": {
+              "enum": [
+                "supplied",
+                "discovered"
+              ]
+            },
+            "candidates": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "overview": {
+          "type": "object",
+          "required": [
+            "period",
+            "actors",
+            "places",
+            "turningPoints"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "period": {
+              "type": "string"
+            },
+            "actors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "places": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "turningPoints": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/source"
+          }
+        },
+        "claims": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/claim"
+          }
+        }
+      }
+    },
+    "factions": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 4,
+      "items": {
+        "$ref": "#/$defs/faction"
+      }
+    },
+    "board": {
+      "type": "object",
+      "required": [
+        "spaces",
+        "links",
+        "presentation"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "spaces": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/space"
+          }
+        },
+        "links": {
+          "type": "array",
+          "description": "Gameplay adjacency. Independent of drawing positions.",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "from",
+              "to"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "from": {
+                "$ref": "#/$defs/id"
+              },
+              "to": {
+                "$ref": "#/$defs/id"
+              },
+              "note": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "presentation": {
+          "type": "object",
+          "required": [
+            "style",
+            "positions"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "style": {
+              "enum": [
+                "schematic",
+                "vintage"
+              ]
+            },
+            "positions": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "required": [
+                  "x",
+                  "y"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "background": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "href"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Image drawn under the printed board.",
+                  "properties": {
+                    "href": {
+                      "type": "string",
+                      "description": "A data URL or a web address."
+                    },
+                    "opacity": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "tracks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "min",
+          "max",
+          "start"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "name": {
+            "type": "string"
+          },
+          "min": {
+            "type": "integer"
+          },
+          "max": {
+            "type": "integer"
+          },
+          "start": {
+            "type": "integer"
+          },
+          "owner": {
+            "$ref": "#/$defs/id"
+          }
+        }
+      }
+    },
+    "setup": {
+      "type": "object",
+      "required": [
+        "placements",
+        "pools",
+        "tracks",
+        "eligibility"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "placements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "space",
+              "piece",
+              "state",
+              "count"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "space": {
+                "$ref": "#/$defs/id"
+              },
+              "piece": {
+                "$ref": "#/$defs/id"
+              },
+              "state": {
+                "$ref": "#/$defs/id"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        },
+        "spaceAttributes": {
+          "type": "object",
+          "description": "Starting values of mutable space attributes, such as opinion.",
+          "additionalProperties": {
+            "type": "object"
+          }
+        },
+        "pools": {
+          "type": "object",
+          "description": "Per piece type: counts outside the board. available + outOfPlay + on-board must equal supply.",
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "available",
+              "outOfPlay"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "available": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "outOfPlay": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        "tracks": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "eligibility": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "rules": {
+      "type": "object",
+      "required": [
+        "sequence",
+        "scoring",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "sequence": {
+          "type": "object",
+          "required": [
+            "choices",
+            "firstActor",
+            "secondActorOptions",
+            "eligibilityAfter",
+            "passGain"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "choices": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "event",
+                  "operationSpecial",
+                  "operation",
+                  "limitedOperation",
+                  "pass"
+                ]
+              }
+            },
+            "firstActor": {
+              "type": "string",
+              "description": "Plain text: how the first actor is found from the card order and eligibility."
+            },
+            "secondActorOptions": {
+              "type": "object",
+              "description": "Key: first actor choice. Value: allowed choices for the second actor.",
+              "additionalProperties": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "event",
+                    "operationSpecial",
+                    "operation",
+                    "limitedOperation",
+                    "pass"
+                  ]
+                }
+              }
+            },
+            "eligibilityAfter": {
+              "type": "object",
+              "required": [
+                "staysEligible",
+                "bothIneligibleResult"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "staysEligible": {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "event",
+                      "operationSpecial",
+                      "operation",
+                      "limitedOperation",
+                      "pass"
+                    ]
+                  }
+                },
+                "bothIneligibleResult": {
+                  "type": "string"
+                }
+              }
+            },
+            "passGain": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "description": "Resources gained on Pass, by faction id."
+            }
+          }
+        },
+        "scoring": {
+          "type": "object",
+          "required": [
+            "name",
+            "phases"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "phases": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "name",
+                  "text",
+                  "steps"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "steps": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/step"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "text": {
+          "type": "object",
+          "description": "Plain rulebook paragraphs by section id. Generated rulebook uses these in order.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/action"
+      }
+    },
+    "deck": {
+      "type": "object",
+      "required": [
+        "cards",
+        "preparation"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "cards": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/card"
+          }
+        },
+        "preparation": {
+          "type": "object",
+          "required": [
+            "piles",
+            "text"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "piles": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "events",
+                  "scoring",
+                  "scoringPlacement"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "events": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/id"
+                    },
+                    "description": "Event card ids in this pile, shuffled together."
+                  },
+                  "scoring": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "scoringPlacement": {
+                    "type": "object",
+                    "required": [
+                      "fromPosition",
+                      "toPosition"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "fromPosition": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "toPosition": {
+                        "type": "integer",
+                        "minimum": 1
+                      }
+                    },
+                    "description": "Positions inside the pile, 1 = top. The scoring card lands in this range."
+                  }
+                }
+              }
+            },
+            "text": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "victory": {
+      "type": "object",
+      "required": [
+        "perFaction",
+        "checkAt",
+        "finalScoring",
+        "tieBreaks"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "perFaction": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "factionId",
+              "plain",
+              "formula",
+              "threshold"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "factionId": {
+                "$ref": "#/$defs/id"
+              },
+              "plain": {
+                "type": "string"
+              },
+              "formula": {
+                "$ref": "#/$defs/expr"
+              },
+              "threshold": {
+                "type": "integer"
+              }
+            }
+          }
+        },
+        "checkAt": {
+          "type": "string"
+        },
+        "finalScoring": {
+          "type": "string"
+        },
+        "tieBreaks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "bots": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/bot"
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "credit": {
+      "type": "object",
+      "required": [
+        "what",
+        "source",
+        "license"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "what": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "license": {
+          "type": "string"
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "id",
+        "url",
+        "status"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "url": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "read",
+            "failed"
+          ]
+        },
+        "readScope": {
+          "type": "string",
+          "description": "What was actually read, for example a character range."
+        },
+        "failure": {
+          "type": "string"
+        }
+      }
+    },
+    "claim": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "enum": [
+            "historical",
+            "design"
+          ]
+        },
+        "text": {
+          "type": "string"
+        },
+        "sourceIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "conflict": {
+          "type": "string",
+          "description": "Note when sources disagree."
+        },
+        "check": {
+          "type": "object",
+          "required": [
+            "verdict"
+          ],
+          "additionalProperties": false,
+          "description": "Result of checking a historical claim against its sources.",
+          "properties": {
+            "verdict": {
+              "enum": [
+                "supported",
+                "partial",
+                "unsupported"
+              ]
+            },
+            "reason": {
+              "type": "string"
+            },
+            "checkedAt": {
+              "type": "string"
+            },
+            "passage": {
+              "type": "object",
+              "required": [
+                "sourceId",
+                "start",
+                "end"
+              ],
+              "additionalProperties": false,
+              "description": "The source passage that decided the verdict, by character position.",
+              "properties": {
+                "sourceId": {
+                  "$ref": "#/$defs/id"
+                },
+                "start": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "end": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "faction": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "type",
+        "color",
+        "symbol",
+        "role",
+        "pieces",
+        "operations",
+        "specialActivities",
+        "resourceTrack"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "state",
+            "guerrilla",
+            "nonviolent",
+            "custom"
+          ]
+        },
+        "color": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "symbol": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3,
+          "description": "Letter or glyph printed with the color so color is never the only cue."
+        },
+        "role": {
+          "type": "string"
+        },
+        "pieces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "name",
+              "states",
+              "defaultState",
+              "supply",
+              "isBase"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "name": {
+                "type": "string"
+              },
+              "states": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/id"
+                }
+              },
+              "defaultState": {
+                "$ref": "#/$defs/id"
+              },
+              "supply": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "isBase": {
+                "type": "boolean"
+              },
+              "maxPerSpace": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        },
+        "operations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "specialActivities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "resourceTrack": {
+          "$ref": "#/$defs/id"
+        },
+        "preset": {
+          "enum": [
+            "state",
+            "guerrilla",
+            "nonviolent",
+            "custom"
+          ],
+          "description": "Preset that supplied this faction's defaults. Informational: type stays the source of truth."
+        }
+      }
+    },
+    "space": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "type",
+        "attrs"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "city",
+            "province",
+            "line",
+            "sanctuary",
+            "custom"
+          ]
+        },
+        "attrs": {
+          "type": "object",
+          "required": [
+            "pop"
+          ],
+          "properties": {
+            "pop": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": {
+            "type": [
+              "integer",
+              "string",
+              "boolean"
+            ]
+          }
+        }
+      }
+    },
+    "expr": {
+      "description": "Small expression language: literals, {var}, {op,args}. Ops: and or not eq ne gt gte lt lte add sub mul min max count adjCount sumSpaces anySpace attr.",
+      "oneOf": [
+        {
+          "type": [
+            "number",
+            "boolean",
+            "string"
+          ]
+        },
+        {
+          "type": "object",
+          "required": [
+            "var"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "var": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "op",
+            "args"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "op": {
+              "enum": [
+                "and",
+                "or",
+                "not",
+                "eq",
+                "ne",
+                "gt",
+                "gte",
+                "lt",
+                "lte",
+                "add",
+                "sub",
+                "mul",
+                "min",
+                "max",
+                "count",
+                "adjCount",
+                "sumSpaces",
+                "anySpace",
+                "attr",
+                "factionCount"
+              ]
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "step": {
+      "type": "object",
+      "description": "Effect step. Fields per op come from src/ops.mjs.",
+      "required": [
+        "op"
+      ],
+      "properties": {
+        "op": {
+          "enum": [
+            "place",
+            "remove",
+            "flip",
+            "move",
+            "shift",
+            "track",
+            "gain",
+            "pay",
+            "roll",
+            "markerSet",
+            "if",
+            "choose"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "place"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "piece",
+              "count",
+              "from",
+              "to"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "place"
+              },
+              "piece": {
+                "$ref": "#/$defs/id"
+              },
+              "count": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "enum": [
+                      "all",
+                      "any",
+                      "moved"
+                    ]
+                  },
+                  {
+                    "$ref": "#/$defs/expr"
+                  }
+                ]
+              },
+              "from": {
+                "enum": [
+                  "available",
+                  "outOfPlay"
+                ]
+              },
+              "to": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "$space",
+                      "choose"
+                    ]
+                  },
+                  {
+                    "$ref": "#/$defs/id"
+                  }
+                ]
+              },
+              "state": {
+                "$ref": "#/$defs/id"
+              },
+              "space": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "$space",
+                      "choose"
+                    ]
+                  },
+                  {
+                    "$ref": "#/$defs/id"
+                  }
+                ]
+              },
+              "spaces": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "filter": {
+                "$ref": "#/$defs/expr"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "remove"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "piece",
+              "count",
+              "to"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "remove"
+              },
+              "piece": {
+                "$ref": "#/$defs/id"
+              },
+              "count": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "enum": [
+                      "all",
+                      "any",
+                      "moved"
+                    ]
+                  },
+                  {
+                    "$ref": "#/$defs/expr"
+                  }
+                ]
+              },
+              "to": {
+                "enum": [
+                  "available",
+                  "outOfPlay"
+                ]
+              },
+              "state": {
+                "$ref": "#/$defs/id"
+              },
+              "fallbackPiece": {
+                "$ref": "#/$defs/id"
+              },
+              "space": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "$space",
+                      "choose"
+                    ]
+                  },
+                  {
+                    "$ref": "#/$defs/id"
+                  }
+                ]
+              },
+              "spaces": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "filter": {
+                "$ref": "#/$defs/expr"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "flip"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "piece",
+              "from",
+              "to",
+              "count"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "flip"
+              },
+              "piece": {
+                "$ref": "#/$defs/id"
+              },
+              "from": {
+                "$ref": "#/$defs/id"
+              },
+              "to": {
+                "$ref": "#/$defs/id"
+              },
+              "count": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "enum": [
+                      "all",
+                      "any",
+                      "moved"
+                    ]
+                  },
+                  {
+                    "$ref": "#/$defs/expr"
+                  }
+                ]
+              },
+              "space": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "$space",
+                      "choose"
+                    ]
+                  },
+                  {
+                    "$ref": "#/$defs/id"
+                  }
+                ]
+              },
+              "spaces": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "filter": {
+                "$ref": "#/$defs/expr"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "move"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "piece",
+              "count",
+              "from",
+              "to"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "move"
+              },
+              "piece": {
+                "$ref": "#/$defs/id"
+              },
+              "count": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "enum": [
+                      "all",
+                      "any",
+                      "moved"
+                    ]
+                  },
+                  {
+                    "$ref": "#/$defs/expr"
+                  }
+                ]
+              },
+              "from": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "$space",
+                      "choose",
+                      "adjacent",
+                      "available",
+                      "outOfPlay"
+                    ]
+                  },
+                  {
+                    "$ref": "#/$defs/id"
+                  }
+                ]
+              },
+              "to": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "$space",
+                      "choose",
+                      "adjacent",
+                      "available",
+                      "outOfPlay"
+                    ]
+                  },
+                  {
+                    "$ref": "#/$defs/id"
+                  }
+                ]
+              },
+              "state": {
+                "$ref": "#/$defs/id"
+              },
+              "filter": {
+                "$ref": "#/$defs/expr"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "shift"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "attr",
+              "toward",
+              "amount"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "shift"
+              },
+              "attr": {
+                "enum": [
+                  "opinion"
+                ]
+              },
+              "toward": {
+                "enum": [
+                  "support",
+                  "opposition"
+                ]
+              },
+              "amount": {
+                "type": "integer"
+              },
+              "space": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "$space",
+                      "choose"
+                    ]
+                  },
+                  {
+                    "$ref": "#/$defs/id"
+                  }
+                ]
+              },
+              "spaces": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "filter": {
+                "$ref": "#/$defs/expr"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "track"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "id",
+              "delta"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "track"
+              },
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "delta": {
+                "type": "integer"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "gain"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "track",
+              "amount"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "gain"
+              },
+              "track": {
+                "$ref": "#/$defs/id"
+              },
+              "amount": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "$ref": "#/$defs/expr"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "pay"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "track",
+              "amount"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "pay"
+              },
+              "track": {
+                "$ref": "#/$defs/id"
+              },
+              "amount": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "$ref": "#/$defs/expr"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "roll"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "die",
+              "store"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "roll"
+              },
+              "die": {
+                "enum": [
+                  "d6"
+                ]
+              },
+              "store": {
+                "type": "string",
+                "pattern": "^[a-z0-9_]+$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "markerSet"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "marker",
+              "value"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "markerSet"
+              },
+              "marker": {
+                "$ref": "#/$defs/id"
+              },
+              "value": {
+                "type": [
+                  "integer",
+                  "string",
+                  "boolean"
+                ]
+              },
+              "space": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "$space",
+                      "choose"
+                    ]
+                  },
+                  {
+                    "$ref": "#/$defs/id"
+                  }
+                ]
+              },
+              "spaces": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "filter": {
+                "$ref": "#/$defs/expr"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "if"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "test",
+              "then"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "if"
+              },
+              "test": {
+                "$ref": "#/$defs/expr"
+              },
+              "then": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/step"
+                }
+              },
+              "else": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/step"
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "choose"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "options"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "choose"
+              },
+              "options": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "label",
+                    "steps"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "label": {
+                      "type": "string"
+                    },
+                    "steps": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "$ref": "#/$defs/step"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "action": {
+      "type": "object",
+      "required": [
+        "id",
+        "faction",
+        "kind",
+        "name",
+        "plain",
+        "cost",
+        "targets",
+        "steps"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "faction": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "enum": [
+            "operation",
+            "specialActivity"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "plain": {
+          "type": "string"
+        },
+        "dependsOn": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Pieces, tracks or space attributes the action needs."
+        },
+        "cost": {
+          "type": "object",
+          "required": [
+            "track",
+            "amount",
+            "per"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "track": {
+              "$ref": "#/$defs/id"
+            },
+            "amount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "per": {
+              "enum": [
+                "space",
+                "use"
+              ]
+            }
+          }
+        },
+        "limitedAllowed": {
+          "type": "boolean"
+        },
+        "timing": {
+          "enum": [
+            "before",
+            "during",
+            "after",
+            "any"
+          ],
+          "description": "Special Activities only."
+        },
+        "targets": {
+          "$ref": "#/$defs/expr",
+          "description": "Legal space filter, evaluated per space with $space bound."
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/step"
+          }
+        },
+        "templateId": {
+          "type": "string",
+          "description": "Archetype this action was built from. Informational only."
+        },
+        "plainOf": {
+          "type": "string",
+          "description": "Fingerprint of the steps when the plain text was last written. A different fingerprint marks the text as stale."
+        }
+      }
+    },
+    "card": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "title"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "type": {
+          "enum": [
+            "event",
+            "scoring"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "final": {
+          "type": "boolean"
+        },
+        "flavor": {
+          "type": "string"
+        },
+        "sides": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "label",
+              "text",
+              "steps"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "enum": [
+                  "unshaded",
+                  "shaded"
+                ]
+              },
+              "label": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "steps": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/step"
+                }
+              },
+              "plainOf": {
+                "type": "string",
+                "description": "Fingerprint of the steps when the plain text was last written. A different fingerprint marks the text as stale."
+              }
+            }
+          }
+        },
+        "claimIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        }
+      }
+    },
+    "bot": {
+      "type": "object",
+      "required": [
+        "id",
+        "factionId",
+        "code",
+        "objective",
+        "measures",
+        "eventPolicy",
+        "start",
+        "nodes",
+        "priorityTables",
+        "randomization",
+        "maxSteps",
+        "dryRuns"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "factionId": {
+          "$ref": "#/$defs/id"
+        },
+        "objective": {
+          "type": "string"
+        },
+        "measures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "name",
+              "plain",
+              "expr"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "name": {
+                "type": "string"
+              },
+              "plain": {
+                "type": "string"
+              },
+              "expr": {
+                "$ref": "#/$defs/expr"
+              }
+            }
+          }
+        },
+        "eventPolicy": {
+          "type": "object",
+          "required": [
+            "plain",
+            "playIf",
+            "side",
+            "overrides"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "playIf": {
+              "$ref": "#/$defs/expr"
+            },
+            "side": {
+              "enum": [
+                "unshaded",
+                "shaded"
+              ]
+            },
+            "overrides": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "cardId",
+                  "directive",
+                  "plain"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "cardId": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "directive": {
+                    "enum": [
+                      "force",
+                      "ignore",
+                      "conditional"
+                    ]
+                  },
+                  "when": {
+                    "$ref": "#/$defs/expr"
+                  },
+                  "side": {
+                    "enum": [
+                      "unshaded",
+                      "shaded"
+                    ]
+                  },
+                  "plain": {
+                    "type": "string"
+                  },
+                  "targets": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "plain": {
+              "type": "string",
+              "description": "Plain-language rule for when the bot plays an Event."
+            }
+          }
+        },
+        "start": {
+          "$ref": "#/$defs/id"
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/botNode"
+          }
+        },
+        "priorityTables": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "scope",
+              "select",
+              "steps",
+              "tiebreak"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "scope": {
+                "enum": [
+                  "space",
+                  "opponent"
+                ],
+                "description": "space: picks spaces. opponent: picks one enemy faction, read as $faction in its steps and tie-breaks."
+              },
+              "select": {
+                "enum": [
+                  "one",
+                  "all"
+                ]
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "steps": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "n",
+                    "text",
+                    "filter"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "n": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "filter": {
+                      "$ref": "#/$defs/expr"
+                    }
+                  }
+                }
+              },
+              "tiebreak": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "letter",
+                    "text",
+                    "key",
+                    "order"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "letter": {
+                      "type": "string",
+                      "pattern": "^[a-z]$"
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "key": {
+                      "$ref": "#/$defs/expr"
+                    },
+                    "order": {
+                      "enum": [
+                        "max",
+                        "min"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "randomization": {
+          "type": "object",
+          "required": [
+            "die",
+            "eligibleSet",
+            "procedure"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "die": {
+              "enum": [
+                "d6"
+              ]
+            },
+            "eligibleSet": {
+              "type": "string"
+            },
+            "procedure": {
+              "type": "string"
+            }
+          }
+        },
+        "maxSteps": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "dryRuns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "case",
+              "patch",
+              "expect"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "case": {
+                "enum": [
+                  "ineligible",
+                  "event-override",
+                  "no-target",
+                  "tie",
+                  "linked-sa",
+                  "fallback"
+                ]
+              },
+              "patch": {
+                "type": "object"
+              },
+              "expect": {
+                "type": "object",
+                "required": [
+                  "outcome"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "outcome": {
+                    "enum": [
+                      "none",
+                      "event",
+                      "operation",
+                      "operationSpecial",
+                      "pass"
+                    ]
+                  },
+                  "path": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "chosen": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "side": {
+                    "enum": [
+                      "unshaded",
+                      "shaded"
+                    ]
+                  },
+                  "linked": {
+                    "type": "string"
+                  },
+                  "target": {
+                    "$ref": "#/$defs/id"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "code": {
+          "type": "string",
+          "pattern": "^[A-Z]{2,3}$",
+          "description": "Short code that prefixes priority table labels on the printed aid."
+        },
+        "layout": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/id"
+          },
+          "description": "Manual flowchart positions by node id. Nodes without an entry are placed automatically.",
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "x",
+              "y"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      }
+    },
+    "botNode": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "enum": [
+            "condition",
+            "event-check",
+            "action",
+            "end"
+          ]
+        },
+        "text": {
+          "type": "string"
+        },
+        "test": {
+          "$ref": "#/$defs/expr"
+        },
+        "yes": {
+          "$ref": "#/$defs/id"
+        },
+        "no": {
+          "$ref": "#/$defs/id"
+        },
+        "action": {
+          "$ref": "#/$defs/id"
+        },
+        "table": {
+          "$ref": "#/$defs/id"
+        },
+        "then": {
+          "$ref": "#/$defs/id"
+        },
+        "onEmpty": {
+          "$ref": "#/$defs/id"
+        },
+        "linked": {
+          "type": "object",
+          "required": [
+            "action",
+            "timing",
+            "trigger",
+            "table"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "$ref": "#/$defs/id"
+            },
+            "timing": {
+              "enum": [
+                "before",
+                "during",
+                "after"
+              ]
+            },
+            "trigger": {
+              "$ref": "#/$defs/expr"
+            },
+            "table": {
+              "$ref": "#/$defs/id"
+            },
+            "skipText": {
+              "type": "string"
+            }
+          }
+        },
+        "outcome": {
+          "enum": [
+            "none",
+            "event",
+            "operation",
+            "operationSpecial",
+            "pass"
+          ]
+        },
+        "target": {
+          "$ref": "#/$defs/id",
+          "description": "An opponent table. The action picks this enemy first; its space table can read $target."
+        }
+      }
+    }
+  }
+}
