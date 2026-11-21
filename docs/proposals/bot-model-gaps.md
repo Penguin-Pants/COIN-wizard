@@ -1,6 +1,6 @@
 # Proposal: bot model gaps (item 3)
 
-Status: waiting for the owner. Each part needs a schema change, so each needs a yes or no before any edit.
+Status: decided by the owner on 2026-11-21 (see "Decisions" at the end). Implementation follows in a separate PR, as `coin-game/1.5.0`.
 Source of the gaps: `docs/SHEETS.md` ("Non-Player sheets", "Player faction sheets: the 4 photos not checked before").
 
 All approved parts go into one new version, `coin-game/1.5.0`. Every new field is optional, so `migrate` only changes the version (as for 1.4.0). The fingerprint in `test/engine.test.mjs` changes once, with that version.
@@ -53,3 +53,14 @@ All approved parts go into one new version, `coin-game/1.5.0`. Every new field i
 
 - Special Activity tag as a phrase ("among 3 spaces", "1 space to 1 space"): optional `spaceText` on an action. Recommend approve.
 - Cost by space type ("LoCs 0"): optional `cost.byType` (space type to amount). Recommend defer: it changes `payCost` and the limit math in `src/dryrun.mjs:55`.
+
+## Decisions (owner, 2026-11-21)
+
+| Part | Decision |
+|---|---|
+| A. `linked` as a list | Approved |
+| B. Loop | No schema change (document the pattern) |
+| C. `parts` (sub-actions) | Approved (against the recommendation to defer) |
+| D. `bot.scoring` tables | Approved |
+| E. `lasting` card flag | Approved |
+| `spaceText`, `cost.byType` (player sheets) | Not decided; not in the item list |
