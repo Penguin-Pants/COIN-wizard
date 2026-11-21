@@ -135,3 +135,67 @@ test("a before-timed Special Activity is skipped when it would leave too little 
   assert.deepEqual(r.chosen, ["cork-city"]);
   assert.equal(r.linked, "skipped", "Martial Law (2) plus Garrison (2) is more than 3 Resources");
 });
+
+// Follow-up 1 (rule chosen by the owner): after a before-timed Special Activity, the Operation
+// drops chosen spaces that are no longer legal and refunds their cost.
+test("a before-timed Special Activity that makes a chosen space illegal drops it and refunds its cost", () => {
+  const g = example();
+  const garrison = g.actions.find((a) => a.id === "crown.garrison");
+  garrison.targets = { op: "and", args: [garrison.targets, { op: "lt", args: [{ var: "$space.opinion" }, 1] }] };
+  const bot = g.bots[0];
+  const node = bot.nodes.find((n) => n.id === "cw.garrison");
+  node.linked.timing = "before"; node.linked.trigger = true;
+  // A check after the Operation: Resources 8 - 2 (Garrison) - 2 (Martial Law) + 2 (refund) = 6.
+  node.then = "cw.chk";
+  bot.nodes.push({ id: "cw.chk", kind: "condition", text: "Resources 6 or more?", test: { op: "gte", args: [{ var: "self.resources" }, 6] }, yes: "cw.end-op", no: "cw.pass" });
+  const d = { id: "x", case: "linked-sa", patch: { spaces: { "cork-city": { pieces: { "crown.army": { normal: 2 } } } } }, expect: { outcome: "none" } };
+  const r = runDry(g, bot, d);
+  assert.equal(r.error, undefined);
+  assert.equal(r.linked, "crown.martial-law:cork-city");
+  assert.deepEqual(r.chosen, [], "Cork City is at Support after Martial Law, so Garrison drops it");
+  assert.deepEqual(r.path.slice(-2), ["cw.chk", "cw.end-op"], "the Garrison cost is refunded");
+});
+
+// Setup shared by the before-timing review tests: Garrison linked to Martial Law with timing before.
+function beforeSetup({ targetsExtra, cost, trigger = true }) {
+  const g = example();
+  const garrison = g.actions.find((a) => a.id === "crown.garrison");
+  garrison.targets = { op: "and", args: [garrison.targets, targetsExtra] };
+  if (cost) garrison.cost = cost;
+  const bot = g.bots[0];
+  const node = bot.nodes.find((n) => n.id === "cw.garrison");
+  node.linked.timing = "before"; node.linked.trigger = trigger;
+  node.then = "cw.chk";
+  bot.nodes.push({ id: "cw.chk", kind: "condition", text: "Resources 6 or more?", test: { op: "gte", args: [{ var: "self.resources" }, 6] }, yes: "cw.end-op", no: "cw.pass" });
+  return { g, bot };
+}
+const corkArmy = { id: "x", case: "linked-sa", patch: { spaces: { "cork-city": { pieces: { "crown.army": { normal: 2 } } } } }, expect: { outcome: "none" } };
+
+test("a per-use Operation cost is refunded when every chosen space is dropped", () => {
+  const { g, bot } = beforeSetup({ targetsExtra: { op: "lt", args: [{ var: "$space.opinion" }, 1] }, cost: { track: "res.crown", amount: 2, per: "use" } });
+  const r = runDry(g, bot, corkArmy);
+  assert.deepEqual(r.chosen, []);
+  assert.deepEqual(r.path.slice(-2), ["cw.chk", "cw.end-op"], "8 - 2 - 2 + 2 = 6");
+});
+
+test("the legality recheck after a before-timed Special Activity ignores the Operation's own reserved cost", () => {
+  const { g, bot } = beforeSetup({ targetsExtra: { op: "gte", args: [{ var: "self.resources" }, 8] }, trigger: false });
+  const r = runDry(g, bot, corkArmy);
+  assert.deepEqual(r.chosen, ["cork-city"]);
+});
+
+test("the recheck after a before-timed Special Activity never charges the Operation twice at the track cap", () => {
+  const { g, bot } = beforeSetup({ targetsExtra: true });
+  g.actions.find((a) => a.id === "crown.martial-law").steps.push({ op: "gain", track: "res.crown", amount: 30 });
+  bot.nodes.find((n) => n.id === "cw.chk").test = { op: "gte", args: [{ var: "self.resources" }, 30] };
+  const r = runDry(g, bot, corkArmy);
+  assert.deepEqual(r.chosen, ["cork-city"]);
+  assert.deepEqual(r.path.slice(-2), ["cw.chk", "cw.end-op"], "Resources stay at the cap of 30");
+});
+
+test("the recheck view stays inside the track range", () => {
+  const { g, bot } = beforeSetup({ targetsExtra: { op: "lte", args: [{ var: "self.resources" }, 30] } });
+  g.actions.find((a) => a.id === "crown.martial-law").steps.push({ op: "gain", track: "res.crown", amount: 30 });
+  const r = runDry(g, bot, corkArmy);
+  assert.deepEqual(r.chosen, ["cork-city"]);
+});

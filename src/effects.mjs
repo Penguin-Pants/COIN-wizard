@@ -87,9 +87,14 @@ function runStep(game, s, ctx) {
     case "place": {
       const sp = spaceOf(s, ctx, "to");
       const pool = poolOf(state, s.piece);
-      const n = Math.min(qty(s.count, ctx, pool[s.from], s.piece, s.state, s.from), roomIn(game, sp, s.piece));
+      let n = Math.min(qty(s.count, ctx, pool[s.from], s.piece, s.state, s.from), roomIn(game, sp, s.piece));
       pool[s.from] -= n;
       addPieces(sp, s.piece, s.state ?? defaultOf(game, s.piece), n);
+      // Placed moved pieces leave the moved count (taken from its states in order).
+      if (s.count === "moved" && n > 0) for (const [st, k] of Object.entries(ctx.moved.byState)) {
+        if (s.state !== undefined && st !== s.state) continue;
+        const used = Math.min(k, n); ctx.moved.byState[st] -= used; n -= used;
+      }
       return;
     }
     case "remove": {
@@ -169,7 +174,27 @@ function runStep(game, s, ctx) {
 }
 
 // The cost of an action in the chosen spaces.
-export const costOf = (action, spaceIds) => (action.cost.amount > 0 ? (action.cost.per === "space" ? action.cost.amount * spaceIds.length : action.cost.amount) : 0);
+// No space: no cost, also for a per-use cost.
+export const costOf = (action, spaceIds) => (action.cost.amount > 0 && spaceIds.length ? (action.cost.per === "space" ? action.cost.amount * spaceIds.length : action.cost.amount) : 0);
+
+// Gives back the cost of the dropped spaces: the cost for all chosen spaces minus the cost for the kept ones.
+export function refundCost(game, state, action, chosenIds, keptIds) {
+  const back = costOf(action, chosenIds) - costOf(action, keptIds);
+  if (back) setTrack(game, state, action.cost.track, trackValue(game, state, action.cost.track) + back);
+}
+
+// A read-only view of the state with the cost of these spaces added back to the cost track,
+// kept inside the track range (for legality checks that must not count the reserved cost).
+// The real state is not changed.
+export function withoutCost(game, state, action, spaceIds) {
+  const back = costOf(action, spaceIds);
+  if (!back) return state;
+  const id = action.cost.track, t = game.tracks.find((x) => x.id === id);
+  const v = clamp(trackValue(game, state, id) + back, t?.min, t?.max);
+  const view = { ...state, tracks: { ...state.tracks, [id]: v }, resources: { ...state.resources } };
+  for (const f of game.factions) if (f.resourceTrack === id) view.resources[f.id] = v;
+  return view;
+}
 
 // Pays the cost of an action (in place).
 export function payCost(game, state, action, spaceIds) {

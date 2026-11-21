@@ -42,12 +42,12 @@ Status of each gap from the 2026-11-21 review (branch `fix/known-gaps`). "Gap" i
 
 | Gap | Known issue | Gap text | Status | Evidence |
 |---|---|---|---|---|
-| 1 | 1 | Dry runs did not change the board between an Operation and its linked Special Activity | Closed | `src/effects.mjs:182` (`applyAction`), `src/dryrun.mjs:120`; tests "a linked Special Activity sees the board after its Operation" (`test/bots.test.mjs`), `test/effects.test.mjs`; Tan War dry run `cw.d7` |
+| 1 | 1 | Dry runs did not change the board between an Operation and its linked Special Activity | Closed | `src/effects.mjs:205` (`applyAction`), `src/dryrun.mjs:120`; tests "a linked Special Activity sees the board after its Operation" (`test/bots.test.mjs`), `test/effects.test.mjs`; Tan War dry run `cw.d7` |
 | 2 | 2 | No example uses `markerSet` | Closed | `examples/tan-war.game.json` (`crown.martial-law` sets `curfew`); `src/state.mjs:8` (markers start from setup), `src/kit.mjs:148` (`spaceMarkers`: counters and component list); test "Tan War Martial Law sets a Curfew marker that starts from setup" (`test/effects.test.mjs`) |
 | 3 | 6 | 3- and 4-faction dry runs store run results as expected | Closed (2 design gaps open) | Every case derived by hand: "Dry runs derived by hand" below; `test/engine.test.mjs` checks each one. Open: no bot in these examples links a Special Activity, and 5 bots have no Event override (see below). |
 | 4 | none | No bundle size limit | Closed | `scripts/build.mjs:9` (`LIMIT_KIB = 700`; the build exits 1 above it and writes no page); tests "the build fails with a clear message above the size limit" and "the build passes under the default limit of 700 KiB" (`test/build.test.mjs`). Size now: 570 KiB. |
 | 5 | none | Built page not tied to a commit | Closed | `scripts/build.mjs:17` (short commit, `-dirty` for local changes) and `ui/index.template.html:139` (`#about`, under the step list: "Build <commit>, schema coin-game/1.3.0"); test "the built page names its commit and schema version" (`test/build.test.mjs`); `Makefile` targets `test`, `test-ui`, `build`, `publish-check`; publish step in `README.md` ("Publish"). |
-| 6 | 3 | Faction aid not compared with a printed GMT sheet | Closed (partial match, see note) | Compared with `examples/non-player-bot-sheets/Colonial_Twilight_FLN_Faction_Sheet.jpg` (on `main`). `src/kit.mjs:166` (`factionAidHtml`): Operations, Special Activities, then Victory for every faction; each action reads Location, Cost, Procedure. Test "the faction aid follows the section order of a printed GMT faction aid" (`test/kit.test.mjs`). Not matched (needs schema fields, so not done): Purpose line, accompanying Op or Special Activity, rule number per action, max spaces per Special Activity. The FLN image shows one side only; Forces, Sequence of play and scoring follow Victory. |
+| 6 | 3 | Faction aid not compared with a printed GMT sheet | Closed (partial match, see note) | Compared with `examples/player-faction-sheets/Colonial_Twilight_FLN_Faction_Sheet.jpg` (on `main`). `src/kit.mjs:166` (`factionAidHtml`): Operations, Special Activities, then Victory for every faction; each action reads Location, Cost, Procedure. Test "the faction aid follows the section order of a printed GMT faction aid" (`test/kit.test.mjs`). Not matched (needs schema fields, so not done): Purpose line, accompanying Op or Special Activity, rule number per action, max spaces per Special Activity. The FLN image shows one side only; Forces, Sequence of play and scoring follow Victory. |
 | 7 | 4 | Print checked by PDF only, not on paper | Open: needs a person (checklist item P1) | Code part closed: `src/kit.mjs:132` (`printTestHtml`), kit file `kit/<game>.print-test.html`; tests "the kit has a print test sheet with a 50 mm ruler, a card and a counter at true size" (`test/kit.test.mjs`) and "the print test sheet is one page at Letter and A4 with true-size ruler, card and counter" (`test/ui/print.test.mjs`). |
 | 8 | 5 | Claim checks tested with scripted answers only | Open: needs a person (checklist item P2) | Manual test script below ("Manual test: claim check in the live artifact"). Scripted coverage: `test/ui/sources.test.mjs`, `test/sources.test.mjs`. |
 | 9 | 7 | Live URL fetch blocked by the page's content security policy | Accepted: platform limit | See "Platform limits" below. |
@@ -68,12 +68,14 @@ Past Tan War files (`test/fixtures/`) keep the old results. After migration they
 Earlier: closed on 2026-11-21 (3 and 4 factions are a core requirement): `other.resources` replaced by per-faction and rival values; bots pick their enemy with opponent tables; templates target a chosen enemy; a click-through test builds 3- and 4-faction games from empty.
 
 
-### Follow-up: dry-run effects (frozen in this PR)
+### Follow-up: dry-run effects
 
-Codex reviewed PR 1 eight times and found 18 edge cases in `src/effects.mjs` and `src/dryrun.mjs`. 16 are fixed, each with a test. The owner froze effect-code changes in this PR on 2026-11-21. Open items for a separate PR:
+Codex reviewed PR 1 eight times and found 18 edge cases in `src/effects.mjs` and `src/dryrun.mjs`. 16 were fixed in PR 1, each with a test. The last 2 are closed in the follow-up PR:
 
-1. **Before-timed Special Activity can make the Operation's chosen spaces illegal.** The spaces are chosen before the Special Activity runs and are not checked again. Example: Martial Law (timing `before`) shifts Cork City to Support; Garrison, restricted to opinion below Support, still places there. Needs a rules decision: drop and refund, choose again, or fall back to `onEmpty`. No shipped example uses timing `before`.
-2. **`place` with count `moved` does not use up the moved count.** A later `moved` step can then place pool pieces that never moved. Example: move 1 Volunteer to Available, then place `moved` into Cork City twice: 2 Volunteers arrive instead of 1. No shipped example places with count `moved`.
+| Item | Status | Evidence |
+|---|---|---|
+| 1. A before-timed Special Activity can make the Operation's chosen spaces illegal | Closed. Rule chosen by the owner: drop those spaces from `chosen` and refund their cost; if none stay, the Operation changes nothing | `src/dryrun.mjs:136` (after a `before` Special Activity), `src/effects.mjs:181` (`refundCost`); test "a before-timed Special Activity that makes a chosen space illegal drops it and refunds its cost" (`test/bots.test.mjs`); rule in `docs/SCHEMA.md` |
+| 2. `place` with count `moved` did not use up the moved count | Closed | `src/effects.mjs:87` (`place`); test "place with count moved places each moved piece once" (`test/effects.test.mjs`) |
 
 ## Platform limits
 
