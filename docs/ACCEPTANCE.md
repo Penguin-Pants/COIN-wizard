@@ -43,7 +43,7 @@ Status of each gap from the 2026-11-21 review (branch `fix/known-gaps`). Closed 
 | # | Gap | Status | Evidence |
 |---|---|---|---|
 | 1 | Dry runs did not change the board between an Operation and its linked Special Activity | Closed | `src/effects.mjs:149` (`applyAction`), `src/dryrun.mjs:114`; tests "a linked Special Activity sees the board after its Operation" (`test/bots.test.mjs`), `test/effects.test.mjs`; Tan War dry run `cw.d7` |
-| 2 | No example uses `markerSet` | Open | |
+| 2 | No example uses `markerSet` | Closed | `examples/tan-war.game.json` (`crown.martial-law` sets `curfew`); `src/state.mjs:8` (markers start from setup), `src/kit.mjs:132` (`spaceMarkers`: counters and component list); test "Tan War Martial Law sets a Curfew marker that starts from setup" (`test/effects.test.mjs`) |
 | 3 | Faction aid not compared with a printed GMT sheet | Open | |
 | 4 | Print checked by PDF only, not on paper | Open | |
 | 5 | Claim checks tested with scripted answers only | Open | |

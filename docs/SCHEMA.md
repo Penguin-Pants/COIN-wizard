@@ -93,7 +93,7 @@ Rules the schema alone does not say:
 - Sequence of play: the first two Eligible factions in the card's faction order act (COIN style), for 2 to 4 factions. Factions that act become Ineligible, except after the choices in `eligibilityAfter.staysEligible`.
 - Opinion is one axis per space: +1 is Support, -1 is Opposition. `shift.toward` moves it toward that side.
 - Tracks stay inside `min` to `max`: a `track` or `gain` change stops at the end of the track. `pay` fails when the track holds less than the amount. (This tool does not run effects. These are rules for the engine to implement.)
-- `markerSet` sets a mutable space attribute (a marker). Markers start from `setup.spaceAttributes`.
+- `markerSet` sets a mutable space attribute (a marker). Markers start from `setup.spaceAttributes`. Example: Tan War Martial Law (`crown.martial-law`) sets `curfew` to `true`; every space starts with `curfew: false`.
 - With 3 or 4 factions a bot names its enemy through an opponent table, never by faction order. `card.lowersEnemy` means the card hurts at least one enemy faction.
 - A bot never asks the player to pick: every action node chooses through a priority table, ties go to the lettered tie-breaks and then to `randomization`.
 - Each dry run states the board change (`patch`) from setup and the expected `outcome`, `path`, `chosen` spaces, `side` and `linked` result.

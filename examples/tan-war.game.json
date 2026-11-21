@@ -540,28 +540,36 @@
     ],
     "spaceAttributes": {
       "dublin": {
-        "opinion": 1
+        "opinion": 1,
+        "curfew": false
       },
       "belfast": {
-        "opinion": 1
+        "opinion": 1,
+        "curfew": false
       },
       "cork-city": {
-        "opinion": 0
+        "opinion": 0,
+        "curfew": false
       },
       "cork-county": {
-        "opinion": -1
+        "opinion": -1,
+        "curfew": false
       },
       "tipperary": {
-        "opinion": -1
+        "opinion": -1,
+        "curfew": false
       },
       "kerry": {
-        "opinion": 0
+        "opinion": 0,
+        "curfew": false
       },
       "limerick": {
-        "opinion": 0
+        "opinion": 0,
+        "curfew": false
       },
       "west": {
-        "opinion": 0
+        "opinion": 0,
+        "curfew": false
       }
     },
     "pools": {
@@ -1009,7 +1017,7 @@
       "faction": "crown",
       "kind": "specialActivity",
       "name": "Martial Law",
-      "plain": "In one space with 2 or more Army and opinion below Support, shift opinion one step toward the Crown. Then raise Repression by 1.",
+      "plain": "In one space with 2 or more Army and opinion below Support, shift opinion one step toward the Crown. Then raise Repression by 1 and place a Curfew marker there. The marker records Crown rule; it has no other effect.",
       "dependsOn": [
         "crown.army",
         "repression",
@@ -1062,6 +1070,12 @@
           "op": "track",
           "id": "repression",
           "delta": 1
+        },
+        {
+          "op": "markerSet",
+          "marker": "curfew",
+          "value": true,
+          "space": "$space"
         }
       ]
     },

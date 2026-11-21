@@ -127,10 +127,18 @@ export function cardsHtml(g) {
   return doc(g, "cards", pages(cards, 6).map((p, i) => `<section class="page">${i === 0 ? `${head(g, "cards")}<p class="note">Cut on the dashed lines. Faction order: ${legend}.</p>` : ""}<div class="cards">${p.join("")}</div></section>`).join(""));
 }
 
+// Space markers set by markerSet steps or started in setup (opinion has its own track on the board).
+// One marker per space, so every space can hold one.
+export function spaceMarkers(g) {
+  const out = new Set(Object.values(g.setup.spaceAttributes ?? {}).flatMap((a) => Object.keys(a)).filter((k) => k !== "opinion"));
+  JSON.stringify([g.actions, g.deck.cards], (k, v) => { if (v?.op === "markerSet" && typeof v.marker === "string") out.add(v.marker); return v; });
+  return [...out].map((id) => ({ id, name: id.charAt(0).toUpperCase() + id.slice(1), count: g.board.spaces.length }));
+}
+
 // Counters: each faction's shape in its color, with the symbol. Bases have a thick border.
 export function countersHtml(g) {
   const groups = g.factions.map((f) => `<div class="grp"><h2>${h(f.name)}</h2><div class="toks">${f.pieces.flatMap((pc) => Array.from({ length: pc.supply }, () => `<span class="tok" title="${h(pc.name)}">${shapeSvg(g, f, { base: pc.isBase, label: pc.isBase ? `${f.symbol}B` : f.symbol })}</span>`)).join("")}</div><p class="note">${f.pieces.map((pc) => `${pc.supply} ${h(pc.name)}${pc.isBase ? " (thick border)" : ""}${pc.states.length > 1 ? `, two-sided: ${pc.states.map(h).join(" / ")}` : ""}`).join("; ")}.</p></div>`).join("");
-  const markers = g.tracks.map((t) => `<li>${h(t.name)} marker (track ${t.min} to ${t.max})</li>`).join("") + g.factions.map((f) => `<li>${h(f.name)} Eligibility marker (${h(f.symbol)})</li>`).join("");
+  const markers = g.tracks.map((t) => `<li>${h(t.name)} marker (track ${t.min} to ${t.max})</li>`).join("") + g.factions.map((f) => `<li>${h(f.name)} Eligibility marker (${h(f.symbol)})</li>`).join("") + spaceMarkers(g).map((m) => `<li>${h(m.name)} marker (${m.count}, one per space)</li>`).join("");
   return doc(g, "counters", `<section class="page">${head(g, "counters")}${groups}<div class="grp"><h2>Markers</h2><ul>${markers}</ul></div></section>`);
 }
 
@@ -157,7 +165,7 @@ export function factionAidHtml(g, f) {
 export function checklistMd(g) {
   const L = [`# ${g.meta.title}: component checklist`, draftNote(g), "", "| Item | Count |", "|---|---|"];
   for (const f of g.factions) for (const pc of f.pieces) L.push(`| ${f.name}: ${pc.name}${pc.states.length > 1 ? ` (${pc.states.join("/")})` : ""} | ${pc.supply} |`);
-  L.push(`| Spaces on the board | ${g.board.spaces.length} |`, `| Event cards | ${g.deck.cards.filter((c) => c.type === "event").length} |`, `| Scoring cards | ${g.deck.cards.filter((c) => c.type === "scoring").length} |`, ...g.tracks.map((t) => `| ${t.name} marker | 1 |`), "", "Supplies you provide:", ...(g.meta.supplies ?? []).map((s) => `- ${s}`), "");
+  L.push(`| Spaces on the board | ${g.board.spaces.length} |`, `| Event cards | ${g.deck.cards.filter((c) => c.type === "event").length} |`, `| Scoring cards | ${g.deck.cards.filter((c) => c.type === "scoring").length} |`, ...g.tracks.map((t) => `| ${t.name} marker | 1 |`), ...spaceMarkers(g).map((m) => `| ${m.name} marker | ${m.count} |`), "", "Supplies you provide:", ...(g.meta.supplies ?? []).map((s) => `- ${s}`), "");
   return L.join("\n");
 }
 

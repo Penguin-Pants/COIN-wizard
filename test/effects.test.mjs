@@ -70,3 +70,24 @@ test("a step that needs a player to pick a space is an error", () => {
   const g = game(), s = deriveState(g, "crown");
   assert.throws(() => run(g, s, "crown.garrison", ["dublin"], [{ op: "place", piece: "crown.army", count: 1, from: "available", to: "choose" }]), /choose/);
 });
+
+// Known issue 2: an example uses markerSet. Tan War Martial Law puts a Curfew marker on its space.
+test("Tan War Martial Law sets a Curfew marker that starts from setup", async () => {
+  const { stepText } = await import("../src/plain.mjs");
+  const { rulebookMd, countersHtml, checklistMd } = await import("../src/kit.mjs");
+  const g = game();
+  const law = act(g, "crown.martial-law");
+  const step = law.steps.find((x) => x.op === "markerSet");
+  assert.ok(step, "Martial Law has a markerSet step");
+  assert.deepEqual(step, { op: "markerSet", marker: "curfew", value: true, space: "$space" });
+  assert.equal(stepText(step, g), "Set curfew to true in this space.");
+  assert.match(law.plain, /Curfew marker/);
+  const s = deriveState(g, "crown");
+  assert.equal(s.spaces.limerick.curfew, false, "markers start from setup.spaceAttributes");
+  run(g, s, "crown.martial-law", ["limerick"]);
+  assert.equal(s.spaces.limerick.curfew, true);
+  assert.equal(s.spaces.kerry.curfew, false);
+  assert.match(rulebookMd(g), /Curfew marker/);
+  assert.match(countersHtml(g), /Curfew marker \(8, one per space\)/);
+  assert.match(checklistMd(g), /\| Curfew marker \| 8 \|/);
+});
