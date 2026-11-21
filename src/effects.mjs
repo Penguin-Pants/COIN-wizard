@@ -184,13 +184,15 @@ export function refundCost(game, state, action, chosenIds, keptIds) {
 }
 
 // A read-only view of the state with the cost of these spaces added back to the cost track,
-// with no clamp at the track end (for legality checks that must not count the reserved cost).
+// kept inside the track range (for legality checks that must not count the reserved cost).
+// The real state is not changed.
 export function withoutCost(game, state, action, spaceIds) {
   const back = costOf(action, spaceIds);
   if (!back) return state;
-  const id = action.cost.track, view = { ...state, tracks: { ...state.tracks }, resources: { ...state.resources } };
-  view.tracks[id] = (view.tracks[id] ?? 0) + back;
-  for (const f of game.factions) if (f.resourceTrack === id) view.resources[f.id] = trackValue(game, state, id) + back;
+  const id = action.cost.track, t = game.tracks.find((x) => x.id === id);
+  const v = clamp(trackValue(game, state, id) + back, t?.min, t?.max);
+  const view = { ...state, tracks: { ...state.tracks, [id]: v }, resources: { ...state.resources } };
+  for (const f of game.factions) if (f.resourceTrack === id) view.resources[f.id] = v;
   return view;
 }
 

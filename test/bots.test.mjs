@@ -192,3 +192,10 @@ test("the recheck after a before-timed Special Activity never charges the Operat
   assert.deepEqual(r.chosen, ["cork-city"]);
   assert.deepEqual(r.path.slice(-2), ["cw.chk", "cw.end-op"], "Resources stay at the cap of 30");
 });
+
+test("the recheck view stays inside the track range", () => {
+  const { g, bot } = beforeSetup({ targetsExtra: { op: "lte", args: [{ var: "self.resources" }, 30] } });
+  g.actions.find((a) => a.id === "crown.martial-law").steps.push({ op: "gain", track: "res.crown", amount: 30 });
+  const r = runDry(g, bot, corkArmy);
+  assert.deepEqual(r.chosen, ["cork-city"]);
+});
