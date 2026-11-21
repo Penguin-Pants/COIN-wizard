@@ -67,3 +67,15 @@ test("the faction aid follows the section order of a printed GMT faction aid", (
     assert.ok(vic.includes(g.victory.finalScoring));
   }
 });
+
+// Known issue 4: a one-page print test sheet with true-size items, to check a print on paper.
+test("the kit has a print test sheet with a 50 mm ruler, a card and a counter at true size", () => {
+  const g = example(), out = files(g);
+  const t = out[`kit/${g.meta.gameId}.print-test.html`];
+  assert.ok(t, "print test sheet exists");
+  assert.match(t, /class="ruler"[^>]*width="50mm"/);
+  assert.match(t, /class="card-size"[^>]*style="width:63mm;height:88mm"/);
+  assert.match(t, /class="counter-size"[^>]*style="width:15mm;height:15mm"/);
+  assert.match(t, /100 %/);
+  assert.match(t, /Letter/); assert.match(t, /A4/);
+});

@@ -82,7 +82,7 @@ Run `npm run validate`. Errors carry a JSON path, a code, a plain message and th
 
 ## Exports
 
-Run `npm run export` for a folder, or `node src/cli.mjs zip <game.json> <out.zip>` for the same zip the wizard downloads. The kit holds `game.json`, a rulebook, a setup sheet, the board SVG, card sheets, counters, a component list and one faction aid per faction. Per bot: aid (`.md`, `.html`), flowchart (`.mmd` and rendered `.svg`), policy (`.yaml`) and structured data (`.json`). An unconfirmed game marks every file DRAFT.
+Run `npm run export` for a folder, or `node src/cli.mjs zip <game.json> <out.zip>` for the same zip the wizard downloads. The kit holds `game.json`, a rulebook, a setup sheet, the board SVG, card sheets, counters, a component list, a print test sheet (50 mm ruler, one card and one counter at true size) and one faction aid per faction. Per bot: aid (`.md`, `.html`), flowchart (`.mmd` and rendered `.svg`), policy (`.yaml`) and structured data (`.json`). An unconfirmed game marks every file DRAFT.
 
 ## Engine contract (frozen)
 
