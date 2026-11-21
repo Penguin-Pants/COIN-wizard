@@ -67,6 +67,13 @@ Past Tan War files (`test/fixtures/`) keep the old results. After migration they
 
 Earlier: closed on 2026-11-21 (3 and 4 factions are a core requirement): `other.resources` replaced by per-faction and rival values; bots pick their enemy with opponent tables; templates target a chosen enemy; a click-through test builds 3- and 4-faction games from empty.
 
+
+### Follow-up: dry-run effects (frozen in this PR)
+
+Codex reviewed PR 1 seven times and found 17 edge cases in `src/effects.mjs` and `src/dryrun.mjs`. 16 are fixed, each with a test. The owner froze effect-code changes in this PR on 2026-11-21. Open items for a separate PR:
+
+1. **Before-timed Special Activity can make the Operation's chosen spaces illegal.** The spaces are chosen before the Special Activity runs and are not checked again. Example: Martial Law (timing `before`) shifts Cork City to Support; Garrison, restricted to opinion below Support, still places there. Needs a rules decision: drop and refund, choose again, or fall back to `onEmpty`. No shipped example uses timing `before`.
+
 ## Platform limits
 
 1. Live URL fetch from the artifact page is blocked by its content security policy (high confidence, from the platform guide; was known issue 7). This is a platform limit, not a defect. **The supported intake path is the chat handoff:** step 1 shows "Ask Claude in chat to read pending sources"; Claude in chat reads the URLs and returns the text, or the designer pastes the text with "Paste text for this source". The real-source session above used this path.
