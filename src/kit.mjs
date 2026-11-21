@@ -244,25 +244,31 @@ export function nonPlayerSheetHtml(g, bot) {
   const dias = order.filter((n) => n.kind === "condition" && !gate(n)).map((n) => `<div class="dia"><p class="q">${h(n.text)}</p>${arr("Yes", n.yes)}${arr("No", n.no)}</div>`).join("");
 
   // A linked list prints in order: the first entry after "then" or "with", the next ones after "if none".
-  // One box per distinct Special Activity use; "nexts" holds the "if none" targets of that box.
+  // One box per distinct Special Activity use. Per box, "nexts" maps each "if none" target to the
+  // Operations whose list goes there, and "ends" holds the Operations whose list stops there. When
+  // the uses differ, every "if none" arrow names its Operations, so the sheet follows runBot.
   const sas = new Map();
   const saKey = (l) => JSON.stringify([l.action, l.table, l.trigger ?? null, l.skipText ?? ""]);
   const saName = (l) => `${act(l.action)?.name ?? l.action} (${labels[l.table]})`;
   const ops = order.filter((n) => n.kind === "action").map((n) => {
     const a = act(n.action), t = table(n.table), links = linkedOf(n);
     links.forEach((l, i) => {
-      const box = sas.get(saKey(l)) ?? sas.set(saKey(l), { l, nexts: new Set() }).get(saKey(l));
-      if (links[i + 1]) box.nexts.add(saName(links[i + 1]));
+      const box = sas.get(saKey(l)) ?? sas.set(saKey(l), { l, nexts: new Map(), ends: new Set() }).get(saKey(l));
+      if (links[i + 1]) { const x = saName(links[i + 1]); box.nexts.set(x, (box.nexts.get(x) ?? new Set()).add(to(n.id))); }
+      else box.ends.add(to(n.id));
     });
     const target = n.target ? `<p><b>Target:</b> one enemy faction (${labels[n.target]})</p>${prio(table(n.target))}` : "";
     const linked = links.map((l, i) => `<p class="arr"><b>${i ? "if none" : TIMING[l.timing] ?? "then"}</b> → ${h(saName(l))}</p>`).join("");
     const next = nodes[n.then].kind === "end" ? "" : arr("after", n.then);
     return `<section class="box op">${title(a?.name ?? n.action, t, a)}${where(a)}${target}${prio(t)}${linked}${next}${arr("if none", n.onEmpty)}</section>`;
   }).join("");
-  const saBoxes = [...sas.values()].map(({ l, nexts }) => {
+  const saBoxes = [...sas.values()].map(({ l, nexts, ends }) => {
     const a = act(l.action), t = table(l.table);
-    const skip = l.skipText || !nexts.size ? `<p class="skip">${h(l.skipText ?? "If none, no Special Activity.")}</p>` : "";
-    return `<section class="box sa">${title(a?.name ?? l.action, t, a)}${where(a)}${l.trigger !== undefined && l.trigger !== true ? `<p><b>Only if:</b> ${h(condTextOf(g, l.trigger))}.</p>` : ""}${prio(t)}${skip}${[...nexts].map((x) => `<p class="arr"><b>if none</b> → ${h(x)}</p>`).join("")}</section>`;
+    const mixed = nexts.size + (ends.size ? 1 : 0) > 1;
+    const after = (ops) => (mixed ? ` (after ${h([...ops].join(", "))})` : "");
+    const skip = l.skipText || (ends.size && !mixed) ? `<p class="skip">${h(l.skipText ?? "If none, no Special Activity.")}</p>` : "";
+    const arrows = [...nexts].map(([x, ops]) => `<p class="arr"><b>if none</b>${after(ops)} → ${h(x)}</p>`).join("") + (mixed && ends.size ? `<p class="arr"><b>if none</b>${after(ends)} → no Special Activity</p>` : "");
+    return `<section class="box sa">${title(a?.name ?? l.action, t, a)}${where(a)}${l.trigger !== undefined && l.trigger !== true ? `<p><b>Only if:</b> ${h(condTextOf(g, l.trigger))}.</p>` : ""}${prio(t)}${skip}${arrows}</section>`;
   }).join("");
 
   const card = (id) => g.deck.cards.find((c) => c.id === id)?.title ?? id.toUpperCase();
