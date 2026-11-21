@@ -91,3 +91,26 @@ test("a scoring dry run that does not match is an error", () => {
   g.bots[1].dryRuns.push({ id: "ib.d7", case: "scoring", patch: {}, expect: { outcome: "none", chosen: ["dublin"] } });
   assert.ok(validate(g).errors.some((e) => e.code === "dry-run-mismatch" && e.path === "/bots/1/dryRuns/6"));
 });
+
+// Bot aid: the fixed "no choices" sentence is replaced when the bot has scoring entries.
+import { aidModel, toMermaid, toMarkdown, toPolicyYaml } from "../src/botaid.mjs";
+import { buildFiles } from "../src/kit.mjs";
+const aidScoring = (g, bi) => { try { return aidModel(g, g.bots[bi]).scoring; } catch { return ""; } };
+const np = (g, f) => { try { return Object.fromEntries(buildFiles(g, { toMermaid, toMarkdown, toPolicyYaml }))[`kit/${g.meta.gameId}.${f}.nonplayer.html`] ?? ""; } catch { return ""; } };
+
+test("the bot aid states each scoring choice and its table", () => {
+  const g = withScoring();
+  const label = `IB-${g.bots[1].priorityTables.findIndex((t) => t.id === "ib.t.agitate") + 1}`;
+  assert.equal(aidScoring(g, 1), `In the Agitate phase: Agitate in Cities first. Choose each space with table ${label}. Every other phase is automatic.`);
+  assert.equal(aidScoring(g, 0), "The bot makes no choices in a scoring round. Every phase is automatic.");
+});
+
+test("the Non-Player sheet prints a box for each scoring phase the bot chooses in", () => {
+  const g = withScoring(), html = np(g, "ira");
+  const i = html.indexOf("<h2>Truce Talks card</h2>");
+  assert.ok(i > html.indexOf('class="col sas"'), "the scoring boxes sit in the right column");
+  const box = html.slice(html.indexOf("<h3>Agitate", i), html.indexOf("</section>", html.indexOf("<h3>Agitate", i)));
+  assert.match(box, /<p>Agitate in Cities first\.<\/p>/);
+  assert.match(box, /<p class="pr">❶ City\.<\/p>/);
+  assert.equal(np(example(), "ira").includes("Truce Talks card</h2>"), false);
+});
