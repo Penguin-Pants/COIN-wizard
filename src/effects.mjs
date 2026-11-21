@@ -91,7 +91,7 @@ function runStep(game, s, ctx) {
       pool[s.from] -= n;
       addPieces(sp, s.piece, s.state ?? defaultOf(game, s.piece), n);
       // Placed moved pieces leave the moved count (taken from its states in order).
-      if (s.count === "moved") for (const [st, k] of Object.entries(ctx.moved.byState)) {
+      if (s.count === "moved" && n > 0) for (const [st, k] of Object.entries(ctx.moved.byState)) {
         if (s.state !== undefined && st !== s.state) continue;
         const used = Math.min(k, n); ctx.moved.byState[st] -= used; n -= used;
       }
@@ -174,11 +174,12 @@ function runStep(game, s, ctx) {
 }
 
 // The cost of an action in the chosen spaces.
-export const costOf = (action, spaceIds) => (action.cost.amount > 0 ? (action.cost.per === "space" ? action.cost.amount * spaceIds.length : action.cost.amount) : 0);
+// No space: no cost, also for a per-use cost.
+export const costOf = (action, spaceIds) => (action.cost.amount > 0 && spaceIds.length ? (action.cost.per === "space" ? action.cost.amount * spaceIds.length : action.cost.amount) : 0);
 
-// Gives back the cost of the dropped spaces: the cost for all chosen spaces minus the cost for the kept ones.
-export function refundCost(game, state, action, chosenIds, keptIds) {
-  const back = costOf(action, chosenIds) - costOf(action, keptIds);
+// Gives back the cost paid for these spaces.
+export function refundCost(game, state, action, spaceIds) {
+  const back = costOf(action, spaceIds);
   if (back) setTrack(game, state, action.cost.track, trackValue(game, state, action.cost.track) + back);
 }
 

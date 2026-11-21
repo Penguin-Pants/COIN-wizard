@@ -128,10 +128,13 @@ export function runBot(game, bot, startState) {
         result.linked = hit ?? "skipped";
       }
       if (before) {
-        // Spaces the Special Activity made illegal are dropped and their cost is refunded.
+        // Spaces the Special Activity made illegal are dropped and their cost is refunded. The
+        // reserved cost is given back first, so the recheck does not count the Operation's own cost;
+        // then only the kept spaces are paid for.
+        refundCost(game, state, action, result.chosen);
         const legalNow = (id) => !!evalExpr(action.targets, { state, links: game.board.links, $space: state.spaces[id], ...extra });
         const kept = result.chosen.filter(legalNow);
-        refundCost(game, state, action, result.chosen, kept);
+        payCost(game, state, action, kept);
         result.chosen = kept;
         applyAction(game, state, action, kept, extra, { pay: false });
       }

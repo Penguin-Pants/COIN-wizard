@@ -190,3 +190,9 @@ test("place with count moved places each moved piece once", () => {
   ]);
   assert.deepEqual(s.spaces["cork-city"].pieces["ira.volunteer"], { underground: 2 });
 });
+
+test("place with count moved and no move before it places nothing and does not fail", () => {
+  const g = game(), s = deriveState(g, "ira");
+  run(g, s, "ira.march", ["cork-city"], [{ op: "place", piece: "ira.volunteer", count: "moved", from: "available", to: "$space" }]);
+  assert.deepEqual(s.spaces["cork-city"].pieces["ira.volunteer"], { underground: 1 });
+});
