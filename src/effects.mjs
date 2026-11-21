@@ -38,9 +38,10 @@ const statesOf = (game, pid) => game.factions.flatMap((f) => f.pieces).find((p) 
 const onSpace = (sp, pid, st) => Object.entries(sp.pieces[pid] ?? {}).filter(([s]) => st === undefined || s === st).reduce((n, [, c]) => n + c, 0);
 
 // How many: a number, "all" or "any" (as many as there are), "moved", or a formula.
-function qty(q, ctx, max) {
+// "moved" counts the pieces of the last move in one state (moved: { piece, byState }).
+function qty(q, ctx, max, piece, st) {
   if (q === "all" || q === "any") return max;
-  if (q === "moved") return Math.min(max, ctx.moved ?? 0);
+  if (q === "moved") return ctx.moved?.piece === piece ? Math.min(max, ctx.moved.byState[st] ?? 0) : 0;
   const n = typeof q === "number" ? q : Number(evalExpr(q, ctx));
   return Math.max(0, Math.min(max, n));
 }
@@ -84,19 +85,16 @@ function runStep(game, s, ctx) {
     }
     case "remove": {
       const sp = spaceOf(s, ctx, "space");
-      const want = qty(s.count, ctx, onSpace(sp, s.piece, s.state) + (s.fallbackPiece ? onSpace(sp, s.fallbackPiece) : 0));
-      let left = want;
-      for (const pid of [s.piece, s.fallbackPiece].filter(Boolean)) {
-        const got = takePieces(game, sp, pid, pid === s.piece ? s.state : undefined, left);
-        const k = got.reduce((t, [, c]) => t + c, 0);
-        poolOf(state, pid)[s.to] += k; left -= k;
-        if (!left) break;
-      }
+      // The fallback piece is used only when no primary piece is there (as the rule text says).
+      const primary = onSpace(sp, s.piece, s.state) > 0 || !s.fallbackPiece;
+      const pid = primary ? s.piece : s.fallbackPiece, st = primary ? s.state : undefined;
+      const got = takePieces(game, sp, pid, st, qty(s.count, ctx, onSpace(sp, pid, st)));
+      poolOf(state, pid)[s.to] += got.reduce((t, [, c]) => t + c, 0);
       return;
     }
     case "flip": {
       const sp = spaceOf(s, ctx, "space");
-      const n = qty(s.count, ctx, onSpace(sp, s.piece, s.from));
+      const n = qty(s.count, ctx, onSpace(sp, s.piece, s.from), s.piece, s.from);
       takePieces(game, sp, s.piece, s.from, n);
       addPieces(sp, s.piece, s.to, n);
       return;
@@ -109,14 +107,15 @@ function runStep(game, s, ctx) {
         : isPool(s.from) ? [] : [spaceOf({ ...s, filter: undefined }, ctx, "from")];
       const ok = (sp) => s.filter === undefined || !!evalExpr(s.filter, { ...ctx, $space: sp });
       const can = isPool(s.from) ? poolOf(state, s.piece)[s.from] : sources.filter(ok).reduce((t, sp) => t + onSpace(sp, s.piece, s.state), 0);
-      let left = qty(s.count, ctx, can), moved = 0;
-      const put = (st, k) => { if (dest) addPieces(dest, s.piece, st, k); else poolOf(state, s.piece)[s.to] += k; moved += k; };
+      let left = qty(s.count, ctx, can);
+      const byState = {};
+      const put = (st, k) => { if (dest) addPieces(dest, s.piece, st, k); else poolOf(state, s.piece)[s.to] += k; byState[st] = (byState[st] ?? 0) + k; };
       if (isPool(s.from)) { poolOf(state, s.piece)[s.from] -= left; put(s.state ?? statesOf(game, s.piece)[0], left); left = 0; }
       for (const sp of sources.filter(ok)) {
         if (!left) break;
         for (const [st, k] of takePieces(game, sp, s.piece, s.state, left)) { put(st, k); left -= k; }
       }
-      ctx.moved = moved;
+      ctx.moved = { piece: s.piece, byState };
       return;
     }
     case "shift": {

@@ -91,3 +91,20 @@ test("Tan War Martial Law sets a Curfew marker that starts from setup", async ()
   assert.match(countersHtml(g), /Curfew marker \(8, one per space\)/);
   assert.match(checklistMd(g), /\| Curfew marker \| 8 \|/);
 });
+
+// Review findings (Codex, PR 1).
+test("flip moved flips only pieces that moved in, not pieces already there", () => {
+  const g = game(), s = deriveState(g, "ira");
+  s.spaces["cork-county"].pieces["ira.volunteer"] = { active: 3 };
+  run(g, s, "ira.march", ["cork-city"]);
+  assert.deepEqual(s.spaces["cork-city"].pieces["ira.volunteer"], { underground: 1, active: 3 });
+});
+
+test("remove uses the fallback piece only when the primary piece is absent", () => {
+  const g = game(), s = deriveState(g, "ira");
+  s.spaces.kerry.pieces["crown.army"] = { normal: 1 };
+  s.spaces.kerry.pieces["crown.police"] = { normal: 2 };
+  run(g, s, "ira.attack", ["kerry"], [{ op: "remove", piece: "crown.army", count: 2, to: "available", fallbackPiece: "crown.police" }]);
+  assert.equal(s.spaces.kerry.pieces["crown.army"]?.normal ?? 0, 0);
+  assert.deepEqual(s.spaces.kerry.pieces["crown.police"], { normal: 2 }, "Army was there, so no Police is removed");
+});
