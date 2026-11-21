@@ -1,7 +1,7 @@
 // Print kit generators. Everything reads the confirmed definition only.
 import { aidModel, toHtml, stepNumbers, tableLabels } from "./botaid.mjs";
 import { graphSvg } from "./graphsvg.mjs";
-import { linkedOf } from "./dryrun.mjs";
+import { linkedOf, cardLasting } from "./dryrun.mjs";
 import { condText, stepText } from "./plain.mjs";
 import { toCond } from "./exprmodel.mjs";
 
@@ -266,7 +266,11 @@ export function nonPlayerSheetHtml(g, bot) {
   }).join("");
 
   const card = (id) => g.deck.cards.find((c) => c.id === id)?.title ?? id.toUpperCase();
-  const evi = `<section class="evi"><h2>Event Instructions</h2>${ep.overrides.map((o) => `<p><b>${h(card(o.cardId))}:</b> ${h(o.plain)}${o.directive === "ignore" ? "" : ` (play the ${o.side ?? ep.side} side)`}</p>`).join("") || "<p>None.</p>"}</section>`;
+  // Overrides for lasting cards (card.lasting of the side this bot plays) print in their own box.
+  const playSide = (o) => (o.directive === "ignore" ? "" : ` (play the ${o.side ?? ep.side} side)`);
+  const lasting = (o) => cardLasting(g, bot, o.cardId);
+  const lastingOvs = ep.overrides.filter((o) => lasting(o) !== "none");
+  const evi = `<section class="evi"><h2>Event Instructions</h2>${ep.overrides.filter((o) => lasting(o) === "none").map((o) => `<p><b>${h(card(o.cardId))}:</b> ${h(o.plain)}${playSide(o)}</p>`).join("") || "<p>None.</p>"}</section>${lastingOvs.length ? `<section class="evi"><h2>Momentum, Capability</h2>${lastingOvs.map((o) => `<p><b>${h(card(o.cardId))}</b> (${LASTING[lasting(o)]}): ${h(o.plain)}${playSide(o)}</p>`).join("")}</section>` : ""}`;
   const terms = bot.measures.length ? `<div class="terms"><b>Terms.</b> ${bot.measures.map((m) => `<b>${h(m.name)}:</b> ${h(m.plain)}`).join(" ")}</div>` : "";
   const gain = g.rules.sequence.passGain[bot.factionId] ?? 0;
   const foot = `<p class="foot">Ties after the lettered tie-breaks, when one space or faction is chosen: ${h(bot.randomization.eligibleSet)} ${h(bot.randomization.procedure)} Pass: gain ${gain} Resource${gain === 1 ? "" : "s"}.</p>`;

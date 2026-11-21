@@ -70,3 +70,21 @@ test("a lasting card side prints its tag, and other sides print none", () => {
   assert.doesNotMatch(cardHtml(html, "Reprisals"), /side unshaded"><b>[^<]*<\/b> <span/);
   assert.match(html, /\.lasting\{[^}]*border/);
 });
+
+// Non-Player sheet: overrides for lasting cards move from Event Instructions to a
+// "Momentum, Capability" box. No lasting override: no box.
+const section = (html, h2) => { const i = html.indexOf(`<h2>${h2}</h2>`); return i < 0 ? "" : html.slice(i, html.indexOf("</section>", i)); };
+
+test("the Non-Player sheet lists overrides for lasting cards in a Momentum, Capability box", () => {
+  const g = example();
+  side(g, "e07", "unshaded").lasting = "capability";
+  const html = kit(g, "crown.nonplayer");
+  assert.match(section(html, "Momentum, Capability"), /<p><b>Martial Law Decree<\/b> \(Capability\): [^<]+ \(play the unshaded side\)<\/p>/);
+  assert.doesNotMatch(section(html, "Event Instructions"), /Martial Law Decree/);
+  assert.match(section(html, "Event Instructions"), /Flying Column/);
+});
+
+test("a sheet with no lasting override has no Momentum, Capability box", () => {
+  assert.equal(section(kit(example(), "crown.nonplayer"), "Momentum, Capability"), "");
+  assert.notEqual(section(kit(example(), "crown.nonplayer"), "Event Instructions"), "");
+});
