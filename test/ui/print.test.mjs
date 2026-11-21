@@ -46,7 +46,41 @@ for (const [g, out] of kits) {
       assert.ok(r.units.every((x) => x === "avoid"));
     }
   });
+  // The Non-Player sheet is one page, as the GMT Non-Player sheets are.
+  test(`${g.meta.gameId}: every Non-Player sheet prints on one page at Letter and A4`, async () => {
+    for (const b of g.bots) {
+      const html = out[`kit/${g.meta.gameId}.${b.factionId}.nonplayer.html`] ?? "";
+      const r = await check(html);
+      assert.equal(r.boxes.length, 1, b.factionId);
+      assert.ok(r.boxes[0].w <= 190 * MM + 1, `${b.factionId} width ${r.boxes[0].w / MM} mm`);
+      assert.ok(r.boxes[0].h <= 259 * MM + 1, `${b.factionId} height ${r.boxes[0].h / MM} mm`);
+      assert.deepEqual(r.counts, { Letter: 1, A4: 1 }, b.factionId);
+    }
+  });
+  // The Sequence of Play sheet and the Card and Spaces list are one page each, as the GMT sheets are.
+  test(`${g.meta.gameId}: the Sequence of Play sheet and the Card and Spaces list print on one page each at Letter and A4`, async () => {
+    for (const name of ["sequence", "lists"]) {
+      const r = await check(out[`kit/${g.meta.gameId}.${name}.html`] ?? "");
+      assert.equal(r.boxes.length, 1, name);
+      assert.ok(r.boxes[0].w <= 190 * MM + 1, `${name} width ${r.boxes[0].w / MM} mm`);
+      assert.ok(r.boxes[0].h <= 259 * MM + 1, `${name} height ${r.boxes[0].h / MM} mm`);
+      assert.deepEqual(r.counts, { Letter: 1, A4: 1 }, name);
+    }
+  });
 }
+
+// The Event card flow reads left to right in rows: 1st Eligible box, arrow, 2nd Eligible box, then Adjust Eligibility.
+test("the Sequence of Play flow keeps its columns: 1st choice, arrow, 2nd options, Adjust Eligibility", async () => {
+  const [g, out] = kits[0];
+  const page = await browser.newPage();
+  try {
+    await page.setContent(out[`kit/${g.meta.gameId}.sequence.html`]); await page.emulateMedia({ media: "print" });
+    const xs = await page.$$eval(".sop1, .flow > .to, .sop2, .adj", (els) => els.map((e) => [e.className, Math.round(e.getBoundingClientRect().left), Math.round(e.getBoundingClientRect().right)]));
+    const col = (c) => xs.filter((x) => x[0].split(" ").includes(c));
+    for (const c of ["sop1", "to", "sop2"]) assert.equal(new Set(col(c).map((x) => x[1])).size, 1, `${c} boxes share one column`);
+    assert.ok(col("sop1")[0][2] <= col("to")[0][1] && col("to")[0][2] <= col("sop2")[0][1] && col("sop2")[0][2] <= col("adj")[0][1], JSON.stringify(xs));
+  } finally { await page.close(); }
+});
 
 // Known issue 4: the print test sheet is one page at Letter and A4, and its items print at true size.
 test("the print test sheet is one page at Letter and A4 with true-size ruler, card and counter", async () => {
