@@ -88,3 +88,25 @@ test("a designer adds and removes an If none Special Activity on an Operation no
   assert.equal(Array.isArray(g.bots[0].nodes[6].linked), false, "one entry left: back to a single object");
   assert.equal(await page.locator("#stepissues li.error").count(), 0);
 }));
+
+// Schema 1.5.0 part D: a bot may choose spaces in scoring phases, with an optional "scoring" dry run.
+test("a designer adds a scoring choice and a scoring dry run that passes", () => withApp(async ({ page, db }) => {
+  await botsTab(page);
+  assert.equal(await page.locator('[data-a="bot-addscoring"]').count(), 1, "the bot offers a scoring choice");
+  await page.click('[data-a="bot-addscoring"]'); await frames(page);
+  assert.equal(await page.locator('select[data-b="bots/0/scoring/0/phaseId"]').count(), 1);
+  await page.locator('select[data-b="bots/0/scoring/0/phaseId"]').selectOption("calm"); await frames(page);
+  await page.click('[data-a="dry-add"][data-case="scoring"]'); await frames(page);
+  const k = `0/${7}`;
+  await page.click(`[data-a="dry-run"][data-dry="${k}"]`); await frames(page);
+  assert.match(await page.innerText("#main"), /Result: none\. Path: calm\./);
+  await page.click(`[data-a="dry-use"][data-dry="${k}"]`); await frames(page);
+  await page.waitForTimeout(1800);
+  const g = JSON.parse((await db())["data/users/u1/draft"].json);
+  assert.deepEqual(g.bots[0].scoring.map((x) => x.phaseId), ["calm"]);
+  assert.deepEqual(g.bots[0].dryRuns.at(-1).expect, { outcome: "none", path: ["calm"] });
+  assert.equal(await page.locator("#stepissues li.error").count(), 0);
+  await page.click('[data-a="bot-delscoring"][data-i="0"]'); await frames(page);
+  await page.waitForTimeout(1800);
+  assert.equal("scoring" in JSON.parse((await db())["data/users/u1/draft"].json).bots[0], false);
+}));

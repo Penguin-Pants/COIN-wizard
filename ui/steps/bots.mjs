@@ -17,7 +17,7 @@ import { render } from "../shell.mjs";
 const ID_OK = /^[a-z0-9][a-z0-9._-]*$/;
 const KINDS = [["condition", "Check (yes or no)"], ["event-check", "Event check"], ["action", "Action"], ["end", "End"]];
 const OUTCOMES = ["none", "event", "operation", "operationSpecial", "pass"];
-const CASE_HELP = { ineligible: "The bot is not Eligible.", "event-override": "A card with an Event exception is current.", "no-target": "The first action finds no legal space.", tie: "Two spaces tie after the tie-breaks.", "linked-sa": "The Operation runs with its linked Special Activity.", fallback: "An action finds no space and the bot falls back." };
+const CASE_HELP = { ineligible: "The bot is not Eligible.", "event-override": "A card with an Event exception is current.", "no-target": "The first action finds no legal space.", tie: "Two spaces tie after the tie-breaks.", "linked-sa": "The Operation runs with its linked Special Activity.", fallback: "An action finds no space and the bot falls back.", scoring: "Optional. A scoring round: the bot picks spaces in its scoring phases." };
 const isCond = (e) => typeof e === "boolean" || (isExpr(e) && ["and", "or", "not", "anySpace", "eq", "ne", "gt", "gte", "lt", "lte"].includes(e.op));
 
 const fname = (id) => S.game.factions.find((f) => f.id === id)?.name ?? id;
@@ -75,6 +75,14 @@ function tableEditor(t, bi, ti) {
     <div class="row">${confirmButton(`tbl-${t.id}`, "Delete table", { action: "bot-deltable", data: `data-p="bots/${bi}" data-i="${ti}"` })}</div></details>`;
 }
 
+// Scoring-phase choices (bot.scoring): in each named phase, steps that need a space pick with the table.
+function scoringRules(b, bi) {
+  const g = S.game, phases = g.rules.scoring.phases.map((ph) => [ph.id, ph.name]);
+  const spaceTables = b.priorityTables.filter((t) => t.scope !== "opponent").map((t) => [t.id, t.id]);
+  const rows = (b.scoring ?? []).map((sc, i) => `<div class="opt"><div class="grid3">${fld("Phase", sel(`bots/${bi}/scoring/${i}/phaseId`, sc.phaseId, phases, { r: true }))}${fld("Table", sel(`bots/${bi}/scoring/${i}/table`, sc.table, spaceTables, { r: true }))}${fld("What the bot does (printed)", inp(`bots/${bi}/scoring/${i}/text`, sc.text ?? ""))}</div><div class="row">${btn("bot-delscoring", "Remove", { cls: "link", data: `data-p="bots/${bi}" data-i="${i}"` })}</div></div>`).join("");
+  return `<section class="panel"><h3>${esc(g.rules.scoring.name)} choices</h3><p class="lead">In a phase named here, every effect that needs a space picks it with the table, so the bot needs no judgment. Other phases are automatic.</p>${rows || "<p><small>No choices. Every phase is automatic.</small></p>"}${spaceTables.length ? btn("bot-addscoring", "Add a scoring choice", { cls: "link", data: `data-p="bots/${bi}"` }) : ""}</section>`;
+}
+
 function eventRules(b, bi) {
   const g = S.game, p = `bots/${bi}/eventPolicy`, ep = b.eventPolicy;
   const events = g.deck.cards.filter((c) => c.type === "event");
@@ -108,6 +116,7 @@ function patchForm(b, bi, d, di) {
 
 function dryRuns(b, bi) {
   const miss = missingCases(b);
+  const optional = b.scoring?.length && !b.dryRuns.some((d) => d.case === "scoring") ? `<li><b>scoring</b> <small>${CASE_HELP.scoring}</small> ${btn("dry-add", "Add case", { cls: "link", data: `data-bot="${bi}" data-case="scoring"` })}</li>` : "";
   const list = CASES.map((c) => `<li>${b.dryRuns.some((d) => d.case === c) ? chip("ok", "✓") : chip("bad", "missing")} <b>${c}</b> <small>${CASE_HELP[c]}</small>${miss.includes(c) ? ` ${btn("dry-add", "Add case", { cls: "link", data: `data-bot="${bi}" data-case="${c}"` })}` : ""}</li>`).join("");
   const runs = b.dryRuns.map((d, di) => {
     const p = `bots/${bi}/dryRuns/${di}`, k = `${bi}/${di}`, r = results[k];
@@ -115,12 +124,12 @@ function dryRuns(b, bi) {
     const x = d.expect;
     const res = r ? (r.error ? `<p class="err">${esc(r.error)}</p>` : `<p><b>Result:</b> ${esc(r.outcome)}. Path: ${esc(r.path.join(" > "))}.${r.chosen?.length ? ` Chosen: ${esc(r.chosen.join(", "))}.` : ""}${r.side ? ` Side: ${r.side}.` : ""}${r.linked ? ` Linked: ${esc(r.linked)}.` : ""}${r.target ? ` Target: ${esc(fname(r.target))}.` : ""}</p>${btn("dry-use", "Use result as expected", { data: `data-dry="${k}"` })}`) : "";
     return `<details class="act" data-k="dry-${esc(d.id)}" ${S.dopen[`dry-${d.id}`] ? "open" : ""}><summary><b>${esc(d.case)}</b> <small>${esc(d.id)}</small> ${bad ? chip("bad", "fail") : chip("ok", "pass")}</summary>
-      ${bad ? `<p class="err">${esc(bad.message)}</p>` : ""}${fld("Case", sel(`${p}/case`, d.case, CASES, { r: true }))}
+      ${bad ? `<p class="err">${esc(bad.message)}</p>` : ""}${fld("Case", sel(`${p}/case`, d.case, [...CASES, "scoring"], { r: true }))}
       <h4>Board state for this run (changes from setup)</h4>${patchForm(b, bi, d, di)}
       <h4>Expected</h4><p>${esc(x.outcome)}${x.path ? `. Path: ${esc(x.path.join(" > "))}` : ""}${x.chosen ? `. Chosen: ${esc(x.chosen.join(", "))}` : ""}${x.side ? `. Side: ${x.side}` : ""}${x.linked ? `. Linked: ${esc(x.linked)}` : ""}${x.target ? `. Target: ${esc(fname(x.target))}` : ""}.</p>
       <div class="row">${btn("dry-run", "Run now", { cls: "primary", data: `data-dry="${k}"` })}${confirmButton(`dry-${d.id}`, "Delete run", { action: "dry-del", data: `data-dry="${k}"` })}</div>${res}</details>`;
   }).join("");
-  return `<section class="panel"><h3>Dry runs</h3><p class="lead">Six required cases check the bot against example board states.</p><ul class="cases">${list}</ul>${runs}</section>`;
+  return `<section class="panel"><h3>Dry runs</h3><p class="lead">Six required cases check the bot against example board states.</p><ul class="cases">${list}${optional}</ul>${runs}</section>`;
 }
 
 export function renderBots() {
@@ -141,6 +150,7 @@ export function renderBots() {
     <section class="panel"><h3>Priority tables</h3>${b.priorityTables.map((t, ti) => tableEditor(t, bi, ti)).join("")}${btn("bot-addtable", "Add a space table", { cls: "link", data: `data-p="bots/${bi}"` })}${btn("bot-addenemy", "Add an enemy table", { cls: "link", data: `data-p="bots/${bi}"` })}
       <h4>Random ties</h4><div class="grid3">${fld("Die", sel(`bots/${bi}/randomization/die`, b.randomization.die, [["d6", "one six-sided die"]]))}${fld("Which spaces take part", area(`bots/${bi}/randomization/eligibleSet`, b.randomization.eligibleSet, { rows: 2 }))}${fld("How the roll picks", area(`bots/${bi}/randomization/procedure`, b.randomization.procedure, { rows: 2 }))}</div></section>
     ${eventRules(b, bi)}
+    ${scoringRules(b, bi)}
     <section class="panel"><h3>Measures</h3><p class="lead">Named values the bot aid prints.</p>${meas || "<p><small>No measures yet.</small></p>"}${btn("bot-addmeasure", "Add a measure", { cls: "link", data: `data-p="bots/${bi}/measures"` })}</section>
     ${dryRuns(b, bi)}
     <section class="panel"><details><summary>Printable aid (preview)</summary><pre class="aid" tabindex="0" aria-label="Printable aid preview">${esc(aid)}</pre></details></section></div>`;
@@ -180,6 +190,14 @@ export const botActions = {
     n.linked = list.length === 1 ? list[0] : list;
     done();
   },
+  // A new choice names the first phase that no bot chooses in yet.
+  "bot-addscoring": (d) => {
+    const b = botOf(d.p), taken = new Set(S.game.bots.flatMap((x) => (x.scoring ?? []).map((sc) => sc.phaseId)));
+    const ph = S.game.rules.scoring.phases.find((x) => !taken.has(x.id)) ?? S.game.rules.scoring.phases[0];
+    (b.scoring ??= []).push({ phaseId: ph?.id ?? "", table: b.priorityTables.find((t) => t.scope !== "opponent")?.id ?? "", text: "" });
+    done();
+  },
+  "bot-delscoring": (d) => { const b = botOf(d.p); b.scoring.splice(Number(d.i), 1); if (!b.scoring.length) delete b.scoring; done(); },
   "bot-addtable": (d) => { const b = botOf(d.p); const id = freeId(new Set(b.priorityTables.map((t) => t.id)), `${b.code.toLowerCase()}.t`); b.priorityTables.push({ id, scope: "space", select: "one", steps: [{ n: 1, text: "Any legal space.", filter: true }], tiebreak: [] }); S.dopen[`tbl-${id}`] = true; done(); },
   "bot-addenemy": (d) => { const b = botOf(d.p); const id = freeId(new Set(b.priorityTables.map((t) => t.id)), `${b.code.toLowerCase()}.enemy`); b.priorityTables.push({ id, scope: "opponent", select: "one", steps: [{ n: 1, text: "Any enemy.", filter: true }], tiebreak: [{ letter: "a", text: "Highest victory margin.", key: { var: "$faction.margin" }, order: "max" }] }); S.dopen[`tbl-${id}`] = true; done(); },
   "bot-deltable": (d) => { S.confirm = null; botOf(d.p).priorityTables.splice(Number(d.i), 1); done(); },
