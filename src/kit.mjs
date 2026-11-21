@@ -142,22 +142,23 @@ export function countersHtml(g) {
   return doc(g, "counters", `<section class="page">${head(g, "counters")}${groups}<div class="grp"><h2>Markers</h2><ul>${markers}</ul></div></section>`);
 }
 
-// Faction player aid, in the order of the COIN series foldouts: forces, Operations (3.0),
-// Special Activities (4.0), the sequence of play, Victory (7.0) and what the faction gets at scoring.
+// Faction player aid, in the order of a printed GMT faction aid (checked against the Colonial
+// Twilight FLN sheet): Operations (3.0), Special Activities (4.0), then Victory (7.0) for every
+// faction with the final-scoring rule. Each action reads Location, Cost, Procedure. Forces, the
+// sequence of play and scoring follow; that sheet does not show them.
 export function factionAidHtml(g, f) {
   const acts = (kind) => f[kind === "operation" ? "operations" : "specialActivities"].map((id) => g.actions.find((a) => a.id === id)).filter(Boolean);
   const track = (id) => g.tracks.find((t) => t.id === id)?.name ?? id;
-  const act = (a) => `<h3>${h(a.name)}</h3><p><b>Cost:</b> ${a.cost.amount ? `${a.cost.amount} ${h(track(a.cost.track))} per ${a.cost.per}` : "free"}${a.kind === "operation" ? `. ${a.limitedAllowed ? "Allowed" : "Not allowed"} as a Limited Operation` : `. Timing: ${h(a.timing ?? "after")} the Operation`}.</p><p class="where"><b>Where:</b> ${h(condTextOf(g, a.targets))}.</p><p>${h(a.plain)}</p>`;
+  const act = (a) => `<h3>${h(a.name)}</h3><p class="where"><b>Location:</b> ${h(condTextOf(g, a.targets))}.</p><p><b>Cost:</b> ${a.cost.amount ? `${a.cost.amount} ${h(track(a.cost.track))} per ${a.cost.per}` : "free"}${a.kind === "operation" ? `. ${a.limitedAllowed ? "Allowed" : "Not allowed"} as a Limited Operation` : `. Timing: ${h(a.timing ?? "after")} the Operation`}.</p><p><b>Procedure:</b> ${h(a.plain)}</p>`;
   const seq = g.rules.sequence;
-  const vic = g.victory.perFaction.find((v) => v.factionId === f.id);
   const mine = new Set([f.resourceTrack, ...f.pieces.map((p) => p.id)]);
   const scoring = g.rules.scoring.phases.flatMap((p) => p.steps.filter((st) => [...mine].some((id) => JSON.stringify(st).includes(`"${id}"`))).map((st) => `<li>${h(p.name)}: ${h(stepTextOf(g, st))}</li>`));
   const body = `<section class="page" style="--f:${f.color}"><div class="band">${shapeSvg(g, f)}<div><h1>${h(f.name)}: faction aid</h1>${head(g, "player aid")}</div></div><div class="cols">
-    <section class="aidsec"><h2>Forces</h2><table><tr><th>Piece</th><th>Sides</th><th>Supply</th></tr>${f.pieces.map((p) => `<tr><td>${h(p.name)}${p.isBase ? " (base)" : ""}</td><td>${p.states.map(h).join(" / ")}</td><td>${p.supply}</td></tr>`).join("")}</table><p>Resources: ${h(track(f.resourceTrack))}. Pass: gain ${seq.passGain[f.id] ?? 0}.</p></section>
     <section class="aidsec"><h2>3.0 Operations</h2>${acts("operation").map(act).join("") || "<p>None yet.</p>"}</section>
     <section class="aidsec"><h2>4.0 Special Activities</h2>${acts("specialActivity").map(act).join("") || "<p>None yet.</p>"}</section>
+    <section class="aidsec"><h2>7.0 Victory</h2>${g.victory.perFaction.map((v) => `<p><b>${h(faction(g, v.factionId).name)}:</b> ${h(v.plain)} Threshold: ${v.threshold}.</p>`).join("") || "<p>No victory rule yet.</p>"}<p>${h(g.victory.checkAt)} ${h(g.victory.finalScoring)}</p></section>
+    <section class="aidsec"><h2>Forces</h2><table><tr><th>Piece</th><th>Sides</th><th>Supply</th></tr>${f.pieces.map((p) => `<tr><td>${h(p.name)}${p.isBase ? " (base)" : ""}</td><td>${p.states.map(h).join(" / ")}</td><td>${p.supply}</td></tr>`).join("")}</table><p>Resources: ${h(track(f.resourceTrack))}. Pass: gain ${seq.passGain[f.id] ?? 0}.</p></section>
     <section class="aidsec"><h2>Sequence of play</h2><p>${h(seq.firstActor)}</p><table><tr><th>1st Eligible chose</th><th>2nd Eligible may choose</th></tr>${Object.entries(seq.secondActorOptions).map(([k, v]) => `<tr><td>${CHOICE[k]}</td><td>${v.map((x) => CHOICE[x]).join(", ")}</td></tr>`).join("")}</table></section>
-    <section class="aidsec"><h2>7.0 Victory</h2><p>${h(vic?.plain ?? "No victory rule yet.")}${vic ? ` Threshold: ${vic.threshold}.` : ""}</p><p>${h(g.victory.checkAt)} ${h(g.victory.finalScoring)}</p></section>
     <section class="aidsec"><h2>At each ${h(g.rules.scoring.name)} card</h2>${scoring.length ? `<ul>${scoring.join("")}</ul>` : "<p>Nothing specific to this faction.</p>"}</section></div></section>`;
   return doc(g, `${f.name} aid`, body);
 }
