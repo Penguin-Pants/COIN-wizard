@@ -48,7 +48,7 @@ Status of each gap from the 2026-11-21 review (branch `fix/known-gaps`). Closed 
 | 4 | Print checked by PDF only, not on paper | Open | |
 | 5 | Claim checks tested with scripted answers only | Open | |
 | 6 | 3- and 4-faction dry runs store run results as expected | Closed (2 design gaps open) | Every case derived by hand: "Dry runs derived by hand" below; `test/engine.test.mjs` checks each one. Open: no bot in these examples links a Special Activity, and 5 bots have no Event override (see below). |
-| 8 | No bundle size limit | Open | |
+| 8 | No bundle size limit | Closed | `scripts/build.mjs:7` (`LIMIT_KIB = 700`; the build exits 1 above it and writes no page); tests "the build fails with a clear message above the size limit" and "the build passes under the default limit of 700 KiB" (`test/build.test.mjs`). Size now: 570 KiB. |
 | 9 | Built page not tied to a commit | Open | |
 | 10 | `main` is not protected | Open | |
 
