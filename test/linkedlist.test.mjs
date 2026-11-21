@@ -134,7 +134,10 @@ test("Special Activity boxes print in list order with an if none arrow to the ne
   const g = withList(), html = np(g);
   const sas = html.slice(html.indexOf('class="col sas"'));
   assert.ok(sas.indexOf("<h3>Martial Law") >= 0 && sas.indexOf("<h3>Martial Law") < sas.indexOf("<h3>Patrol"), "Martial Law before Patrol");
-  assert.match(boxOf(html, "sas", "Martial Law"), new RegExp(`<p class="arr"><b>if none</b> → Patrol \\(${label(g, "cw.t.patrol")}\\)</p>`));
+  // Only Garrison tries Patrol next; Crackdown also links Martial Law but stops there (Codex review of PR 11).
+  const ml = boxOf(html, "sas", "Martial Law");
+  assert.match(ml, new RegExp(`<p class="arr"><b>if none</b> \\(after Garrison \\(${label(g, "cw.t.garrison")}\\)\\) → Patrol \\(${label(g, "cw.t.patrol")}\\)</p>`));
+  assert.match(ml, new RegExp(`<p class="arr"><b>if none</b> \\(after Crackdown \\(${label(g, "cw.t.crack")}\\)\\) → no Special Activity</p>`));
   assert.doesNotMatch(boxOf(html, "sas", "Patrol"), /<b>if none<\/b>/);
   assert.match(boxOf(html, "sas", "Patrol"), /Skip Patrol if Dublin is not legal\./);
 });
@@ -148,4 +151,12 @@ test("a table used by a later linked entry belongs to that node", () => {
   n.linked = [n.linked, { ...structuredClone(n.linked), table: "ra.t.pressure2" }];
   assert.deepEqual((V.tableUsers?.(b, "ra.t.pressure2") ?? []).map((x) => x.id), ["ra.op"]);
   assert.deepEqual(validate(g).errors, []);
+});
+
+test("a Special Activity box used by one list only prints a plain if none arrow", () => {
+  const g = withList();
+  delete node(g, "cw.crack").linked;
+  const ml = boxOf(np(g), "sas", "Martial Law");
+  assert.match(ml, new RegExp(`<p class="arr"><b>if none</b> → Patrol \\(${label(g, "cw.t.patrol")}\\)</p>`));
+  assert.doesNotMatch(ml, /\(after /);
 });
