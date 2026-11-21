@@ -1975,6 +1975,13 @@
               "plainOf": {
                 "type": "string",
                 "description": "Fingerprint of the steps when the plain text was last written. A different fingerprint marks the text as stale."
+              },
+              "lasting": {
+                "enum": [
+                  "momentum",
+                  "capability"
+                ],
+                "description": "The side's effect lasts: a Momentum Event (until the next scoring card) or a Capability (for the rest of the game). The side's text states what it does; the variable card.lasting reads it."
               }
             }
           }
