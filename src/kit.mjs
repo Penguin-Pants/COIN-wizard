@@ -225,7 +225,9 @@ export function nonPlayerSheetHtml(g, bot) {
   const where = (a) => (!a || a.targets === true ? "" : `<p class="where">Where ${h(condTextOf(g, a.targets))}.</p>`);
   // The printed max is what a dry run takes: the table limit, capped by the action's maxSpaces (src/dryrun.mjs).
   const max = (t, a) => (t.scope === "opponent" ? "" : `<span class="tag">max ${Math.min(t.select === "all" ? t.limit : 1, a?.maxSpaces ?? Infinity)}</span>`);
-  const prio = (t) => `${t.steps.map((s) => `<p class="pr">${NUM(s.n)} ${h(s.text)}</p>`).join("")}${t.tiebreak.length ? `<div class="tb">${t.tiebreak.map((x) => `<p>${LET(x.letter)} ${h(x.text)} (${x.order === "max" ? "highest" : "lowest"} wins)</p>`).join("")}</div>` : ""}`;
+  // A table that selects several spaces breaks its last ties by space name, not by the die (pick in src/dryrun.mjs).
+  const byName = (t) => (t.select === "all" && t.scope !== "opponent" ? '<p class="pr">Still tied: take spaces in alphabetical order of name.</p>' : "");
+  const prio = (t) => `${t.steps.map((s) => `<p class="pr">${NUM(s.n)} ${h(s.text)}</p>`).join("")}${t.tiebreak.length ? `<div class="tb">${t.tiebreak.map((x) => `<p>${LET(x.letter)} ${h(x.text)} (${x.order === "max" ? "highest" : "lowest"} wins)</p>`).join("")}</div>` : ""}${byName(t)}`;
   const title = (name, t, a) => `<div class="bt"><h3>${h(name)} <small>(${labels[t.id]})</small></h3>${max(t, a)}</div>`;
 
   const evNodes = order.filter((n) => n.kind === "event-check");
@@ -243,7 +245,7 @@ export function nonPlayerSheetHtml(g, bot) {
     const a = act(n.action), t = table(n.table);
     if (n.linked) sas.set(saKey(n.linked), n.linked);
     const target = n.target ? `<p><b>Target:</b> one enemy faction (${labels[n.target]})</p>${prio(table(n.target))}` : "";
-    const linked = n.linked ? `<p class="arr"><b>${TIMING[n.linked.timing] ?? "then"}</b> → ${h(act(n.linked.action)?.name ?? n.linked.action)}</p>` : "";
+    const linked = n.linked ? `<p class="arr"><b>${TIMING[n.linked.timing] ?? "then"}</b> → ${h(act(n.linked.action)?.name ?? n.linked.action)} (${labels[n.linked.table]})</p>` : "";
     const next = nodes[n.then].kind === "end" ? "" : arr("after", n.then);
     return `<section class="box op">${title(a?.name ?? n.action, t, a)}${where(a)}${target}${prio(t)}${linked}${next}${arr("if none", n.onEmpty)}</section>`;
   }).join("");
@@ -256,7 +258,7 @@ export function nonPlayerSheetHtml(g, bot) {
   const evi = `<section class="evi"><h2>Event Instructions</h2>${ep.overrides.map((o) => `<p><b>${h(card(o.cardId))}:</b> ${h(o.plain)}</p>`).join("") || "<p>None.</p>"}</section>`;
   const terms = bot.measures.length ? `<div class="terms"><b>Terms.</b> ${bot.measures.map((m) => `<b>${h(m.name)}:</b> ${h(m.plain)}`).join(" ")}</div>` : "";
   const gain = g.rules.sequence.passGain[bot.factionId] ?? 0;
-  const foot = `<p class="foot">Ties after the lettered tie-breaks: ${h(bot.randomization.eligibleSet)} ${h(bot.randomization.procedure)} Pass: gain ${gain} Resource${gain === 1 ? "" : "s"}.</p>`;
+  const foot = `<p class="foot">Ties after the lettered tie-breaks, when one space or faction is chosen: ${h(bot.randomization.eligibleSet)} ${h(bot.randomization.procedure)} Pass: gain ${gain} Resource${gain === 1 ? "" : "s"}.</p>`;
   const sym = shapeSvg(g, f);
   const body = `<section class="page np" style="--f:${f.color}"><div class="sheethead">${sym}<h1>Non-Player ${h(f.name)}</h1>${sym}</div>${head(g, "Non-Player sheet")}
     <div class="npgrid"><div class="col flow">${evt}${dias}</div><div class="col ops"><h2>Operations</h2>${ops || "<p>None.</p>"}</div><div class="col sas"><h2>Special Activities</h2>${saBoxes || "<p>None.</p>"}</div></div>${evi}${terms}${foot}</section>`;

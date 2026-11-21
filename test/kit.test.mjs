@@ -271,3 +271,21 @@ test("each tie-break states whether the highest or the lowest value wins", () =>
   assert.match(op, /ⓐ Highest Pop\. \(highest wins\)/);
   assert.match(op, /ⓑ Crown cubes\. \(lowest wins\)/);
 });
+
+// Codex review of PR 4, round 2: arrows name the table of the box they lead to, and a table that
+// selects several spaces breaks its last ties by space name, not by the die (pick in src/dryrun.mjs).
+test("an arrow to a Special Activity names the table of the box it leads to", () => {
+  const g = example(), b = g.bots[0];
+  b.priorityTables.push({ ...structuredClone(b.priorityTables.find((t) => t.id === "cw.t.law")), id: "cw.t.law2" });
+  b.nodes.find((n) => n.id === "cw.garrison").linked.table = "cw.t.law2";
+  const html = np(g, b), labels = Object.fromEntries(b.priorityTables.map((t, i) => [t.id, `CW-${i + 1}`]));
+  assert.match(opBox(html, "Crackdown"), new RegExp(`<b>then</b> → Martial Law \\(${labels["cw.t.law"]}\\)`));
+  assert.match(opBox(html, "Garrison"), new RegExp(`<b>then</b> → Martial Law \\(${labels["cw.t.law2"]}\\)`));
+});
+
+test("a box that selects several spaces says leftover ties go by space name", () => {
+  const g = example(), html = np(g, g.bots[0]);
+  assert.match(opBox(html, "Crackdown"), /Still tied: take spaces in alphabetical order of name\./);
+  assert.doesNotMatch(opBox(html, "Garrison"), /alphabetical/);
+  assert.match(html, /<p class="foot">Ties after the lettered tie-breaks, when one space or faction is chosen:/);
+});
