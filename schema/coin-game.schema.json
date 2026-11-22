@@ -1774,6 +1774,10 @@
                       "$ref": "#/$defs/id",
                       "description": "The enemy faction this option acts against (1.6.0). A bot whose action node picked an enemy ($target) takes the option for that faction."
                     },
+                    "legal": {
+                      "$ref": "#/$defs/expr",
+                      "description": "Spaces where this option can be used (1.6.0, needs faction). When the action is used against that faction, a space must meet both the action's targets and this."
+                    },
                     "steps": {
                       "type": "array",
                       "minItems": 1,

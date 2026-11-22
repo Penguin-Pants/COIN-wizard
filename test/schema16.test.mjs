@@ -72,3 +72,19 @@ test("plain text names the enemy of each option", () => {
   const g = three(); const a = strike(g);
   assert.match(stepText(a.steps[0], g), /^Choose an enemy faction: Against /);
 });
+
+// Review finding on PR 22: a bot that targets one enemy must use that enemy's legal spaces, not the union.
+test("each enemy option carries its own legal spaces, and an action used against an enemy uses them", async () => {
+  const { legalityOf } = await import("../src/effects.mjs");
+  const g = three(); const a = strike(g);
+  for (const o of a.steps[0].options) assert.ok(o.legal && o.legal !== true, `${o.faction} has its own legality`);
+  const [o1, o2] = a.steps[0].options;
+  assert.deepEqual(legalityOf(a, { $target: o2.faction }), { op: "and", args: [a.targets, o2.legal] });
+  assert.equal(legalityOf(a, {}), a.targets, "a player sees the spaces legal against any enemy");
+  assert.equal(legalityOf(a, { $target: "nobody" }), a.targets);
+  g.actions.push(a);
+  o1.legal = { op: "nosuch", args: [] };
+  assert.ok(validate(g).errors.some((e) => e.path.endsWith("/options/0/legal")), "an option's legality is checked like any condition");
+  o1.legal = true; delete o1.faction; // a schema problem would stop the checks, so the condition is valid here
+  assert.ok(validate(g).errors.some((e) => e.code === "option-legal"), "legal needs a faction");
+});

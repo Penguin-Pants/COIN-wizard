@@ -147,6 +147,10 @@ export function validate(game) {
         // An option's faction is an enemy of the acting faction, and each enemy has at most one option.
         const seenF = new Set();
         st.options.forEach((o, j) => {
+          if (o.legal !== undefined) {
+            checkExpr(o.legal, `${p}/options/${j}/legal`, scope);
+            if (o.faction === undefined) err("option-legal", `${p}/options/${j}/legal`, "An option's legal spaces need the faction it acts against");
+          }
           if (o.faction === undefined) return;
           const op = `${p}/options/${j}/faction`;
           if (!factionIds.has(o.faction)) err("missing-ref", op, `Unknown faction ${o.faction}`);

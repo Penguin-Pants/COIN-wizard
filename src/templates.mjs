@@ -211,7 +211,7 @@ function build(game, factionId, tpl) {
     plain: `Choose an enemy faction. ${parts.map(({ f, a }) => `Against ${f.name}: ${a.plain}`).join(" ")}`,
     targets: { op: "or", args: parts.map(({ a }) => a.targets) },
     dependsOn: [...new Set(parts.flatMap(({ a }) => a.dependsOn ?? []))],
-    steps: [{ op: "choose", options: parts.map(({ f, a }) => ({ label: `Against ${f.name}`, faction: f.id, steps: a.steps })) }]
+    steps: [{ op: "choose", options: parts.map(({ f, a }) => ({ label: `Against ${f.name}`, faction: f.id, legal: a.targets, steps: a.steps })) }]
   };
 }
 

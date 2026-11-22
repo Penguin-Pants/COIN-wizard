@@ -257,6 +257,14 @@ export function payCost(game, state, action, spaceIds) {
   if (total) setTrack(game, state, action.cost.track, trackValue(game, state, action.cost.track) - total);
 }
 
+// The legal-space condition of an action used against an enemy ($target): the action's targets and,
+// when its choice has an option for that enemy with its own legal spaces, those too (schema 1.6.0).
+// With no target (a player before choosing) it is the action's targets: legal against any enemy.
+export function legalityOf(action, extra = {}) {
+  const o = extra.$target && action.steps?.[0]?.op === "choose" ? action.steps[0].options.find((x) => x.faction === extra.$target) : null;
+  return o?.legal !== undefined ? { op: "and", args: [action.targets, o.legal] } : action.targets;
+}
+
 // Pays the action's cost (unless pay is false), then runs its steps once per chosen space
 // (in the chosen order). Changes state in place. extra: { $target } when the action picked an enemy.
 export function applyAction(game, state, action, spaceIds, extra = {}, { pay = true } = {}) {
