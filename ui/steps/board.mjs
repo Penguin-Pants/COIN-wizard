@@ -4,7 +4,7 @@ import { addButton, removeButton, defineList } from "../components/listEditor.mj
 import { fvars, fdot } from "../components/faction.mjs";
 import { boardSvg } from "../../src/kit.mjs";
 import { touch, check, ask, guard } from "../store.mjs";
-import { boardPrompt, applyBoard } from "../../src/boardsuggest.mjs";
+import { boardPrompt, applyBoard, boardBase } from "../../src/boardsuggest.mjs";
 import { render } from "../shell.mjs";
 
 export function renderBoard() {
@@ -46,10 +46,12 @@ function suggestPanel(g) {
 async function suggestBoard() {
   const g = S.game;
   const r = await ask(boardPrompt(g, S.texts));
-  S.proposal = { kind: "board", ...applyBoard(g, r) };
+  S.proposal = { kind: "board", base: boardBase(g), ...applyBoard(g, r) };
 }
 function acceptBoard() {
-  const { game } = S.proposal; const g = S.game;
+  const { game, base } = S.proposal; const g = S.game;
+  // Factions, pieces or tracks changed since the suggestion: its counts would no longer fit.
+  if (base !== boardBase(g)) { S.proposal = null; S.msg.board = "Factions, pieces or tracks changed after this suggestion, so it was discarded. Ask Claude again."; render(); return; }
   g.board = game.board; g.setup = game.setup; g.tracks = game.tracks;
   S.proposal = null; touch(); check(); render();
 }

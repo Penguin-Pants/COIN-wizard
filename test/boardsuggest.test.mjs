@@ -89,3 +89,42 @@ test("a suggestion with fewer than 2 usable spaces is refused", () => {
   const g = load("tan-war");
   assert.throws(() => applyBoard(g, { spaces: [{ name: "Only" }] }), /at least 2 spaces/);
 });
+
+// Review findings on PR 18.
+const two = (extra = {}) => ({ spaces: [{ name: "Alpha" }, { name: "Beta" }], links: [{ from: "Alpha", to: "Beta" }], ...extra });
+
+test("per-space limits hold across states and entries, and the excess stays in the pool", () => {
+  const g = load("tan-war");
+  const b = piecesOf(g).find((p) => p.maxPerSpace === 1);
+  const { game, report } = applyBoard(g, two({ placements: [{ space: "Alpha", piece: b.id, state: b.states[0], count: 2 }, { space: "Alpha", piece: b.id, state: b.states.at(-1), count: 1 }] }));
+  assert.deepEqual(errors(game), []);
+  assert.equal(game.setup.placements.filter((x) => x.piece === b.id).reduce((s, x) => s + x.count, 0), 1);
+  assert.ok(report.dropped.some((d) => /limit of 1/.test(d)));
+  assert.ok(boardPrompt({ ...g, brief: { ...g.brief, sources: [{ id: "s1", url: "u", status: "read" }] } }, { s1: "t" }).includes(`max ${b.maxPerSpace} per space`));
+});
+
+test("a suggestion whose links leave a space unreachable is refused", () => {
+  assert.throws(() => applyBoard(load("tan-war"), { spaces: [{ name: "Alpha" }, { name: "Beta" }], links: [] }), /cannot be reached.*Beta/);
+});
+
+test("a new space never takes the id of a space it removes", () => {
+  const g = load("tan-war"); const old = g.board.spaces[0]; old.name = "Galway";
+  const { game, report } = applyBoard(g, two({ spaces: [{ name: "Dublin" }, { name: "Beta" }], links: [{ from: "Dublin", to: "Beta" }] }));
+  assert.ok(report.removed.includes(old.id));
+  assert.ok(!game.board.spaces.some((s) => s.id === old.id));
+});
+
+test("the prompt anchors the setup to the chosen time period", () => {
+  const g = load("tan-war"); g.brief.sources = [{ id: "s1", url: "u", status: "read" }]; g.brief.overview.period = "July 1921";
+  assert.match(boardPrompt(g, { s1: "t" }), /Start of the game: July 1921/);
+});
+
+test("a suggestion made for other factions, pieces or tracks cannot be applied", async () => {
+  const { boardBase } = await import("../src/boardsuggest.mjs");
+  const g = load("tan-war"); const base = boardBase(g);
+  assert.equal(boardBase(structuredClone(g)), base);
+  g.factions[0].pieces[0].supply += 1;
+  assert.notEqual(boardBase(g), base);
+  const h = load("tan-war"); h.tracks[0].max += 1;
+  assert.notEqual(boardBase(h), base);
+});

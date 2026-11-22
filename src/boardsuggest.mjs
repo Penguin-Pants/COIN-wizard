@@ -11,17 +11,18 @@ export function boardPrompt(game, texts) {
   const srcs = game.brief.sources.filter((s) => s.status === "read" && texts[s.id]);
   if (!srcs.length) throw new Error("No source text yet. Mark a source read in Step 1, or paste its text.");
   const material = srcs.map((s) => chunkText(s.id, texts[s.id]).slice(0, 2).map((c) => `SOURCE ${s.id} (${s.url}), characters ${c.start} to ${c.end}:\n${c.text}`).join("\n\n")).join("\n\n");
-  const pieces = game.factions.flatMap((f) => f.pieces.map((p) => `${p.id}: ${p.name}, faction ${f.name} (${f.id}), states ${p.states.join("/")}, supply ${p.supply}${p.isBase ? ", base" : ""}`)).join("\n");
+  const pieces = game.factions.flatMap((f) => f.pieces.map((p) => `${p.id}: ${p.name}, faction ${f.name} (${f.id}), states ${p.states.join("/")}, supply ${p.supply}${p.maxPerSpace ? `, max ${p.maxPerSpace} per space` : ""}${p.isBase ? ", base" : ""}`)).join("\n");
   const tracks = game.tracks.map((t) => `${t.id}: ${t.name}, ${t.min} to ${t.max}`).join("\n");
   const o = game.brief.overview;
   return `You help design a COIN-style board game about: ${game.meta.title}. ${game.brief.conflict}
 Places named in the overview: ${o.places.join("; ") || "none"}.
+Start of the game: ${o.period || "not set; use the start of the period the sources cover"}. Base the starting setup on the situation at that time.
 Using the sources below, suggest the map and the starting setup. Base each space on a real region, city, border area or sanctuary from the sources. Paraphrase, never copy sentences.
 Space types: city, province, line (a road or rail line), sanctuary (a foreign base area), custom. pop is population weight 0 to 3 (cities 1 to 3, empty areas 0). opinion is -1 Opposition, 0 Neutral, 1 Support at the start.
 Give 8 to 20 spaces. Every space must be reachable through links. Links are legal movement between spaces that touch.
 Pieces (use these ids and states exactly):
 ${pieces}
-Place pieces where each faction was strong when the game starts. Total placed plus out of play must not exceed a piece's supply.
+Place pieces where each faction was strong when the game starts. Total placed plus out of play must not exceed a piece's supply. Never place more of a piece in one space than its per-space maximum.
 Tracks (use these ids; start must be inside the range):
 ${tracks}
 Factions: ${game.factions.map((f) => `${f.id} (${f.name})`).join(", ")}.
@@ -42,7 +43,8 @@ function slug(name, taken) {
 export function applyBoard(game, r) {
   const g = structuredClone(game), dropped = [];
   const old = new Map(game.board.spaces.map((s) => [key(s.name), s]));
-  const taken = new Set(), byName = new Map(), kept = [], added = [];
+  // Every current id is reserved: a new space never inherits a removed space's id, references or position.
+  const taken = new Set(game.board.spaces.map((s) => s.id)), byName = new Map(), kept = [], added = [];
 
   const spaces = [];
   for (const s of Array.isArray(r?.spaces) ? r.spaces : []) {
@@ -52,7 +54,7 @@ export function applyBoard(game, r) {
     if (spaces.length >= MAX_SPACES) { dropped.push(`Space ${s.name} (more than ${MAX_SPACES} spaces)`); continue; }
     const prev = old.get(k);
     const id = prev ? prev.id : null;
-    if (id) { taken.add(id); kept.push(id); }
+    if (id) kept.push(id);
     spaces.push({ s, k, id, prev });
   }
   if (spaces.length < 2) throw new Error("Claude's answer needs at least 2 spaces. Try again.");
@@ -81,6 +83,13 @@ export function applyBoard(game, r) {
     else { seen.add(pair); links.push({ id: `l${links.length + 1}`, from: a, to: b }); }
   }
 
+  const adj = new Map(spaces.map((x) => [x.id, []]));
+  for (const l of links) { adj.get(l.from).push(l.to); adj.get(l.to).push(l.from); }
+  const reach = new Set([spaces[0].id]), q = [spaces[0].id];
+  while (q.length) for (const n of adj.get(q.shift())) if (!reach.has(n)) { reach.add(n); q.push(n); }
+  const lost = spaces.filter((x) => !reach.has(x.id)).map((x) => x.out.name);
+  if (lost.length) throw new Error(`Claude's board has spaces that cannot be reached by legal connections: ${lost.join(", ")}. Nothing was changed. Try again.`);
+
   const pieces = new Map(g.factions.flatMap((f) => f.pieces).map((p) => [p.id, p]));
   const used = new Map(), placements = [];
   for (const pl of Array.isArray(r?.placements) ? r.placements : []) {
@@ -89,8 +98,10 @@ export function applyBoard(game, r) {
     if (!sp) { dropped.push(`Placement in unknown space ${pl?.space}`); continue; }
     let state = pl.state;
     if (!p.states.includes(state)) { dropped.push(`State "${state}" of ${p.name} (set to ${p.states[0]})`); state = p.states[0]; }
-    const want = int(pl.count, 0, 999, 0), left = p.supply - (used.get(p.id) ?? 0), n = Math.min(want, left);
-    if (n < want) dropped.push(`${want - n} ${p.name} in ${pl.space} (more than the supply of ${p.supply})`);
+    const here = placements.filter((x) => x.space === sp && x.piece === p.id).reduce((t, x) => t + x.count, 0);
+    const want = int(pl.count, 0, 999, 0), left = p.supply - (used.get(p.id) ?? 0), room = p.maxPerSpace ? p.maxPerSpace - here : Infinity;
+    const n = Math.max(0, Math.min(want, left, room));
+    if (n < want) dropped.push(room < Math.min(want, left) ? `${want - n} ${p.name} in ${pl.space} (more than the limit of ${p.maxPerSpace} per space)` : `${want - n} ${p.name} in ${pl.space} (more than the supply of ${p.supply})`);
     if (n <= 0) continue;
     used.set(p.id, (used.get(p.id) ?? 0) + n);
     const same = placements.find((x) => x.space === sp && x.piece === p.id && x.state === state);
@@ -119,3 +130,6 @@ export function applyBoard(game, r) {
   g.setup.pools = pools;
   return { game: g, report: { kept, added, removed, dropped, notes: typeof r?.notes === "string" ? r.notes : "" } };
 }
+
+// What a suggestion depends on: factions, pieces and tracks. A proposal is applied only while this is unchanged.
+export const boardBase = (g) => JSON.stringify([g.factions.map((f) => [f.id, f.pieces]), g.tracks.map((t) => [t.id, t.min, t.max])]);
