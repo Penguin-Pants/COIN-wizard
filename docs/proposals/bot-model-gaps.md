@@ -66,4 +66,5 @@ All approved parts go into one new version, `coin-game/1.5.0`. Every new field i
 | `spaceText`, `cost.byType` (player sheets) | `spaceText` approved for 1.5.0; `cost.byType` deferred (owner, in the implementation session) |
 | D: which phase steps, dry-run case, space count | Every step that needs a space in a named phase, at most one entry per phase; case `scoring` runs the named phases (`outcome: none`, `path` = phase ids); up to the step's `spaces`, capped by the table (owner, in the implementation session) |
 | E: side read by `card.lasting` | The side the bot plays: the override's side, else `eventPolicy.side` (owner, in the implementation session) |
+| C: cost, empty and timing rules | As written in `docs/SCHEMA.md` ("Action node `parts`", rules 1 to 8); timing `before` allowed with an empty check first and no cost set aside (owner, in the implementation session) |
 | A: timing of list entries | One timing per list; the validator rejects a mix (owner, in the implementation session) |
