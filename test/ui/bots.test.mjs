@@ -110,3 +110,28 @@ test("a designer adds a scoring choice and a scoring dry run that passes", () =>
   await page.waitForTimeout(1800);
   assert.equal("scoring" in JSON.parse((await db())["data/users/u1/draft"].json).bots[0], false);
 }));
+
+// Schema 1.5.0 part C: an Operation node split into numbered parts, each with its table and effects.
+test("a designer splits an Operation node into parts and joins it back", () => withApp(async ({ page, db }) => {
+  await botsTab(page);
+  await page.locator('.flow g[data-node="cw.garrison"]').click(); await frames(page);
+  assert.equal(await page.locator('[data-a="bot-parts-add"]').count(), 1, "the node form offers parts");
+  await page.click('[data-a="bot-parts-add"]'); await frames(page);
+  assert.equal(await page.locator('select[data-b="bots/0/nodes/6/parts/0/table"]').count(), 1);
+  assert.equal(await page.locator('select[data-b="bots/0/nodes/6/table"]').count(), 0, "no node table with parts");
+  await page.click('[data-a="bot-parts-add"]'); await frames(page);
+  await page.locator('input[data-b="bots/0/nodes/6/parts/1/text"]').fill("Place 1 Police.");
+  await page.locator('input[data-b="bots/0/nodes/6/parts/1/text"]').dispatchEvent("change"); await frames(page);
+  await page.waitForTimeout(1800);
+  let n = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].nodes[6];
+  assert.equal(n.parts.length, 2);
+  assert.equal("table" in n, false);
+  assert.equal(n.parts[0].steps.length, 2, "the first part starts with the Operation's effects");
+  assert.equal(n.parts[1].text, "Place 1 Police.");
+  await page.click('[data-a="bot-parts-del"][data-i="1"]'); await frames(page);
+  await page.click('[data-a="bot-parts-del"][data-i="0"]'); await frames(page);
+  await page.waitForTimeout(1800);
+  n = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].nodes[6];
+  assert.equal("parts" in n, false);
+  assert.equal(n.table, "cw.t.garrison", "the last part's table goes back to the node");
+}));
