@@ -65,7 +65,7 @@ function nodeForm(b, bi) {
 
 // parts: numbered sub-actions of one Operation, each with its own table and effects (schema 1.5.0).
 function partsForm(n, p, tables) {
-  const rows = (n.parts ?? []).map((pt, i) => `<div class="sblock"><h4>Part ${i + 1}</h4><div class="grid2">${fld("What it does (printed)", inp(`${p}/parts/${i}/text`, pt.text))}${fld("Table", sel(`${p}/parts/${i}/table`, pt.table, tables.filter(([v]) => v), { r: true }))}</div><h4>Effects in each chosen space</h4><ol class="steps">${stepList(pt.steps, `${p}/parts/${i}/steps`, { space: true })}</ol>${addButton("steps", "Add effect", { cls: "link", data: `data-p="${p}/parts/${i}/steps"` })}<div class="row">${btn("bot-parts-del", "Remove this part", { cls: "link", data: `data-p="${p}" data-i="${i}"` })}</div></div>`).join("");
+  const rows = (n.parts ?? []).map((pt, i) => `<div class="sblock"><h4>Part ${i + 1}</h4><div class="grid2">${fld("What it does (printed)", inp(`${p}/parts/${i}/text`, pt.text))}${fld("Table", sel(`${p}/parts/${i}/table`, pt.table, tables.filter(([v]) => v), { r: true }))}</div><h4>Effects in each chosen space</h4><ol class="steps">${stepList(pt.steps, `${p}/parts/${i}/steps`, { space: true, target: n.target !== undefined })}</ol>${addButton("steps", "Add effect", { cls: "link", data: `data-p="${p}/parts/${i}/steps"` })}<div class="row">${btn("bot-parts-del", "Remove this part", { cls: "link", data: `data-p="${p}" data-i="${i}"` })}</div></div>`).join("");
   return `${rows}<div class="row">${btn("bot-parts-add", n.parts ? "Add a part" : "Split into parts", { cls: "link", data: `data-p="${p}"` })}<small> Parts run in order. Each picks its own spaces with its table and runs its own effects. The cost is paid once per space.</small></div>`;
 }
 

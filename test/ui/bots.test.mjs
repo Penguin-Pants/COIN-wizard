@@ -135,3 +135,16 @@ test("a designer splits an Operation node into parts and joins it back", () => w
   assert.equal("parts" in n, false);
   assert.equal(n.table, "cw.t.garrison", "the last part's table goes back to the node");
 }));
+
+// Codex review of PR 14: part effects of a node with a target may read the target, so their editors offer it.
+test("the part effect editor offers the target when the node picks an enemy", () => withApp(async ({ page }) => {
+  await botsTab(page);
+  await page.click('[data-a="bot-addenemy"]'); await frames(page);
+  await page.locator('.flow g[data-node="cw.garrison"]').click(); await frames(page);
+  await page.locator('select[data-b="bots/0/nodes/6/target"]').selectOption({ index: 1 }); await frames(page);
+  await page.click('[data-a="bot-parts-add"]'); await frames(page);
+  await page.locator('select[data-sq="bots/0/nodes/6/parts/0/steps/0/count"]').selectOption("formula"); await frames(page);
+  const flags = await page.locator('[data-path="/bots/0/nodes/6/parts/0/steps/0/count"][data-xt2]').evaluateAll((els) => els.map((e) => e.dataset.xt2));
+  assert.ok(flags.length > 0, "the count formula has an expression editor");
+  assert.ok(flags.every((x) => x === "1"), JSON.stringify(flags));
+}));
