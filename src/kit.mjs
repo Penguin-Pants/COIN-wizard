@@ -5,6 +5,7 @@ import { linkedOf, cardLasting } from "./dryrun.mjs";
 import { choiceCounts } from "./effects.mjs";
 import { condText, stepText } from "./plain.mjs";
 import { toCond } from "./exprmodel.mjs";
+import { voronoi, FRAME } from "./mapplace.mjs";
 
 const condTextOf = (g, e) => condText(toCond(e), g);
 const stepTextOf = (g, st) => stepText(st, g);
@@ -22,22 +23,35 @@ function nameLines(name) {
 }
 
 // presentation.background: { href, opacity } draws a designer image under the board.
+// The board as a map: provinces and other areas are region shapes (cells around each space's
+// position), cities are round markers and lines are bars, both drawn on top. Lines between centers
+// are the legal connections. Region tint shows starting opinion. With a map image the board keeps the
+// editor frame, so each space stays on its place on the image.
+const OPINION_FILL = { 1: "#dbe7f3", 0: "#efeadb", "-1": "#f3dcd8" };
 export function boardSvg(g, { fixed = false } = {}) {
   const pos = g.board.presentation.positions;
+  const bg = g.board.presentation.background;
+  const frame = fixed || bg?.href;
   const xs = Object.values(pos).map((p) => p.x), ys = Object.values(pos).map((p) => p.y);
   const pad = 70;
-  const minX = fixed ? 0 : Math.min(...xs) - pad, minY = fixed ? 0 : Math.min(...ys) - pad;
-  const w = fixed ? 640 : Math.max(...xs) - minX + pad, hgt = fixed ? 480 : Math.max(...ys) - minY + pad;
-  const bg = g.board.presentation.background;
-  const image = bg?.href ? `<image href="${h(bg.href)}" x="${minX}" y="${minY}" width="${w}" height="${hgt}" preserveAspectRatio="xMidYMid slice" opacity="${bg.opacity ?? 0.35}"/>` : "";
-  const line = g.board.links.filter((l) => pos[l.from] && pos[l.to]).map((l) => `<line x1="${pos[l.from].x}" y1="${pos[l.from].y}" x2="${pos[l.to].x}" y2="${pos[l.to].y}" stroke="#444" stroke-width="3" stroke-linecap="round"/>`).join("");
+  const minX = frame ? 0 : Math.min(...xs) - pad, minY = frame ? 0 : Math.min(...ys) - pad;
+  const w = frame ? FRAME.w : Math.max(...xs) - minX + pad, hgt = frame ? FRAME.h : Math.max(...ys) - minY + pad;
+  const image = bg?.href ? `<image href="${h(bg.href)}" x="${minX}" y="${minY}" width="${w}" height="${hgt}" preserveAspectRatio="xMidYMid meet" opacity="${bg.opacity ?? 0.35}"/>` : "";
+  const placed = g.board.spaces.filter((s) => pos[s.id]);
+  const isRegion = (s) => s.type !== "city" && s.type !== "line";
+  const cells = voronoi(Object.fromEntries(placed.filter(isRegion).map((s) => [s.id, pos[s.id]])), { x: minX, y: minY, w, h: hgt }, { reach: 0.85 });
+  const opinion = (s) => OPINION_FILL[g.setup.spaceAttributes?.[s.id]?.opinion ?? 0] ?? OPINION_FILL[0];
   const label = 'font-family="sans-serif" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3" stroke-linejoin="round"';
-  const nodes = g.board.spaces.filter((s) => pos[s.id]).map((s) => {
-    const { x, y } = pos[s.id], lines = nameLines(s.name), top = y - (lines.length > 1 ? 12 : 5);
-    const shape = s.type === "city" ? `<rect x="${x - 54}" y="${y - 32}" width="108" height="64" rx="8" fill="#fff" fill-opacity="0.92" stroke="#111" stroke-width="3"/>` : `<ellipse cx="${x}" cy="${y}" rx="58" ry="34" fill="#fff" fill-opacity="0.92" stroke="#111" stroke-width="2" stroke-dasharray="${s.type === "province" ? "0" : "5 3"}"/>`;
-    return `<g data-space="${h(s.id)}" tabindex="0" style="cursor:grab"><title>${h(s.name)}: drag to move, arrow keys nudge</title>${shape}${lines.map((t, i) => `<text x="${x}" y="${top + i * 13}" font-size="12" font-weight="700" ${label}>${h(t)}</text>`).join("")}<text x="${x}" y="${top + lines.length * 13 + 2}" font-size="10.5" ${label}>${s.type}, Pop ${s.attrs.pop}</text></g>`;
+  const text = (s, x, y) => { const lines = nameLines(s.name), top = y - (lines.length > 1 ? 12 : 5); return `${lines.map((t, i) => `<text x="${x}" y="${top + i * 13}" font-size="12" font-weight="700" ${label}>${h(t)}</text>`).join("")}<text x="${x}" y="${top + lines.length * 13 + 2}" font-size="10.5" ${label}>${s.type}, Pop ${s.attrs.pop}</text>`; };
+  const grp = (s, body) => `<g data-space="${h(s.id)}" tabindex="0" style="cursor:grab"><title>${h(s.name)}: drag to move, arrow keys nudge</title>${body}</g>`;
+  const regions = placed.filter(isRegion).map((s) => grp(s, `<polygon points="${cells[s.id].map(([x, y]) => `${Math.round(x * 10) / 10},${Math.round(y * 10) / 10}`).join(" ")}" fill="${opinion(s)}" fill-opacity="${bg?.href ? 0.45 : 1}" stroke="#555" stroke-width="1.5" stroke-dasharray="${s.type === "province" ? "0" : "6 3"}"/>${text(s, pos[s.id].x, pos[s.id].y)}`)).join("");
+  const line = g.board.links.filter((l) => pos[l.from] && pos[l.to]).map((l) => `<line x1="${pos[l.from].x}" y1="${pos[l.from].y}" x2="${pos[l.to].x}" y2="${pos[l.to].y}" stroke="#333" stroke-width="2" stroke-opacity="0.55" stroke-linecap="round"/>`).join("");
+  const markers = placed.filter((s) => !isRegion(s)).map((s) => {
+    const { x, y } = pos[s.id];
+    const shape = s.type === "city" ? `<circle cx="${x}" cy="${y}" r="16" fill="${opinion(s)}" stroke="#111" stroke-width="3"/>` : `<rect x="${x - 26}" y="${y - 7}" width="52" height="14" rx="7" fill="#d8c9a3" stroke="#111" stroke-width="2"/>`;
+    return grp(s, `${shape}${text(s, x, y + 34)}`);
   }).join("");
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${minX} ${minY} ${w} ${hgt}" width="${Math.round(w)}" height="${Math.round(hgt)}" role="img" aria-label="Schematic board for ${h(g.meta.title)}"><rect x="${minX}" y="${minY}" width="${w}" height="${hgt}" fill="#f7f7f2"/>${image}${line}${nodes}<text x="${minX + 8}" y="${minY + hgt - 8}" font-size="10" font-family="sans-serif">${h(g.meta.title)} schematic board. Lines are legal connections. ${draftNote(g)}</text></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${minX} ${minY} ${w} ${hgt}" width="${Math.round(w)}" height="${Math.round(hgt)}" role="img" aria-label="Board for ${h(g.meta.title)}"><rect x="${minX}" y="${minY}" width="${w}" height="${hgt}" fill="#f7f7f2"/>${image}${regions}${line}${markers}<text x="${minX + 8}" y="${minY + hgt - 8}" font-size="10" font-family="sans-serif">${h(g.meta.title)} board. Lines are legal connections; tint is starting opinion (blue Support, red Opposition). ${draftNote(g)}</text></svg>`;
 }
 
 export function setupSheetMd(g) {
