@@ -46,3 +46,9 @@ test("a web address background is saved as it is", () => {
   const { json, images } = packGame(g);
   assert.deepEqual(images, {}); assert.ok(json.includes("https://example.org/map.png"));
 });
+
+test("a failed image read is passed on, so the saved game keeps its image reference", async () => {
+  const g = load(); g.board.presentation.background = { href: bigImage, opacity: 0.5 };
+  const { json } = packGame(g);
+  await assert.rejects(unpackGame(json, async () => { throw Object.assign(new Error("offline"), { code: "unavailable" }); }), /offline/);
+});

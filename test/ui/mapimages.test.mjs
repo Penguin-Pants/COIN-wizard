@@ -34,6 +34,17 @@ test("Claude places spaces on an uploaded map, and Apply puts the map under the 
   assert.ok(draft.json.includes("db-image:")); assert.ok(!draft.json.includes("data:image/jpeg"));
 }, { replies: [["Find each space below on the map", ANSWER]] }));
 
+test("Apply moves only the spaces found on the map; a space moved during the preview keeps its place", () => withApp(async ({ page }) => {
+  await goStep(page, 2);
+  await page.setInputFiles("#mapfiles", MAP); await page.waitForSelector("ol.maps img");
+  await page.click('[data-a="map-place"]'); await page.waitForSelector('[aria-label="Suggested map positions"]');
+  await page.click('summary:has-text("Exact positions")');
+  const x = page.locator('input[data-path="/board/presentation/positions/belfast/x"]');
+  await x.fill("111"); await x.dispatchEvent("change"); await frames(page);
+  await page.click('[data-a="map-accept"]'); await frames(page);
+  assert.equal(await page.inputValue('input[data-path="/board/presentation/positions/belfast/x"]'), "111");
+}, { replies: [["Find each space below on the map", ANSWER]] }));
+
 test("a saved map comes back with the resumed draft", () => withApp(async ({ page }) => {
   await goStep(page, 2);
   await page.setInputFiles("#mapfiles", MAP); await page.waitForSelector("ol.maps img");

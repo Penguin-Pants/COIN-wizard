@@ -82,7 +82,8 @@ async function placeOnMap() {
 function acceptMap() {
   const p = S.proposal, g = S.game;
   if (p.spaces !== g.board.spaces.map((s) => s.id).join("|")) { S.proposal = null; S.msg.map = "The spaces changed after this suggestion, so it was discarded. Ask Claude again."; render(); return; }
-  g.board.presentation.positions = p.game.board.presentation.positions;
+  // Only the spaces Claude found move; every other space keeps its current place.
+  for (const id of p.report.placed) g.board.presentation.positions[id] = p.game.board.presentation.positions[id];
   g.board.presentation.background = { href: p.map.href, opacity: 0.5 };
   S.proposal = null; touch(); check(); render();
 }

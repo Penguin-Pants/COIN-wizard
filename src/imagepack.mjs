@@ -16,12 +16,13 @@ export function packGame(game) {
   return { json: JSON.stringify(game), images };
 }
 
-// load(key) returns the data URL, or null when the image is gone.
+// load(key) returns the data URL, or null when the image is confirmed gone. A failed read throws and
+// is passed on, so the caller can retry and the saved game keeps its image reference.
 export async function unpackGame(json, load) {
   const game = JSON.parse(json), missing = [], bg = game.board?.presentation?.background;
   if (bg?.href?.startsWith(REF)) {
     const key = bg.href.slice(REF.length);
-    let href = null; try { href = await load(key); } catch { /* treated as gone */ }
+    const href = await load(key);
     if (href) bg.href = href; else { game.board.presentation.background = null; missing.push(key); }
   }
   return { game, missing };
