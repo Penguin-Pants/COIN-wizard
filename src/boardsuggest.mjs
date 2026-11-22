@@ -1,0 +1,121 @@
+// Claude suggests the board and setup from the read sources: spaces, legal connections,
+// starting pieces, pieces out of play, track starts and starting eligibility.
+// applyBoard turns that raw answer into a valid board. It never trusts the answer: unknown names,
+// pieces and states are dropped and reported, and piece counts always add up to the supply.
+import { chunkText } from "./sources.mjs";
+
+const TYPES = ["city", "province", "line", "sanctuary", "custom"];
+const MAX_SPACES = 30;
+
+export function boardPrompt(game, texts) {
+  const srcs = game.brief.sources.filter((s) => s.status === "read" && texts[s.id]);
+  if (!srcs.length) throw new Error("No source text yet. Mark a source read in Step 1, or paste its text.");
+  const material = srcs.map((s) => chunkText(s.id, texts[s.id]).slice(0, 2).map((c) => `SOURCE ${s.id} (${s.url}), characters ${c.start} to ${c.end}:\n${c.text}`).join("\n\n")).join("\n\n");
+  const pieces = game.factions.flatMap((f) => f.pieces.map((p) => `${p.id}: ${p.name}, faction ${f.name} (${f.id}), states ${p.states.join("/")}, supply ${p.supply}${p.isBase ? ", base" : ""}`)).join("\n");
+  const tracks = game.tracks.map((t) => `${t.id}: ${t.name}, ${t.min} to ${t.max}`).join("\n");
+  const o = game.brief.overview;
+  return `You help design a COIN-style board game about: ${game.meta.title}. ${game.brief.conflict}
+Places named in the overview: ${o.places.join("; ") || "none"}.
+Using the sources below, suggest the map and the starting setup. Base each space on a real region, city, border area or sanctuary from the sources. Paraphrase, never copy sentences.
+Space types: city, province, line (a road or rail line), sanctuary (a foreign base area), custom. pop is population weight 0 to 3 (cities 1 to 3, empty areas 0). opinion is -1 Opposition, 0 Neutral, 1 Support at the start.
+Give 8 to 20 spaces. Every space must be reachable through links. Links are legal movement between spaces that touch.
+Pieces (use these ids and states exactly):
+${pieces}
+Place pieces where each faction was strong when the game starts. Total placed plus out of play must not exceed a piece's supply.
+Tracks (use these ids; start must be inside the range):
+${tracks}
+Factions: ${game.factions.map((f) => `${f.id} (${f.name})`).join(", ")}.
+Return only JSON: {"spaces":[{"name":"","type":"","pop":0,"opinion":0,"why":"one short reason"}],"links":[{"from":"space name","to":"space name"}],"placements":[{"space":"space name","piece":"piece id","state":"state","count":1}],"outOfPlay":{"piece id":0},"tracks":{"track id":0},"eligibility":{"faction id":true},"notes":"one or two sentences on the main choices"}
+
+${material}`;
+}
+
+const int = (v, lo, hi, d) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : d; };
+const key = (s) => String(s ?? "").trim().toLowerCase();
+function slug(name, taken) {
+  const base = key(name).normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32) || "space";
+  let id = /^[a-z0-9]/.test(base) ? base : `s-${base}`, n = 2;
+  while (taken.has(id)) id = `${base}-${n++}`;
+  taken.add(id); return id;
+}
+
+export function applyBoard(game, r) {
+  const g = structuredClone(game), dropped = [];
+  const old = new Map(game.board.spaces.map((s) => [key(s.name), s]));
+  const taken = new Set(), byName = new Map(), kept = [], added = [];
+
+  const spaces = [];
+  for (const s of Array.isArray(r?.spaces) ? r.spaces : []) {
+    const k = key(s?.name);
+    if (!k) { dropped.push("A space with no name"); continue; }
+    if (spaces.some((x) => x.k === k)) { dropped.push(`Second space named ${s.name}`); continue; }
+    if (spaces.length >= MAX_SPACES) { dropped.push(`Space ${s.name} (more than ${MAX_SPACES} spaces)`); continue; }
+    const prev = old.get(k);
+    const id = prev ? prev.id : null;
+    if (id) { taken.add(id); kept.push(id); }
+    spaces.push({ s, k, id, prev });
+  }
+  if (spaces.length < 2) throw new Error("Claude's answer needs at least 2 spaces. Try again.");
+  for (const x of spaces) if (!x.id) { x.id = slug(x.s.name, taken); added.push(x.id); }
+
+  const positions = {}, attrs = {};
+  spaces.forEach((x, i) => {
+    const type = TYPES.includes(x.s.type) ? x.s.type : "province";
+    if (!TYPES.includes(x.s.type)) dropped.push(`Type "${x.s.type}" of ${x.s.name} (set to province)`);
+    byName.set(x.k, x.id);
+    x.out = { id: x.id, name: String(x.s.name).trim(), type, attrs: { ...(x.prev?.attrs ?? {}), pop: int(x.s.pop, 0, 9, 1) } };
+    const a = (2 * Math.PI * i) / spaces.length;
+    positions[x.id] = game.board.presentation.positions[x.id] ?? { x: Math.round(360 + 220 * Math.cos(a)), y: Math.round(240 + 180 * Math.sin(a)) };
+    const op = [-1, 0, 1].includes(Number(x.s.opinion)) ? Number(x.s.opinion) : 0;
+    attrs[x.id] = { ...(game.setup.spaceAttributes?.[x.id] ?? {}), opinion: op };
+  });
+  const removed = game.board.spaces.map((s) => s.id).filter((id) => !kept.includes(id));
+
+  const links = [], seen = new Set();
+  for (const l of Array.isArray(r?.links) ? r.links : []) {
+    const a = byName.get(key(l?.from)), b = byName.get(key(l?.to));
+    const pair = [a, b].sort().join("|");
+    if (!a || !b) dropped.push(`Link ${l?.from} to ${l?.to} (unknown space)`);
+    else if (a === b) dropped.push(`Link from ${l.from} to itself`);
+    else if (seen.has(pair)) dropped.push(`Second link ${l.from} to ${l.to}`);
+    else { seen.add(pair); links.push({ id: `l${links.length + 1}`, from: a, to: b }); }
+  }
+
+  const pieces = new Map(g.factions.flatMap((f) => f.pieces).map((p) => [p.id, p]));
+  const used = new Map(), placements = [];
+  for (const pl of Array.isArray(r?.placements) ? r.placements : []) {
+    const p = pieces.get(pl?.piece), sp = byName.get(key(pl?.space));
+    if (!p) { dropped.push(`Placement of unknown piece ${pl?.piece}`); continue; }
+    if (!sp) { dropped.push(`Placement in unknown space ${pl?.space}`); continue; }
+    let state = pl.state;
+    if (!p.states.includes(state)) { dropped.push(`State "${state}" of ${p.name} (set to ${p.states[0]})`); state = p.states[0]; }
+    const want = int(pl.count, 0, 999, 0), left = p.supply - (used.get(p.id) ?? 0), n = Math.min(want, left);
+    if (n < want) dropped.push(`${want - n} ${p.name} in ${pl.space} (more than the supply of ${p.supply})`);
+    if (n <= 0) continue;
+    used.set(p.id, (used.get(p.id) ?? 0) + n);
+    const same = placements.find((x) => x.space === sp && x.piece === p.id && x.state === state);
+    if (same) same.count += n; else placements.push({ space: sp, piece: p.id, state, count: n });
+  }
+  const pools = {};
+  for (const p of pieces.values()) {
+    const left = p.supply - (used.get(p.id) ?? 0), oop = int(r?.outOfPlay?.[p.id], 0, left, 0);
+    pools[p.id] = { available: left - oop, outOfPlay: oop };
+  }
+
+  for (const t of g.tracks) {
+    const v = r?.tracks?.[t.id];
+    if (v === undefined) continue;
+    const n = int(v, t.min, t.max, t.start);
+    if (n !== Number(v)) dropped.push(`${t.name} start ${v} (set to ${n}, inside ${t.min} to ${t.max})`);
+    t.start = n; g.setup.tracks[t.id] = n;
+  }
+  for (const f of g.factions) if (typeof r?.eligibility?.[f.id] === "boolean") g.setup.eligibility[f.id] = r.eligibility[f.id];
+
+  g.board.spaces = spaces.map((x) => x.out);
+  g.board.links = links;
+  g.board.presentation.positions = positions;
+  g.setup.spaceAttributes = attrs;
+  g.setup.placements = placements;
+  g.setup.pools = pools;
+  return { game: g, report: { kept, added, removed, dropped, notes: typeof r?.notes === "string" ? r.notes : "" } };
+}
