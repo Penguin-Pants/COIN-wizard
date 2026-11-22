@@ -173,7 +173,8 @@ function runStep(game, s, ctx) {
       if (s.to === "choose" || s.from === "choose") noChoice(s, "move");
       const dest = isPool(s.to) ? null : spaceOf({ ...s, filter: undefined }, ctx, "to");
       const sources = s.from === "adjacent"
-        ? neighbors(game.board.links, ctx.$space.id).map((id) => state.spaces[id]).sort((a, b) => a.name.localeCompare(b.name))
+        // "adjacent" is next to the space being resolved; with none (a scoring phase), next to the destination.
+        ? neighbors(game.board.links, (ctx.$space ?? dest).id).map((id) => state.spaces[id]).sort((a, b) => a.name.localeCompare(b.name))
         : isPool(s.from) ? [] : [spaceOf({ ...s, filter: undefined }, ctx, "from")];
       // "moved" moves only the pieces at the place they moved to.
       const ok = (sp) => (s.count !== "moved" || sp.id === ctx.moved?.at) && (s.filter === undefined || !!evalExpr(s.filter, { ...ctx, $space: sp }));

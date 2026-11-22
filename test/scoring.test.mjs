@@ -184,3 +184,23 @@ test("the scoring box prints the most spaces one step picks, not the table limit
   const h2 = np(g, "ira"), j = h2.indexOf("<h3>Agitate", h2.indexOf("<h2>Truce Talks card</h2>"));
   assert.match(h2.slice(j, h2.indexOf("</section>", j)), /<span class="tag">max 1<\/span>/);
 });
+
+test("a move from adjacent spaces to a fixed space reads adjacency from that space", () => {
+  // Belfast is linked to Dublin (1 Volunteer). After the move, Belfast is the City with a Volunteer
+  // first in name order.
+  const g = withScoring();
+  g.rules.scoring.phases.find((p) => p.id === "agitate").steps = [
+    { op: "move", piece: "ira.volunteer", count: 1, from: "adjacent", to: "belfast" },
+    { op: "markerSet", marker: "curfew", value: true, space: "choose", filter: { op: "gte", args: [{ op: "count", args: ["ira.volunteer", { var: "$space.id" }, "*"] }, 1] } }
+  ];
+  const r = score(g);
+  assert.equal(r.error, undefined);
+  assert.deepEqual(r.chosen, ["belfast"]);
+});
+
+test("a scoring dry run reads card.lasting from the deck, as a turn does", () => {
+  // The scoring table keeps Cities only when the current card is not lasting.
+  const g = withScoring();
+  g.bots[1].priorityTables.at(-1).steps[0].filter = { op: "and", args: [CITY, { op: "eq", args: [{ var: "card.lasting" }, "none"] }] };
+  assert.deepEqual(score(g).chosen, ["belfast", "cork-city"]);
+});
