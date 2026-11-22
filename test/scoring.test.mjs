@@ -158,3 +158,17 @@ test("a chosen move that finds no space moves nothing, so a later moved count is
   ];
   assert.deepEqual(score(g).chosen, ["belfast"]);
 });
+
+test("a move from a chosen source to a pool binds the source as the space", () => {
+  // The City table picks Belfast (name order). count reads $space: Volunteers in that space (0 in Belfast
+  // at setup, so use a filter for Dublin, which has 1). Without the binding, $space is undefined and it throws.
+  const g = withScoring();
+  g.rules.scoring.phases.find((p) => p.id === "agitate").steps = [
+    { op: "move", piece: "ira.volunteer", from: "choose", to: "available", filter: { op: "eq", args: [{ var: "$space.id" }, "dublin"] }, count: { op: "count", args: ["ira.volunteer", { var: "$space.id" }, "*"] } },
+    { op: "markerSet", marker: "curfew", value: true, space: "choose", filter: { op: "gte", args: [{ op: "count", args: ["ira.volunteer", { var: "$space.id" }, "*"] }, 1] } }
+  ];
+  const r = score(g);
+  assert.equal(r.error, undefined);
+  // Dublin's 1 Volunteer goes to Available; the Cities with a Volunteer are then only Cork City.
+  assert.deepEqual(r.chosen, ["dublin", "cork-city"]);
+});
