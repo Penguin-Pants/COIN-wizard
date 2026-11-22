@@ -4,7 +4,7 @@ import { addButton, removeButton, defineList } from "../components/listEditor.mj
 import { fvars, fdot } from "../components/faction.mjs";
 import { boardSvg } from "../../src/kit.mjs";
 import { touch, check, ask, guard } from "../store.mjs";
-import { boardPrompt, applyBoard, boardBase } from "../../src/boardsuggest.mjs";
+import { boardPrompt, fillBoard, boardBase } from "../../src/boardsuggest.mjs";
 import { render } from "../shell.mjs";
 
 export function renderBoard() {
@@ -28,25 +28,28 @@ export function renderBoard() {
     <div class="row">${g.factions.map((f) => `<label class="chk"><input type="checkbox" ${bound(`setup/eligibility/${f.id}`, "b")} ${g.setup.eligibility[f.id] ? "checked" : ""}> ${esc(f.name)} starts Eligible</label>`).join("")}</div></section>`;
 }
 
-// One Claude call fills every field on this step from the read sources. Nothing changes until Apply.
+// One Claude call fills the empty fields of this step from the read sources (placeholder spaces and
+// default values count as empty; src/boardsuggest.mjs fillBoard). Nothing changes until Apply.
 function suggestPanel(g) {
   const read = g.brief.sources.filter((s) => s.status === "read" && S.texts[s.id]).map((s) => s.id);
   const p = S.proposal?.kind === "board" ? S.proposal : null;
   const list = (title, xs) => (xs.length ? `<details><summary>${title} (${xs.length})</summary><ul>${xs.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details>` : "");
+  const nm = (id) => esc(p.game.board.spaces.find((s) => s.id === id)?.name ?? id);
+  const newLinks = p ? p.game.board.links.length - g.board.links.filter((l) => p.report.kept.includes(l.from) && p.report.kept.includes(l.to)).length : 0;
   const prev = p ? `<div class="proposal" role="region" aria-label="Suggested board"><h4>Claude's suggested board</h4>
-    <p>${p.game.board.spaces.length} spaces, ${p.game.board.links.length} legal connections, ${p.game.setup.placements.reduce((n, x) => n + x.count, 0)} starting pieces, ${g.tracks.length} track starts and starting eligibility.</p>
+    <p>Apply adds ${p.report.added.length} spaces${p.report.added.length ? ` (${p.report.added.map(nm).join(", ")})` : ""} and ${newLinks} legal connections, and fills starting pieces, track starts and eligibility where you left them empty or at the default.</p>
     ${p.report.notes ? `<p><small>${esc(p.report.notes)}</small></p>` : ""}
-    <p><small>Spaces: ${p.game.board.spaces.map((s) => esc(s.name)).join(", ")}.</small></p>
-    ${p.report.removed.length ? `<p><b>Note.</b> Apply removes ${p.report.removed.length} of your spaces: ${p.report.removed.map((id) => esc(g.board.spaces.find((s) => s.id === id)?.name ?? id)).join(", ")}. Actions, cards or bots that name them will show issues. Undo restores them.</p>` : ""}
+    ${p.report.removed.length ? `<p><b>Note.</b> Apply replaces ${p.report.removed.length} placeholder spaces: ${p.report.removed.map((id) => esc(g.board.spaces.find((s) => s.id === id)?.name ?? id)).join(", ")}. Undo restores them.</p>` : ""}
+    ${list("Kept as you set it", p.report.skipped)}
     ${list("Parts of the answer not used", p.report.dropped)}
     <div class="row">${btn("board-accept", "Apply to this step", { cls: "primary" })}${btn("dismiss", "Keep mine")}</div></div>` : "";
-  return `<section class="panel"><h3>Suggest from sources</h3><p><small>Claude suggests spaces, legal connections, starting pieces, piece counts, track starts and eligibility from the sources marked read: ${read.join(", ") || "none yet"}. You review the result before anything changes.</small></p>
-  <div class="row">${btn("suggest-board", S.busy.board ? "Asking Claude..." : "Suggest the whole board with Claude", { cls: "primary", dis: S.busy.board || !S.sample || !read.length })}</div>${S.msg.board ? `<p class="err">${esc(S.msg.board)}</p>` : ""}${prev}</section>`;
+  return `<section class="panel"><h3>Suggest from sources</h3><p><small>Claude fills the empty fields of this step (spaces, legal connections, starting pieces, piece counts, track starts and eligibility) from the sources marked read. Placeholder spaces and default values count as empty; everything you set stays. Sources: ${read.join(", ") || "none yet"}. You review the result before anything changes.</small></p>
+  <div class="row">${btn("suggest-board", S.busy.board ? "Asking Claude..." : "Fill empty fields with Claude", { cls: "primary", dis: S.busy.board || !S.sample || !read.length })}</div>${S.msg.board ? `<p class="err">${esc(S.msg.board)}</p>` : ""}${prev}</section>`;
 }
 async function suggestBoard() {
   const g = S.game;
   const r = await ask(boardPrompt(g, S.texts));
-  S.proposal = { kind: "board", base: boardBase(g), ...applyBoard(g, r) };
+  S.proposal = { kind: "board", base: boardBase(g), ...fillBoard(g, r) };
 }
 function acceptBoard() {
   const { game, base } = S.proposal; const g = S.game;
