@@ -362,8 +362,9 @@ function validateBot(game, bot, p, { err, warn, checkExpr, actionById, cardById,
   });
 }
 
-// Nodes that choose with a table: as the node's table or as the table of any linked entry.
-export const tableUsers = (bot, id) => bot.nodes.filter((n) => n.table === id || linkedOf(n).some((L) => L.table === id));
+// What chooses with a table: nodes (as the node's table or a linked entry's table) and scoring
+// entries. A scoring entry has no target, so a table it uses may not read $target.
+export const tableUsers = (bot, id) => [...bot.nodes.filter((n) => n.table === id || linkedOf(n).some((L) => L.table === id)), ...(bot.scoring ?? []).filter((sc) => sc.table === id)];
 
 function result(issues) {
   return { ok: !issues.some((i) => i.severity === "error"), errors: issues.filter((i) => i.severity === "error"), warnings: issues.filter((i) => i.severity === "warning") };

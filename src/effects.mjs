@@ -96,10 +96,17 @@ function chosenRun(game, s, ctx) {
     ctx.$space = prev;
     return true;
   }
+  // move: a chosen source must meet the step's filter (the source filter). A chosen destination
+  // becomes the space context, so "adjacent" sources are the spaces linked to it.
   if (s.op === "move" && (s.to === "choose" || s.from === "choose")) {
-    const pick = (w) => (w === "choose" ? ctx.choose(undefined, 1)[0]?.id : w);
-    const to = pick(s.to), from = pick(s.from);
-    if (to !== undefined && from !== undefined) runStep(game, { ...s, to, from }, ctx);
+    const from = s.from === "choose" ? ctx.choose(s.filter, 1)[0]?.id : s.from;
+    const dest = s.to === "choose" ? ctx.choose(undefined, 1)[0] : undefined;
+    const to = s.to === "choose" ? dest?.id : s.to;
+    if (to === undefined || from === undefined) return true;
+    const prev = ctx.$space;
+    if (dest) ctx.$space = dest;
+    runStep(game, { ...s, to, from }, ctx);
+    ctx.$space = prev;
     return true;
   }
   return false;
