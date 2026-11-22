@@ -114,3 +114,33 @@ test("the Non-Player sheet prints a box for each scoring phase the bot chooses i
   assert.match(box, /<p class="pr">❶ City\.<\/p>/);
   assert.equal(np(example(), "ira").includes("Truce Talks card</h2>"), false);
 });
+
+// Codex review of PR 13.
+test("a move from a chosen source picks only among spaces its filter allows", () => {
+  // Filter: Dublin only. Without the filter the City table would pick Belfast (name order).
+  const g = withScoring();
+  g.rules.scoring.phases.find((p) => p.id === "agitate").steps = [{ op: "move", piece: "ira.volunteer", count: 1, from: "choose", to: "limerick", filter: { op: "eq", args: [{ var: "$space.id" }, "dublin"] } }];
+  assert.deepEqual(score(g).chosen, ["dublin"]);
+});
+
+test("a move from adjacent spaces to a chosen space reads adjacency from that space", () => {
+  // The City table picks Belfast; Dublin (1 Volunteer) is linked to it.
+  const g = withScoring();
+  g.rules.scoring.phases.find((p) => p.id === "agitate").steps = [
+    { op: "move", piece: "ira.volunteer", count: 1, from: "adjacent", to: "choose" },
+    { op: "markerSet", marker: "curfew", value: true, space: "choose", filter: { op: "gte", args: [{ op: "count", args: ["ira.volunteer", { var: "$space.id" }, "*"] }, 1] } }
+  ];
+  const r = score(g);
+  assert.equal(r.error, undefined);
+  // Step 2: Cities with a Volunteer after the move are Belfast and Cork City; name order gives Belfast.
+  assert.deepEqual(r.chosen, ["belfast", "belfast"]);
+});
+
+test("a space table used by a scoring choice may not read $target", () => {
+  const g = JSON.parse(readFileSync(new URL("../examples/four-valleys.game.json", import.meta.url), "utf8"));
+  const b = g.bots[0], t = b.priorityTables.find((x) => JSON.stringify(x).includes("$target"));
+  assert.ok(t, "Four Valleys has a space table that reads $target");
+  b.scoring = [{ phaseId: g.rules.scoring.phases[0].id, table: t.id }];
+  const i = b.priorityTables.indexOf(t);
+  assert.ok(validate(g).errors.some((e) => e.path.startsWith(`/bots/0/priorityTables/${i}`)), JSON.stringify(validate(g).errors.slice(0, 2)));
+});
