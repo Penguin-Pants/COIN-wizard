@@ -152,7 +152,7 @@ export function validate(game) {
     if (!trackIds.has(a.cost.track)) err("missing-ref", `${p}/cost`, `Cost track not found: ${a.cost.track}`);
     else if (a.faction && game.factions.find((f) => f.id === a.faction)?.resourceTrack !== a.cost.track) warn("cost-track", `${p}/cost`, `Action ${a.id} is paid from ${a.cost.track}, not its faction's resource track`);
     if (a.kind === "specialActivity" && !a.timing) err("no-timing", p, `Special Activity ${a.id} needs a timing`);
-    if (a.kind !== "specialActivity") for (const k of ["accompanies", "maxSpaces"]) if (a[k] !== undefined) err("sa-only", `${p}/${k}`, `${k} is for Special Activities only (${a.id})`);
+    if (a.kind !== "specialActivity") for (const k of ["accompanies", "maxSpaces", "spaceText"]) if (a[k] !== undefined) err("sa-only", `${p}/${k}`, `${k} is for Special Activities only (${a.id})`);
     if (a.kind === "specialActivity" && Array.isArray(a.accompanies)) for (const id of a.accompanies) {
       const o = actionById[id];
       if (!o || o.kind !== "operation" || o.faction !== a.faction) err("missing-ref", `${p}/accompanies`, `${a.id} accompanies ${id}, which is not an Operation of ${a.faction}`);

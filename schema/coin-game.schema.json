@@ -1906,6 +1906,11 @@
           "type": "integer",
           "minimum": 1,
           "description": "Special Activities only: the most spaces it may affect."
+        },
+        "spaceText": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Special Activities only. A phrase for the space tag on the faction sheet, such as \"among 3 spaces\". Printed in place of \"max N spaces\"; print only."
         }
       }
     },

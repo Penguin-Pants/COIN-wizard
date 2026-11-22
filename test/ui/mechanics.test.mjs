@@ -101,3 +101,14 @@ test("sheet fields of an action are set without JSON and an empty one is removed
   assert.equal("maxSpaces" in a, false);
   assert.equal(a.accompanies, "any");
 }));
+
+// Schema 1.5.0: the space tag phrase of a Special Activity (spaceText).
+test("a designer sets a Special Activity's space tag and clears it", () => withApp(async ({ page, db }) => {
+  await goStep(page, 1); await openAction(page, "crown.martial-law");
+  const law = 'details.act[data-k="act-crown.martial-law"]';
+  assert.equal(await page.locator(`${law} input[data-b="actions/3/spaceText"]`).count(), 1, "the Special Activity has a space tag field");
+  await page.fill(`${law} input[data-b="actions/3/spaceText"]`, "among 3 spaces");
+  assert.equal((await saved(page, db)).actions[3].spaceText, "among 3 spaces");
+  await page.fill(`${law} input[data-b="actions/3/spaceText"]`, "");
+  assert.equal("spaceText" in (await saved(page, db)).actions[3], false);
+}));
