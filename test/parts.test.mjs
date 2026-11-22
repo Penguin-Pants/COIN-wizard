@@ -117,3 +117,25 @@ test("a part table must pick spaces", () => {
   node(g, "cw.garrison").parts[0].table = "cw.enemy";
   assert.ok(errs(g).some((e) => e.code === "bad-target" && e.path === "/bots/0/nodes/6/parts/0"));
 });
+
+// Bot aid and Non-Player sheet: numbered sub-actions in one Operation step and one box.
+import { aidModel, toMermaid, toMarkdown, toPolicyYaml } from "../src/botaid.mjs";
+import { buildFiles } from "../src/kit.mjs";
+const label = (g, id) => `CW-${g.bots[0].priorityTables.findIndex((t) => t.id === id) + 1}`;
+const aidStep = (g) => { try { return aidModel(g, g.bots[0]).steps.map((s) => s.text).find((t) => t.startsWith("Garrison")) ?? ""; } catch { return ""; } };
+const np = (g) => { try { return Object.fromEntries(buildFiles(g, { toMermaid, toMarkdown, toPolicyYaml }))[`kit/${g.meta.gameId}.crown.nonplayer.html`] ?? ""; } catch { return ""; } };
+const opBox = (html, name) => { const i = html.indexOf(`<h3>${name}`, html.indexOf('class="col ops"')); return i < 0 ? "" : html.slice(i, html.indexOf("</section>", i)); };
+
+test("the bot aid lists the parts in order with their tables and the cost rule", () => {
+  const g = withParts(), t = aidStep(g);
+  assert.match(t, new RegExp(`Do these parts in order, each in its own spaces: 1\\. Place 1 Police in the 2 Cities with the fewest Police\\. Choose up to 2 spaces with table ${label(g, "cw.t.p1")}\\. 2\\. Place 2 Army in a City with 2 or more Police\\. Choose 1 space with table ${label(g, "cw.t.p2")}\\.`));
+  assert.match(t, /Pay the cost once for each space, over all parts\. If no part finds a legal or affordable space: /);
+});
+
+test("the Non-Player sheet prints the parts as numbered sub-actions in one Operation box", () => {
+  const g = withParts(), box = opBox(np(g), "Garrison");
+  assert.match(box, new RegExp(`<div class="part"><p class="pt">1\\. Place 1 Police in the 2 Cities with the fewest Police\\. <small>\\(${label(g, "cw.t.p1")}, max 2\\)</small></p><p class="pr">❶ Any City\\.</p>`));
+  assert.match(box, new RegExp(`<div class="part"><p class="pt">2\\. Place 2 Army in a City with 2 or more Police\\. <small>\\(${label(g, "cw.t.p2")}, max 1\\)</small></p>`));
+  assert.ok(box.indexOf("1. Place 1 Police") < box.indexOf("2. Place 2 Army"));
+  assert.match(np(g), new RegExp(`<b>if none</b> → Garrison \\(${label(g, "cw.t.p1")}, ${label(g, "cw.t.p2")}\\)`));
+});

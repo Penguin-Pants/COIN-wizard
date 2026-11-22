@@ -76,7 +76,11 @@ export function aidModel(game, bot) {
     if (n.kind === "condition") return { n: num[n.id], text: `${n.text} Yes: ${goto(n.yes)}. No: ${goto(n.no)}.` };
     if (n.kind === "event-check") return { n: num[n.id], text: `${n.text} If you play the Event: ${goto(n.yes)}. If not: ${goto(n.no)}.` };
     const a = actions[n.action];
-    let t = `${a.name} (cost ${costText(a)}). ${n.target ? `First choose the target: one enemy faction with table ${labels[n.target]}. If no enemy qualifies: ${goto(n.onEmpty)}. ` : ""}Choose ${select(tableById[n.table])} with table ${labels[n.table]}. If no space is legal or affordable: ${goto(n.onEmpty)}. Otherwise resolve it, then ${goto(n.then)}.`;
+    // parts: numbered sub-actions, each with its own table (schema 1.5.0, docs/SCHEMA.md "Action node parts").
+    const choose = n.parts
+      ? `Do these parts in order, each in its own spaces: ${n.parts.map((pt, i) => `${i + 1}. ${pt.text} Choose ${select(tableById[pt.table])} with table ${labels[pt.table]}.`).join(" ")} Pay the cost once for each space, over all parts. If no part finds a legal or affordable space`
+      : `Choose ${select(tableById[n.table])} with table ${labels[n.table]}. If no space is legal or affordable`;
+    let t = `${a.name} (cost ${costText(a)}). ${n.target ? `First choose the target: one enemy faction with table ${labels[n.target]}. If no enemy qualifies: ${goto(n.onEmpty)}. ` : ""}${choose}: ${goto(n.onEmpty)}. Otherwise resolve it, then ${goto(n.then)}.`;
     const links = linkedOf(n);
     const saText = (L) => `${actions[L.action].name} (cost ${costText(actions[L.action])}). ${L.skipText ?? "Skip it if it cannot be used."} Choose its space with table ${labels[L.table]}.`;
     if (links.length === 1) {
