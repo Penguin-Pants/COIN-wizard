@@ -29,3 +29,39 @@ test("a faction's problems are listed with where they are, and Show opens the ri
     assert.deepEqual(app.errors, []);
   } finally { await app.close(); }
 });
+
+// Review findings on PR 23.
+test("Show on another faction's bot problem opens that bot", async () => {
+  const g = JSON.parse(readFileSync("examples/tan-war.game.json", "utf8")); g.bots[1].dryRuns = [];
+  const app = await openApp(browser, { example: false, saved: { "data/users/u1/draft": { json: JSON.stringify(g), savedAt: "2026-11-22T10:00:00Z" } } });
+  try {
+    const { page } = app;
+    await page.click('[data-a="resume"]'); await frames(page);
+    await goStep(page, 1);
+    const fp = page.locator(`details.fp:has([aria-label^="Problems for"])`);
+    await fp.locator('[data-a="show-issue"]').first().click(); await frames(page);
+    const name = g.factions.find((f) => f.id === g.bots[1].factionId).name;
+    assert.match(await page.textContent("main"), new RegExp(`${name}`));
+    assert.equal(await page.$eval('[data-a="bot-pick"][aria-selected="true"]', (e) => e.dataset.i), "1");
+    assert.deepEqual(app.errors, []);
+  } finally { await app.close(); }
+});
+
+test("the faction problem list updates after an edit, without a full render", async () => {
+  const g = JSON.parse(readFileSync("examples/tan-war.game.json", "utf8")); g.factions[0].pieces[0].supply = 0;
+  const app = await openApp(browser, { example: false, saved: { "data/users/u1/draft": { json: JSON.stringify(g), savedAt: "2026-11-22T10:00:00Z" } } });
+  try {
+    const { page } = app;
+    await page.click('[data-a="resume"]'); await frames(page);
+    await goStep(page, 1);
+    const region = page.locator('[aria-label^="Problems for"]').first();
+    const before = await region.locator("li").count();
+    const supply = page.locator('input[data-path="/factions/0/pieces/0/supply"]');
+    await supply.fill(String(load().factions[0].pieces[0].supply)); await supply.dispatchEvent("input");
+    await page.waitForTimeout(900);
+    const after = await page.locator('[aria-label^="Problems for"] li').count();
+    assert.ok(after < before, `list shrinks after the fix: ${before} -> ${after}`);
+    assert.deepEqual(app.errors, []);
+  } finally { await app.close(); }
+});
+const load = () => JSON.parse(readFileSync("examples/tan-war.game.json", "utf8"));

@@ -48,7 +48,15 @@ function replaceGame(g) {
 
 const coreActions = {
   goto: (d) => { if (Number(d.step) !== S.step) stepChanged(S.step); S.step = Number(d.step); if (d.tab) S.tab = d.tab; if (d.f) S.ftab = d.f; render(); $("#h")?.focus(); },
-  "show-issue": (d) => { const st = EDITOR_STEP[d.editor] ?? [4]; if (st[0] !== S.step || (st[1] && st[1] !== S.tab)) { S.step = st[0]; if (st[1]) S.tab = st[1]; render(); } showIssue(d.ipath); },
+  "show-issue": (d) => {
+    const st = EDITOR_STEP[d.editor] ?? [4];
+    // The bot or faction tab that holds the issue: only the selected one is on screen.
+    const b = /^\/bots\/(\d+)/.exec(d.ipath), a = /^\/actions\/(\d+)/.exec(d.ipath), f = /^\/factions\/(\d+)/.exec(d.ipath);
+    const pick = b && S.bot !== +b[1] ? () => { S.bot = +b[1]; S.botNode = null; } : null;
+    const ftab = a ? S.game.actions[+a[1]]?.faction : f ? S.game.factions[+f[1]]?.id : null;
+    if (st[0] !== S.step || (st[1] && st[1] !== S.tab) || pick || (ftab && ftab !== S.ftab)) { S.step = st[0]; if (st[1]) S.tab = st[1]; pick?.(); if (ftab) S.ftab = ftab; render(); }
+    showIssue(d.ipath);
+  },
   "mark-done": () => { if (markDone(S.step)) saveProgress(); render(); },
   "new-project": () => replaceGame(blankGame()),
   "load-example": (d) => replaceGame(migrate(example(d.ex))),

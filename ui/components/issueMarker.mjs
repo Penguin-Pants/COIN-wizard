@@ -1,5 +1,6 @@
 import { S, $, esc, EDITOR_STEP, STEPS } from "../state.mjs";
 import { btn, chip } from "./fields.mjs";
+import { factionIssueItems } from "./faction.mjs";
 
 // Finds the one field that shows an issue. Walks up the issue path until exactly one element has that data-path.
 // Two or more matches (for example the placement grid) mean no single field owns the issue.
@@ -34,6 +35,8 @@ export function placeIssues() {
   const main = $("#main"); if (!main) return;
   main.querySelectorAll(".fieldissue").forEach((m) => m.remove());
   main.querySelectorAll("[aria-invalid]").forEach((el) => { el.removeAttribute("aria-invalid"); el.removeAttribute("aria-describedby"); });
+  // A faction's problem list follows every validation, also when the edit does not re-render the step.
+  main.querySelectorAll("[data-fiss]").forEach((el) => { const f = S.game.factions.find((x) => x.id === el.dataset.fiss); const items = f ? factionIssueItems(f) : []; el.hidden = !items.length; el.querySelector(".fn").textContent = `${items.length} to fix.`; el.querySelector(".fl").innerHTML = issueList(items); const c = main.querySelector(`[data-fchip="${CSS.escape(el.dataset.fiss)}"]`); if (c) { c.hidden = !items.length; c.textContent = `${items.length} to fix`; } });
   main.querySelectorAll("[data-tabcount]").forEach((el) => { const n = S.issues.errors.filter((e) => e.editor === el.dataset.tabcount).length; el.innerHTML = n ? ` ${chip("bad", String(n))}` : ""; });
   const list = $("#stepissues"); if (!list) return;
   const rest = [];
