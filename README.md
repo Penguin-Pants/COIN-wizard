@@ -3,7 +3,7 @@
 A guided tool for designing a COIN-series board game (2 to 4 factions), from a conflict to a print-and-play kit and a machine-readable game file.
 
 - **Live tool:** a Claude artifact, "COIN Game Design Wizard". `npm run build` writes `dist/index.html`, the page that is published.
-- **Game file:** one JSON document per game, schema `coin-game/1.4.0` (frozen). Guide: `docs/SCHEMA.md`.
+- **Game file:** one JSON document per game, schema `coin-game/1.5.0` (frozen). Guide: `docs/SCHEMA.md`.
 - **Engine contract:** a game engine imports `game.json` and validates it against `schema/coin-game.schema.json`. See "Engine contract" in `docs/SCHEMA.md`.
 - **Acceptance and known issues:** `docs/ACCEPTANCE.md`.
 

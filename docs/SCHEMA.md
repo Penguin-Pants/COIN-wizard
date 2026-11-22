@@ -1,4 +1,4 @@
-# coin-game/1.4.0 schema guide
+# coin-game/1.5.0 schema guide
 
 File: `schema/coin-game.schema.json` (JSON Schema 2020-12). Example: `examples/tan-war.game.json`.
 Rule: one JSON file holds the whole game. Printed text, diagrams and bot aids come from it. Nothing else is a source of truth.
@@ -25,6 +25,7 @@ Rule: one JSON file holds the whole game. Printed text, diagrams and bot aids co
 
 | Version | Changes |
 |---|---|
+| 1.5.0 | Bot model gaps (`docs/proposals/bot-model-gaps.md`). Every new field is optional. Migration only changes the version. Frozen sample: `test/fixtures/tan-war.1.4.0.game.json`. |
 | 1.4.0 | Optional sheet fields on actions, printed on the faction sheet: `purpose` (one line), `ruleRef` (rule section, such as `3.3.1`), and for Special Activities `accompanies` (`any` or a list of the faction's Operation ids) and `maxSpaces`. An Operation's "+ X or Y?" tag is derived from the Special Activities that accompany it. A bot's linked Special Activity must accompany the node's Operation when `accompanies` is a list, and dry runs never choose more spaces than `maxSpaces`. The sheet prints pairing tags only when every Special Activity of the faction states `accompanies`. Migration only changes the version. |
 | 1.3.0 | Full 3 and 4 faction support. New variables for any faction (`resources.<id>`, `eligible.<id>`, `score.<id>`, `margin.<id>`) and for the enemies (`rivals.maxMargin` and similar). New op `factionCount`. Priority tables with scope `opponent` pick an enemy faction; an action node's `target` names one, and its space table reads `$target`. Dry runs may expect a `target`. `other.resources` is removed: migration writes `resources.<first other faction>` in bots and actions, where 1.2.0 meant exactly that. Table scope `piece` is removed (it was never run). |
 | 1.2.0 | Effect steps get fixed fields per op (see below). `shift.toward` is `support` or `opposition`; migration maps a faction id or name by faction type (state to `support`, others to `opposition`). `pay` and `markerSet` are defined. Optional `plainOf` on actions and card sides marks stale plain text. |
@@ -88,7 +89,7 @@ Run `npm run export` for a folder, or `node src/cli.mjs zip <game.json> <out.zip
 
 ## Engine contract (frozen)
 
-`coin-game/1.4.0` is frozen. The engine must accept this version. `test/engine.test.mjs` holds a fingerprint of the schema file and fails on any change: a change needs a new version and a `migrate` step.
+`coin-game/1.5.0` is frozen. The engine must accept this version. `test/engine.test.mjs` holds a fingerprint of the schema file and fails on any change: a change needs a new version and a `migrate` step.
 
 Rules the schema alone does not say:
 

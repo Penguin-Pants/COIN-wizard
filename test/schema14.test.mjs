@@ -10,11 +10,10 @@ const example = () => read("../examples/tan-war.game.json");
 const act = (g, id) => g.actions.find((a) => a.id === id);
 const codes = (g) => validate(g).errors.map((e) => e.code);
 
-test("the latest version is 1.4.0 and a 1.3.0 file migrates to it unchanged otherwise", () => {
-  assert.equal(LATEST, "coin-game/1.4.0");
+test("a 1.3.0 file migrates to the latest version unchanged otherwise", () => {
   const old = read("./fixtures/tan-war.1.3.0.game.json");
   const m = migrate(old);
-  assert.equal(m.meta.schemaVersion, "coin-game/1.4.0");
+  assert.equal(m.meta.schemaVersion, LATEST);
   m.meta.schemaVersion = old.meta.schemaVersion;
   assert.deepEqual(m, old);
 });
