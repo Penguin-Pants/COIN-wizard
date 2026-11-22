@@ -1,6 +1,6 @@
 // Apply an action's cost and effect steps to a dry-run state, so later nodes and the
 // linked Special Activity see the changed board. Bot rules for choices inside steps:
-// - "choose" takes the first option. Count "any" means as many as can move or flip.
+// - "choose" takes the option whose faction is the action's target ($target), else the first option. Count "any" means as many as can move or flip.
 // - "move" from "adjacent" takes pieces from linked spaces in name order.
 // - A roll uses the next die of the dry run (error when none is left).
 // - A step that needs a player to pick a space ("choose", or "spaces" with "filter") is an error,
@@ -217,7 +217,8 @@ function runStep(game, s, ctx) {
     }
     case "markerSet": { spaceOf(s, ctx, "space")[s.marker] = s.value; return; }
     case "if": runSteps(game, evalExpr(s.test, ctx) ? s.then : (s.else ?? []), ctx); return;
-    case "choose": runSteps(game, s.options[0].steps, ctx); return;
+    // The option for the enemy the action targets, else the first option (a player chooses on the table).
+    case "choose": runSteps(game, runOption(s, ctx).steps, ctx); return;
     default: throw new Error(`Unknown effect op ${s.op}`);
   }
 }
@@ -254,6 +255,17 @@ export function withoutCost(game, state, action, spaceIds) {
 export function payCost(game, state, action, spaceIds) {
   const total = costOf(action, spaceIds);
   if (total) setTrack(game, state, action.cost.track, trackValue(game, state, action.cost.track) - total);
+}
+
+// The option of a choice that runs: the one for the action's target, else the first option.
+const runOption = (s, ctx) => (ctx.$target && s.options.find((o) => o.faction === ctx.$target)) || s.options[0];
+
+// The legal-space condition when a bot runs the action: the action's targets and the legal spaces of
+// the option each top-level choice will run (schema 1.6.0). A player before choosing sees the action's
+// targets alone: the spaces legal against any enemy. The validator allows legal only at the top level.
+export function legalityOf(action, extra = {}) {
+  const legal = (action.steps ?? []).filter((s) => s.op === "choose").map((s) => runOption(s, extra).legal).filter((x) => x !== undefined);
+  return legal.length ? { op: "and", args: [action.targets, ...legal] } : action.targets;
 }
 
 // Pays the action's cost (unless pay is false), then runs its steps once per chosen space

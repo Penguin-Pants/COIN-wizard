@@ -5,7 +5,7 @@ import { stepList } from "../components/stepList.mjs";
 import { condEditor } from "../components/exprEditor.mjs";
 import { draftButton, staleChip } from "../components/plainText.mjs";
 import { SHAPES, fvars, colorWarn, fidx, fbadge, factionIssues, isOpen } from "../components/faction.mjs";
-import { TEMPLATES, templatesFor, instantiate, defaultTarget, defaultRoles, unmet } from "../../src/templates.mjs";
+import { TEMPLATES, templatesFor, instantiate } from "../../src/templates.mjs";
 import { presetPieces } from "../../src/presets.mjs";
 import { touch, check, ask, guard } from "../store.mjs";
 import { render } from "../shell.mjs";
@@ -34,7 +34,7 @@ function lane(f, kind) {
     <div class="lh"><span class="${sa ? "sam" : `opm s-${SHAPES[fidx(f.id) % 4]}`}" aria-hidden="true"></span><h3 class="h4">${sa ? "Special Activities" : "Operations"}</h3><span class="chip cnt">${acts.length}</span></div>
     <p class="cap">${sa ? "Played with an Operation. Timing shows on each card." : "The main action on a faction's turn."}</p>
     <div class="cards">${acts.map((a) => actionEditor(a, f)).join("") || `<p class="empty">None yet. Add one below.</p>`}</div>
-    <div class="add"><select id="tpl-${esc(f.id)}-${kind}" aria-label="${label} template for ${esc(f.name)}">${list.map(opt).join("")}</select>${g.factions.length > 2 ? `<label class="mini"><span>Against</span><select id="tgt-${esc(f.id)}-${kind}" aria-label="Enemy faction for the ${label.toLowerCase()} template">${g.factions.filter((x) => x.id !== f.id).map((x) => `<option value="${esc(x.id)}" ${x.id === defaultTarget(g, f.id) ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select></label>` : ""}${S.msg[`tpl-${f.id}`] ? `<p class="err">${esc(S.msg[`tpl-${f.id}`])}</p>` : ""}
+    <div class="add"><select id="tpl-${esc(f.id)}-${kind}" aria-label="${label} template for ${esc(f.name)}">${list.map(opt).join("")}</select>${S.msg[`tpl-${f.id}`] ? `<p class="err">${esc(S.msg[`tpl-${f.id}`])}</p>` : ""}
     <div class="row">${btn("addtpl", "Add from template", { cls: "ob", data: `data-f="${esc(f.id)}" data-kind="${kind}"` })}${btn("suggest-actions", S.busy[key] ? "Asking Claude..." : `Suggest ${sa ? "Special Activities" : "Operations"} with Claude`, { cls: "fb", dis: S.busy[key] || !S.sample, data: `data-f="${esc(f.id)}" data-kind="${kind}"` })}${addButton("actions", `Blank ${label}`, { data: `data-f="${esc(f.id)}" data-kind="${kind}"` })}</div>
     ${S.msg[key] ? `<p class="err">${esc(S.msg[key])}</p>` : ""}${pr}</div></section>`;
 }
@@ -112,11 +112,11 @@ export const factionActions = {
   "suggest-factions": () => guard("factions", suggestFactions),
   "accept-factions": () => { const g = S.game; S.proposal.data.forEach((p, i) => { const f = g.factions[i]; if (f) Object.assign(f, { name: p.name, symbol: String(p.symbol).slice(0, 3), color: /^#[0-9a-f]{6}$/i.test(p.color) ? p.color : f.color, type: ["state", "guerrilla", "nonviolent", "custom"].includes(p.type) ? p.type : f.type, role: p.role }); }); S.proposal = null; touch(); render(); },
   addtpl: (d) => {
-    const sel = $(`#tpl-${d.f}-${d.kind}`), tgt = $(`#tgt-${d.f}-${d.kind}`)?.value;
-    const act = sel && instantiate(S.game, d.f, sel.value, undefined, tgt);
+    const sel = $(`#tpl-${d.f}-${d.kind}`);
+    const act = sel && instantiate(S.game, d.f, sel.value);
     if (act) { delete S.msg[`tpl-${d.f}`]; pushAction(act); return; }
-    const t = TEMPLATES.find((x) => x.id === sel?.value);
-    S.msg[`tpl-${d.f}`] = t ? `${t.name} ${unmet(t, defaultRoles(S.game, d.f, tgt))} from that enemy. Choose another enemy or template.` : "Choose a template.";
+    const t = TEMPLATES.find((x) => x.id === sel?.value), why = t && templatesFor(S.game, d.f).find((x) => x.tpl === t)?.reason;
+    S.msg[`tpl-${d.f}`] = t ? `${t.name} ${why}. Choose another template.` : "Choose a template.";
     render();
   },
   "suggest-actions": (d) => guard(`act-${d.f}-${d.kind}`, () => suggestActions(d.f, d.kind)),

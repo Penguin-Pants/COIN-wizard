@@ -2,7 +2,7 @@
 // effect steps on the dry-run state (src/effects.mjs) before its linked Special Activity
 // and before the next node, so each sees the board the action left.
 import { evalExpr } from "./expr.mjs";
-import { applyAction, payCost, refundCost, withoutCost, runPhaseSteps } from "./effects.mjs";
+import { applyAction, payCost, refundCost, withoutCost, runPhaseSteps, legalityOf } from "./effects.mjs";
 
 
 // A node's linked Special Activities as a list: none, one object or a list (schema 1.5.0).
@@ -24,7 +24,8 @@ function affordable(state, action, game) {
 function legalSpaces(game, state, action, extra = {}) {
   if (!affordable(state, action, game)) return [];
   const ctx = (sp) => ({ state, links: game.board.links, $space: sp, ...extra });
-  return Object.values(state.spaces).filter((sp) => !!evalExpr(action.targets, ctx(sp)));
+  const legal = legalityOf(action, extra);
+  return Object.values(state.spaces).filter((sp) => !!evalExpr(legal, ctx(sp)));
 }
 
 function rollDie(state) {
@@ -106,7 +107,8 @@ function runLinked(game, state, links, actions, tables, ctx, extra) {
 function runParts(game, state, node, action, tables, actions, extra, result) {
   const links = linkedOf(node), ctx = { state, links: game.board.links };
   const { amount, per } = action.cost, paid = new Set();
-  const legalNow = () => Object.values(state.spaces).filter((sp) => !!evalExpr(action.targets, { ...ctx, $space: sp, ...extra }));
+  const legal = legalityOf(action, extra);
+  const legalNow = () => Object.values(state.spaces).filter((sp) => !!evalExpr(legal, { ...ctx, $space: sp, ...extra }));
   // New spaces a part may still pay for. Spaces already paid for are free.
   const canNew = () => {
     const have = state.resources[state.self];
@@ -200,7 +202,7 @@ export function runBot(game, bot, startState) {
         // Spaces the Special Activity made illegal are dropped and their cost is refunded. The
         // recheck reads a view without the Operation's own reserved cost.
         const view = withoutCost(game, state, action, result.chosen);
-        const legalNow = (id) => !!evalExpr(action.targets, { state: view, links: game.board.links, $space: view.spaces[id], ...extra });
+        const legalNow = (id) => !!evalExpr(legalityOf(action, extra), { state: view, links: game.board.links, $space: view.spaces[id], ...extra });
         const kept = result.chosen.filter(legalNow);
         refundCost(game, state, action, result.chosen, kept);
         result.chosen = kept;
