@@ -10,6 +10,7 @@ import { fld, inp, area, sel, btn, chip } from "../components/fields.mjs";
 import { condEditor, valueEditor } from "../components/exprEditor.mjs";
 import { confirmButton } from "../components/confirmButton.mjs";
 import { defineList, addButton, removeButton } from "../components/listEditor.mjs";
+import { stepList } from "../components/stepList.mjs";
 import { fvars, fbadge, fidx } from "../components/faction.mjs";
 import { touch } from "../store.mjs";
 import { render } from "../shell.mjs";
@@ -51,7 +52,8 @@ function nodeForm(b, bi) {
       return `<div class="sblock">${i ? `<p><b>If none, try next:</b></p>` : ""}<div class="grid3">${fld("Special Activity", sel(`${lp}/action`, E.action, sas.length ? sas : [[E.action, E.action]]))}${fld("Timing", sel(`${lp}/timing`, E.timing, ["before", "during", "after"]), list && !i ? "Every entry uses the same timing." : "")}${fld("Table", sel(`${lp}/table`, E.table, b.priorityTables.map((t) => [t.id, t.id])))}</div>${fld("Trigger", condEditor(`${lp}/trigger`, E.trigger))}${fld("When it is skipped (printed)", inp(`${lp}/skipText`, E.skipText ?? ""))}${entries.length > 1 ? `<div class="row">${btn("bot-linked-del", "Remove this Special Activity", { cls: "link", data: `data-p="${p}" data-i="${i}"` })}</div>` : ""}</div>`;
     };
     const enemyTables = [["", "(none: act without a target)"], ...b.priorityTables.filter((t) => t.scope === "opponent").map((t) => [t.id, t.id])];
-    body = `<div class="grid2">${fld("Pick the enemy first", sel(`${p}/target`, n.target ?? "", enemyTables, { t: "o", r: true }), "An enemy table picks one enemy faction. The space table can then use \"the target\".")}${fld("Operation", sel(`${p}/action`, n.action ?? "", [["", "(choose)"], ...ops], { t: "o", r: true }))}${fld("Priority table", sel(`${p}/table`, n.table ?? "", tables, { t: "o", r: true }), "The table picks the spaces, so the bot needs no judgment.")}${branch("then", "After it acts, go to")}${branch("onEmpty", "If no space qualifies (fallback), go to")}</div>
+    body = `<div class="grid2">${fld("Pick the enemy first", sel(`${p}/target`, n.target ?? "", enemyTables, { t: "o", r: true }), "An enemy table picks one enemy faction. The space table can then use \"the target\".")}${fld("Operation", sel(`${p}/action`, n.action ?? "", [["", "(choose)"], ...ops], { t: "o", r: true }))}${n.parts ? "" : fld("Priority table", sel(`${p}/table`, n.table ?? "", tables, { t: "o", r: true }), "The table picks the spaces, so the bot needs no judgment.")}${branch("then", "After it acts, go to")}${branch("onEmpty", "If no space qualifies (fallback), go to")}</div>
+      ${partsForm(n, p, tables)}
       <label class="chk"><input type="checkbox" data-a="bot-linked" data-p="${p}" ${L ? "checked" : ""}> Linked Special Activity</label><small> Runs with the Operation when its trigger holds and its table finds a space.</small>
       ${entries.map(entry).join("")}${L ? `<div class="row">${btn("bot-linked-add", "Add an If none Special Activity", { cls: "link", data: `data-p="${p}"` })}<small> Tried in order: the first one whose trigger holds and whose table finds a space runs.</small></div>` : ""}`;
   }
@@ -59,6 +61,12 @@ function nodeForm(b, bi) {
   return `<div class="nodeform"><div class="grid3">${fld("Node id", `<input data-nodeid="${esc(n.id)}" data-bot="${bi}" data-path="/${p}/id" value="${esc(n.id)}">`)}${fld("Kind", `<select data-nkind="${p}" data-path="/${p}/kind">${KINDS.map(([v, l]) => `<option value="${v}" ${v === n.kind ? "selected" : ""}>${l}</option>`).join("")}</select>`)}<div class="fld"><span>&nbsp;</span>${b.start === n.id ? chip("ok", "Start node") : btn("bot-start", "Make this the start", { data: `data-p="bots/${bi}" data-id="${esc(n.id)}"` })}</div></div>
     ${fld("Text (printed on the flowchart)", area(`${p}/text`, n.text, { rows: 2, r: true }))}${body}
     <div class="row">${confirmButton(`node-${n.id}`, "Delete node", { action: "bot-delnode", data: `data-p="bots/${bi}" data-id="${esc(n.id)}"` })}</div></div>`;
+}
+
+// parts: numbered sub-actions of one Operation, each with its own table and effects (schema 1.5.0).
+function partsForm(n, p, tables) {
+  const rows = (n.parts ?? []).map((pt, i) => `<div class="sblock"><h4>Part ${i + 1}</h4><div class="grid2">${fld("What it does (printed)", inp(`${p}/parts/${i}/text`, pt.text))}${fld("Table", sel(`${p}/parts/${i}/table`, pt.table, tables.filter(([v]) => v), { r: true }))}</div><h4>Effects in each chosen space</h4><ol class="steps">${stepList(pt.steps, `${p}/parts/${i}/steps`, { space: true, target: n.target !== undefined })}</ol>${addButton("steps", "Add effect", { cls: "link", data: `data-p="${p}/parts/${i}/steps"` })}<div class="row">${btn("bot-parts-del", "Remove this part", { cls: "link", data: `data-p="${p}" data-i="${i}"` })}</div></div>`).join("");
+  return `${rows}<div class="row">${btn("bot-parts-add", n.parts ? "Add a part" : "Split into parts", { cls: "link", data: `data-p="${p}"` })}<small> Parts run in order. Each picks its own spaces with its table and runs its own effects. The cost is paid once per space.</small></div>`;
 }
 
 function tableEditor(t, bi, ti) {
@@ -198,6 +206,19 @@ export const botActions = {
     done();
   },
   "bot-delscoring": (d) => { const b = botOf(d.p); b.scoring.splice(Number(d.i), 1); if (!b.scoring.length) delete b.scoring; done(); },
+  // The first part takes the node's table and the Operation's effects; removing the last part gives its table back.
+  "bot-parts-add": (d) => {
+    const n = getP(S.game, d.p), b = getP(S.game, d.p.replace(/\/nodes\/\d+$/, ""));
+    const table = n.table ?? b.priorityTables.find((t) => t.scope !== "opponent")?.id ?? "";
+    if (!n.parts) { n.parts = [{ text: "", table, steps: structuredClone(S.game.actions.find((a) => a.id === n.action)?.steps ?? []) }]; delete n.table; }
+    else n.parts.push({ text: "", table: n.parts.at(-1).table, steps: [] });
+    done();
+  },
+  "bot-parts-del": (d) => {
+    const n = getP(S.game, d.p), [gone] = n.parts.splice(Number(d.i), 1);
+    if (!n.parts.length) { delete n.parts; n.table = gone.table; }
+    done();
+  },
   "bot-addtable": (d) => { const b = botOf(d.p); const id = freeId(new Set(b.priorityTables.map((t) => t.id)), `${b.code.toLowerCase()}.t`); b.priorityTables.push({ id, scope: "space", select: "one", steps: [{ n: 1, text: "Any legal space.", filter: true }], tiebreak: [] }); S.dopen[`tbl-${id}`] = true; done(); },
   "bot-addenemy": (d) => { const b = botOf(d.p); const id = freeId(new Set(b.priorityTables.map((t) => t.id)), `${b.code.toLowerCase()}.enemy`); b.priorityTables.push({ id, scope: "opponent", select: "one", steps: [{ n: 1, text: "Any enemy.", filter: true }], tiebreak: [{ letter: "a", text: "Highest victory margin.", key: { var: "$faction.margin" }, order: "max" }] }); S.dopen[`tbl-${id}`] = true; done(); },
   "bot-deltable": (d) => { S.confirm = null; botOf(d.p).priorityTables.splice(Number(d.i), 1); done(); },
