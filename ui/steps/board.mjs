@@ -3,7 +3,8 @@ import { fld, inp, sel, btn, chip, bound } from "../components/fields.mjs";
 import { addButton, removeButton, defineList } from "../components/listEditor.mjs";
 import { fvars, fdot } from "../components/faction.mjs";
 import { boardSvg } from "../../src/kit.mjs";
-import { touch, check } from "../store.mjs";
+import { touch, check, ask, guard } from "../store.mjs";
+import { boardPrompt, applyBoard } from "../../src/boardsuggest.mjs";
 import { render } from "../shell.mjs";
 
 export function renderBoard() {
@@ -13,6 +14,7 @@ export function renderBoard() {
   const count = (sp, pid, st) => g.setup.placements.filter((x) => x.space === sp && x.piece === pid && x.state === st).reduce((s, x) => s + x.count, 0);
   const lnk = (id) => g.board.spaces.find((s) => s.id === id)?.name ?? id;
   return `<h2 tabindex="-1" id="h">Prepare the board and setup</h2><p class="lead">Spaces and legal connections define play. Drawing positions are separate and only change how the board looks.</p>
+  ${suggestPanel(g)}
   <section class="panel"><h3>Spaces</h3><table class="t"><thead><tr><th>Name</th><th>Type</th><th>Pop</th><th>Starting opinion</th><th><span class="sr">Actions</span></th></tr></thead><tbody>${g.board.spaces.map((s, i) => `<tr><td>${inp(`board/spaces/${i}/name`, s.name)}</td><td>${sel(`board/spaces/${i}/type`, s.type, ["city", "province", "line", "sanctuary", "custom"])}</td><td>${inp(`board/spaces/${i}/attrs/pop`, s.attrs.pop, { t: "n", type: "number", attrs: 'min="0"' })}</td><td>${sel(`setup/spaceAttributes/${s.id}/opinion`, g.setup.spaceAttributes?.[s.id]?.opinion ?? 0, [[-1, "Opposition"], [0, "Neutral"], [1, "Support"]], { t: "n" })}</td><td>${removeButton("spaces", { id: s.id })}</td></tr>`).join("")}</tbody></table>${addButton("spaces", "Add space")}</section>
   <section class="panel"><h3>Legal connections</h3>
     <form class="row" onsubmit="return false"><label class="fld"><span>From</span><select id="lk-from">${g.board.spaces.map((s) => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join("")}</select></label><label class="fld"><span>To</span><select id="lk-to">${g.board.spaces.map((s, i) => `<option value="${esc(s.id)}" ${i === 1 ? "selected" : ""}>${esc(s.name)}</option>`).join("")}</select></label>${addButton("links", "Add connection")}</form>
@@ -24,6 +26,32 @@ export function renderBoard() {
   <section class="panel"><h3>Piece counts</h3><table class="t"><thead><tr><th>Piece</th><th>On board</th><th>Available</th><th>Out of Play</th><th>Supply</th><th>Check</th></tr></thead><tbody>${pieces().map((p) => { const pool = g.setup.pools[p.id] ?? { available: 0, outOfPlay: 0 }; const sum = onBoard(p.id) + pool.available + pool.outOfPlay; return `<tr><td>${fdot(g.factions.find((f) => f.id === p.owner))} ${esc(p.name)}</td><td>${onBoard(p.id)}</td><td>${inp(`setup/pools/${p.id}/available`, pool.available, { t: "n", type: "number", attrs: 'min="0"' })}</td><td>${inp(`setup/pools/${p.id}/outOfPlay`, pool.outOfPlay, { t: "n", type: "number", attrs: 'min="0"' })}</td><td>${p.supply}</td><td>${sum === p.supply ? chip("ok", `${sum} = ${p.supply}`) : chip("bad", `${sum} not ${p.supply}`)}</td></tr>`; }).join("")}</tbody></table></section>
   <section class="panel"><h3>Tracks and eligibility</h3><div class="grid3">${g.tracks.map((t, ti) => fld(`${esc(t.name)} (${t.min} to ${t.max})`, `<input type="number" data-track="${esc(t.id)}" data-path="/tracks/${ti}/start" value="${t.start}" min="${t.min}" max="${t.max}">`)).join("")}</div>
     <div class="row">${g.factions.map((f) => `<label class="chk"><input type="checkbox" ${bound(`setup/eligibility/${f.id}`, "b")} ${g.setup.eligibility[f.id] ? "checked" : ""}> ${esc(f.name)} starts Eligible</label>`).join("")}</div></section>`;
+}
+
+// One Claude call fills every field on this step from the read sources. Nothing changes until Apply.
+function suggestPanel(g) {
+  const read = g.brief.sources.filter((s) => s.status === "read" && S.texts[s.id]).map((s) => s.id);
+  const p = S.proposal?.kind === "board" ? S.proposal : null;
+  const list = (title, xs) => (xs.length ? `<details><summary>${title} (${xs.length})</summary><ul>${xs.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details>` : "");
+  const prev = p ? `<div class="proposal" role="region" aria-label="Suggested board"><h4>Claude's suggested board</h4>
+    <p>${p.game.board.spaces.length} spaces, ${p.game.board.links.length} legal connections, ${p.game.setup.placements.reduce((n, x) => n + x.count, 0)} starting pieces, ${g.tracks.length} track starts and starting eligibility.</p>
+    ${p.report.notes ? `<p><small>${esc(p.report.notes)}</small></p>` : ""}
+    <p><small>Spaces: ${p.game.board.spaces.map((s) => esc(s.name)).join(", ")}.</small></p>
+    ${p.report.removed.length ? `<p><b>Note.</b> Apply removes ${p.report.removed.length} of your spaces: ${p.report.removed.map((id) => esc(g.board.spaces.find((s) => s.id === id)?.name ?? id)).join(", ")}. Actions, cards or bots that name them will show issues. Undo restores them.</p>` : ""}
+    ${list("Parts of the answer not used", p.report.dropped)}
+    <div class="row">${btn("board-accept", "Apply to this step", { cls: "primary" })}${btn("dismiss", "Keep mine")}</div></div>` : "";
+  return `<section class="panel"><h3>Suggest from sources</h3><p><small>Claude suggests spaces, legal connections, starting pieces, piece counts, track starts and eligibility from the sources marked read: ${read.join(", ") || "none yet"}. You review the result before anything changes.</small></p>
+  <div class="row">${btn("suggest-board", S.busy.board ? "Asking Claude..." : "Suggest the whole board with Claude", { cls: "primary", dis: S.busy.board || !S.sample || !read.length })}</div>${S.msg.board ? `<p class="err">${esc(S.msg.board)}</p>` : ""}${prev}</section>`;
+}
+async function suggestBoard() {
+  const g = S.game;
+  const r = await ask(boardPrompt(g, S.texts));
+  S.proposal = { kind: "board", ...applyBoard(g, r) };
+}
+function acceptBoard() {
+  const { game } = S.proposal; const g = S.game;
+  g.board = game.board; g.setup = game.setup; g.tracks = game.tracks;
+  S.proposal = null; touch(); check(); render();
 }
 
 export function wireBoard() {
@@ -72,4 +100,8 @@ export function onBoardChange(el) {
   rd.readAsDataURL(file);
   return true;
 }
-export const boardBgActions = { "board-bg-clear": () => { S.game.board.presentation.background = null; touch(); render(); } };
+export const boardBgActions = {
+  "board-bg-clear": () => { S.game.board.presentation.background = null; touch(); render(); },
+  "suggest-board": () => guard("board", suggestBoard),
+  "board-accept": () => acceptBoard()
+};
