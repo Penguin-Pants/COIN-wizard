@@ -102,7 +102,8 @@ function chosenRun(game, s, ctx) {
     const from = s.from === "choose" ? ctx.choose(s.filter, 1)[0]?.id : s.from;
     const dest = s.to === "choose" ? ctx.choose(undefined, 1)[0] : undefined;
     const to = s.to === "choose" ? dest?.id : s.to;
-    if (to === undefined || from === undefined) return true;
+    // No qualifying choice: the move moves nothing, so a later "moved" count is 0 (as in the move executor).
+    if (to === undefined || from === undefined) { ctx.moved = { piece: s.piece, at: to ?? s.to, byState: {} }; return true; }
     const prev = ctx.$space;
     if (dest) ctx.$space = dest;
     runStep(game, { ...s, to, from }, ctx);
