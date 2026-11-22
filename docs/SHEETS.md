@@ -34,8 +34,8 @@ All 9 photos in `examples/non-player-bot-sheets/` were checked: Non-Player AUC, 
 | "then" / "with" arrow to a Special Activity box | `linked` with `timing` after / during | Yes (`before` prints "before") |
 | Special Activity box with priorities and "If none, no Special Activity" | linked table and `skipText` | Yes, plus "Only if" from `trigger` |
 | "max 3", "max 6 spaces", "for max 2/3 of Res" | table `limit`, `maxSpaces` | Partly (no share-of-Resources limit) |
-| Special Activity fallback chain ("If none, Process"; "If no such Eradicate: After Assault: Transport. Otherwise: Govern.") | none (one linked Special Activity) | Gap |
-| A diamond between an Operation and its Special Activities picks which one (A Distant Plain: "Aid at 2 or less?", "Warlords at 43+ Res?") | none (`trigger` only says yes or no to one Special Activity) | Gap |
+| Special Activity fallback chain ("If none, Process"; "If no such Eradicate: After Assault: Transport. Otherwise: Govern.") | `linked` as a list, tried in order (schema 1.5.0) | Have: Operation box names each entry; Special Activity boxes in list order with "if none" arrows |
+| A diamond between an Operation and its Special Activities picks which one (A Distant Plain: "Aid at 2 or less?", "Warlords at 43+ Res?") | `trigger` of the first `linked` entry; the next entry is the other answer (schema 1.5.0) | Have: "Only if" on the first box, "if none" arrow to the next |
 | "Loop" badges: when every Operation fails, run the chart again with looser rules ("Loop: Pass", "Loop: Attack", "If loop: Transport") | more action nodes on the `onEmpty` path, with looser tables (`docs/SCHEMA.md`, "Loop pattern") | Have (pattern, no schema field) |
 | One Operation box with several numbered sub-actions, each with its own effect (Rally: flip, then place Bases, then place Guerrillas) | none (one table chooses spaces; one step list runs in each) | Gap |
 | Support-phase box (Agitate, Elite Backing) | none (bots make no choices at scoring) | Gap |

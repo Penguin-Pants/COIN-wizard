@@ -63,4 +63,5 @@ All approved parts go into one new version, `coin-game/1.5.0`. Every new field i
 | C. `parts` (sub-actions) | Approved (against the recommendation to defer) |
 | D. `bot.scoring` tables | Approved |
 | E. `lasting` card flag | Approved |
-| `spaceText`, `cost.byType` (player sheets) | Not decided; not in the item list |
+| `spaceText`, `cost.byType` (player sheets) | `spaceText` approved for 1.5.0; `cost.byType` deferred (owner, in the implementation session) |
+| A: timing of list entries | One timing per list; the validator rejects a mix (owner, in the implementation session) |

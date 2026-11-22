@@ -2,7 +2,8 @@
 import { newBot, addNode, deleteNode, graphInfo, missingCases, newDryRun, runDry, toExpect, CASES } from "../../src/botedit.mjs";
 import { graphSvg } from "../../src/graphsvg.mjs";
 import { aidModel, toMarkdown } from "../../src/botaid.mjs";
-import { renameId } from "../../src/validate.mjs";
+import { renameId, tableUsers } from "../../src/validate.mjs";
+import { linkedOf } from "../../src/dryrun.mjs";
 import { isExpr } from "../../src/exprmodel.mjs";
 import { S, esc, getP } from "../state.mjs";
 import { fld, inp, area, sel, btn, chip } from "../components/fields.mjs";
@@ -43,11 +44,16 @@ function nodeForm(b, bi) {
   if (n.kind === "condition") body = `${fld("Test", condEditor(`${p}/test`, n.test ?? true))}<div class="grid2">${branch("yes", "If yes, go to")}${branch("no", "If no, go to")}</div>`;
   if (n.kind === "event-check") body = `<p><small>Plays the Event when the Event rules below allow it.</small></p><div class="grid2">${branch("yes", "If it plays the Event, go to")}${branch("no", "If not, go to")}</div>`;
   if (n.kind === "action") {
-    const L = n.linked, lp = `${p}/linked`;
+    // linked: one object or a list tried in order (schema 1.5.0). Each entry has its own fields.
+    const L = n.linked, list = Array.isArray(L), entries = linkedOf(n);
+    const entry = (E, i) => {
+      const lp = list ? `${p}/linked/${i}` : `${p}/linked`;
+      return `<div class="sblock">${i ? `<p><b>If none, try next:</b></p>` : ""}<div class="grid3">${fld("Special Activity", sel(`${lp}/action`, E.action, sas.length ? sas : [[E.action, E.action]]))}${fld("Timing", sel(`${lp}/timing`, E.timing, ["before", "during", "after"]), list && !i ? "Every entry uses the same timing." : "")}${fld("Table", sel(`${lp}/table`, E.table, b.priorityTables.map((t) => [t.id, t.id])))}</div>${fld("Trigger", condEditor(`${lp}/trigger`, E.trigger))}${fld("When it is skipped (printed)", inp(`${lp}/skipText`, E.skipText ?? ""))}${entries.length > 1 ? `<div class="row">${btn("bot-linked-del", "Remove this Special Activity", { cls: "link", data: `data-p="${p}" data-i="${i}"` })}</div>` : ""}</div>`;
+    };
     const enemyTables = [["", "(none: act without a target)"], ...b.priorityTables.filter((t) => t.scope === "opponent").map((t) => [t.id, t.id])];
     body = `<div class="grid2">${fld("Pick the enemy first", sel(`${p}/target`, n.target ?? "", enemyTables, { t: "o", r: true }), "An enemy table picks one enemy faction. The space table can then use \"the target\".")}${fld("Operation", sel(`${p}/action`, n.action ?? "", [["", "(choose)"], ...ops], { t: "o", r: true }))}${fld("Priority table", sel(`${p}/table`, n.table ?? "", tables, { t: "o", r: true }), "The table picks the spaces, so the bot needs no judgment.")}${branch("then", "After it acts, go to")}${branch("onEmpty", "If no space qualifies (fallback), go to")}</div>
       <label class="chk"><input type="checkbox" data-a="bot-linked" data-p="${p}" ${L ? "checked" : ""}> Linked Special Activity</label><small> Runs with the Operation when its trigger holds and its table finds a space.</small>
-      ${L ? `<div class="sblock"><div class="grid3">${fld("Special Activity", sel(`${lp}/action`, L.action, sas.length ? sas : [[L.action, L.action]]))}${fld("Timing", sel(`${lp}/timing`, L.timing, ["before", "during", "after"]))}${fld("Table", sel(`${lp}/table`, L.table, b.priorityTables.map((t) => [t.id, t.id])))}</div>${fld("Trigger", condEditor(`${lp}/trigger`, L.trigger))}${fld("When it is skipped (printed)", inp(`${lp}/skipText`, L.skipText ?? ""))}</div>` : ""}`;
+      ${entries.map(entry).join("")}${L ? `<div class="row">${btn("bot-linked-add", "Add an If none Special Activity", { cls: "link", data: `data-p="${p}"` })}<small> Tried in order: the first one whose trigger holds and whose table finds a space runs.</small></div>` : ""}`;
   }
   if (n.kind === "end") body = fld("Outcome", sel(`${p}/outcome`, n.outcome ?? "pass", OUTCOMES, { r: true }));
   return `<div class="nodeform"><div class="grid3">${fld("Node id", `<input data-nodeid="${esc(n.id)}" data-bot="${bi}" data-path="/${p}/id" value="${esc(n.id)}">`)}${fld("Kind", `<select data-nkind="${p}" data-path="/${p}/kind">${KINDS.map(([v, l]) => `<option value="${v}" ${v === n.kind ? "selected" : ""}>${l}</option>`).join("")}</select>`)}<div class="fld"><span>&nbsp;</span>${b.start === n.id ? chip("ok", "Start node") : btn("bot-start", "Make this the start", { data: `data-p="bots/${bi}" data-id="${esc(n.id)}"` })}</div></div>
@@ -58,7 +64,7 @@ function nodeForm(b, bi) {
 function tableEditor(t, bi, ti) {
   const p = `bots/${bi}/priorityTables/${ti}`, b = S.game.bots[bi];
   // An enemy table reads "that faction". A space table reads "the target" when every node that uses it picks an enemy.
-  const users = b.nodes.filter((n) => n.table === t.id || n.linked?.table === t.id);
+  const users = tableUsers(b, t.id);
   const ctx = t.scope === "opponent" ? { faction: true } : { space: true, target: users.length > 0 && users.every((n) => n.target) };
   const steps = t.steps.map((s, si) => `<li class="step"><div class="shead"><b>${s.n}.</b>${inp(`${p}/steps/${si}/text`, s.text, { attrs: `aria-label="Step ${s.n} description"` })}${t.steps.length > 1 ? removeButton("tsteps", { i: si, data: `data-p="${p}/steps"` }) : ""}</div>${condEditor(`${p}/steps/${si}/filter`, s.filter, ctx)}</li>`).join("");
   const ties = t.tiebreak.map((x, xi) => `<li class="step"><div class="shead"><b>${x.letter}.</b>${sel(`${p}/tiebreak/${xi}/order`, x.order, [["max", "Highest"], ["min", "Lowest"]], { attrs: `aria-label="Tie-break ${x.letter} direction"` })}${inp(`${p}/tiebreak/${xi}/text`, x.text, { attrs: `aria-label="Tie-break ${x.letter} description"` })}${removeButton("tbreaks", { i: xi, data: `data-p="${p}/tiebreak"` })}</div>${valueEditor(`${p}/tiebreak/${xi}/key`, x.key, ctx)}</li>`).join("");
@@ -159,6 +165,19 @@ export const botActions = {
     const n = getP(S.game, d.p), b = getP(S.game, d.p.replace(/\/nodes\/\d+$/, ""));
     if (el.checked) n.linked = { action: S.game.actions.find((a) => a.faction === b.factionId && a.kind === "specialActivity")?.id ?? "", timing: "after", trigger: true, table: b.priorityTables[0]?.id ?? "" };
     else delete n.linked;
+    done();
+  },
+  // A second entry turns the object into a list; removing down to one entry turns it back.
+  "bot-linked-add": (d) => {
+    const n = getP(S.game, d.p), b = getP(S.game, d.p.replace(/\/nodes\/\d+$/, "")), list = linkedOf(n);
+    const { skipText, ...next } = structuredClone(list[0]);
+    next.action = S.game.actions.find((a) => a.faction === b.factionId && a.kind === "specialActivity" && !list.some((x) => x.action === a.id))?.id ?? next.action;
+    n.linked = [...list, next];
+    done();
+  },
+  "bot-linked-del": (d) => {
+    const n = getP(S.game, d.p), list = linkedOf(n).filter((_, i) => i !== Number(d.i));
+    n.linked = list.length === 1 ? list[0] : list;
     done();
   },
   "bot-addtable": (d) => { const b = botOf(d.p); const id = freeId(new Set(b.priorityTables.map((t) => t.id)), `${b.code.toLowerCase()}.t`); b.priorityTables.push({ id, scope: "space", select: "one", steps: [{ n: 1, text: "Any legal space.", filter: true }], tiebreak: [] }); S.dopen[`tbl-${id}`] = true; done(); },
