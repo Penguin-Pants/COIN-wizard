@@ -61,7 +61,7 @@ AUC and FARC (Andean Abyss), Coalition and Government (A Distant Plain) use the 
 
 | GMT sheet | Kit sheet | Status |
 |---|---|---|
-| Special Activity tag can be a phrase: "among 3 spaces" (Surge, Air Lift), "1 space to 1 space" (Transport) | Tag is only "max N spaces" (`maxSpaces`) | Gap (needs a schema field) |
+| Special Activity tag can be a phrase: "among 3 spaces" (Surge, Air Lift), "1 space to 1 space" (Transport) | `spaceText` prints in place of "max N spaces" (schema 1.5.0) | Have |
 | Cost depends on the space type: "1 Resource per destination City/Dept (LoCs 0)" | Cost is one amount per space or per use | Gap (needs a schema field) |
 | "Cost: None" | "Cost: free" | Wording only |
 | No Cost line on Special Activity boxes | The kit prints Cost (already known) | Kept |
