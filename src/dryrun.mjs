@@ -195,16 +195,7 @@ export function runBot(game, bot, startState) {
       const before = links[0]?.timing === "before";
       if (before) payCost(game, state, action, result.chosen);
       else applyAction(game, state, action, result.chosen, extra);
-      if (links.length) {
-        let hit = null;
-        for (const L of links) {
-          const sa = actions[L.action];
-          if (!evalExpr(L.trigger, { ...ctx, ...extra })) continue;
-          const sel = selectByTable(game, state, tables[L.table], legalSpaces(game, state, sa, extra), sa, extra);
-          if (sel.length) { hit = `${sa.id}:${sel.map((s) => s.id).join(",")}`; applyAction(game, state, sa, sel.map((s) => s.id), extra); break; }
-        }
-        result.linked = hit ?? "skipped";
-      }
+      if (links.length) result.linked = runLinked(game, state, links, actions, tables, ctx, extra);
       if (before) {
         // Spaces the Special Activity made illegal are dropped and their cost is refunded. The
         // recheck reads a view without the Operation's own reserved cost.
