@@ -8,6 +8,13 @@ import { applyAction, payCost, refundCost, withoutCost } from "./effects.mjs";
 // A node's linked Special Activities as a list: none, one object or a list (schema 1.5.0).
 export const linkedOf = (node) => (node?.linked == null ? [] : [node.linked].flat());
 
+// card.lasting: the lasting value ("momentum", "capability" or "none") of the side this bot
+// plays for the card, which is the override's side, else the Event policy side (schema 1.5.0).
+export function cardLasting(game, bot, cardId) {
+  const side = bot.eventPolicy.overrides.find((o) => o.cardId === cardId)?.side ?? bot.eventPolicy.side;
+  return game.deck.cards.find((c) => c.id === cardId)?.sides?.find((s) => s.id === side)?.lasting ?? "none";
+}
+
 function affordable(state, action, game) {
   const f = game.factions.find((x) => x.id === state.self);
   const have = state.resources[f.id];
@@ -84,6 +91,8 @@ function eventDecision(bot, state, game) {
 export function runBot(game, bot, startState) {
   const state = structuredClone(startState);
   state.self = bot.factionId;
+  // A dry-run patch may set card.lasting; otherwise it comes from the deck.
+  if (state.card) state.card.lasting ??= cardLasting(game, bot, state.card.id);
   const nodes = Object.fromEntries(bot.nodes.map((n) => [n.id, n]));
   const tables = Object.fromEntries(bot.priorityTables.map((t) => [t.id, t]));
   const actions = Object.fromEntries(game.actions.map((a) => [a.id, a]));

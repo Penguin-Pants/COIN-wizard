@@ -118,4 +118,4 @@ export function scanExpr(e, out = { vars: [], pieces: [], ops: [] }) {
 }
 
 // Faction ids in resources.<id> and similar names are checked against the game by the validator.
-export const VAR_OK = /^(eligible|self\.resources|(resources|eligible|score|margin)\.[a-z0-9._-]+|rivals\.(max|min)(Resources|Score|Margin)|\$(faction|target)\.(id|name|type|resources|eligible|score|margin)|track\.[a-z0-9._-]+|card\.(id|hasEffect|raisesSelf|lowersEnemy)|var\.[a-z0-9_]+|\$space\.(id|name|type|pop|opinion))$/;
+export const VAR_OK = /^(eligible|self\.resources|(resources|eligible|score|margin)\.[a-z0-9._-]+|rivals\.(max|min)(Resources|Score|Margin)|\$(faction|target)\.(id|name|type|resources|eligible|score|margin)|track\.[a-z0-9._-]+|card\.(id|hasEffect|raisesSelf|lowersEnemy|lasting)|var\.[a-z0-9_]+|\$space\.(id|name|type|pop|opinion))$/;

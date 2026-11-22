@@ -1,7 +1,7 @@
 // Print kit generators. Everything reads the confirmed definition only.
 import { aidModel, toHtml, stepNumbers, tableLabels } from "./botaid.mjs";
 import { graphSvg } from "./graphsvg.mjs";
-import { linkedOf } from "./dryrun.mjs";
+import { linkedOf, cardLasting } from "./dryrun.mjs";
 import { condText, stepText } from "./plain.mjs";
 import { toCond } from "./exprmodel.mjs";
 
@@ -98,7 +98,7 @@ export function rulebookMd(g) {
 // Print layout. No paper size is forced: every page box fits inside both Letter and A4
 // with 10 mm margins (190 x 259 mm usable), and cards and aid sections never break across pages.
 const CSS = "@page{margin:10mm}*{box-sizing:border-box}body{font:9.5pt system-ui,sans-serif;margin:0;color:#111}.page{width:190mm;break-after:page;page-break-after:always}.page:last-of-type{break-after:auto;page-break-after:auto}.note{font-size:8.5pt;margin:0 0 3mm}.draft{font-weight:700;letter-spacing:.08em}"
-  + ".cards{display:grid;grid-template-columns:repeat(3,63mm);grid-auto-rows:88mm;gap:0;width:189mm}.card{width:63mm;height:88mm;border:0.3mm dashed #777;padding:3mm;overflow:hidden;break-inside:avoid;page-break-inside:avoid;position:relative;font-size:8pt;display:flex;flex-direction:column;gap:1mm}.card h3{margin:0;font-size:10pt}.ord{display:flex;gap:1mm}.ord svg{width:7mm;height:7mm}.side{border-top:0.3mm solid #999;padding-top:1mm}.shaded{background:#e8e8e8}.i{font-style:italic}.cid{margin-top:auto;font-size:7pt}"
+  + ".cards{display:grid;grid-template-columns:repeat(3,63mm);grid-auto-rows:88mm;gap:0;width:189mm}.card{width:63mm;height:88mm;border:0.3mm dashed #777;padding:3mm;overflow:hidden;break-inside:avoid;page-break-inside:avoid;position:relative;font-size:8pt;display:flex;flex-direction:column;gap:1mm}.card h3{margin:0;font-size:10pt}.ord{display:flex;gap:1mm}.ord svg{width:7mm;height:7mm}.side{border-top:0.3mm solid #999;padding-top:1mm}.shaded{background:#e8e8e8}.i{font-style:italic}.cid{margin-top:auto;font-size:7pt}.lasting{font-size:7pt;font-weight:700;text-transform:uppercase;border:0.2mm solid #111;padding:0 0.8mm}"
   + ".toks{display:flex;flex-wrap:wrap;gap:1.5mm}.tok svg{width:15mm;height:15mm;display:block}.grp{break-inside:avoid;page-break-inside:avoid;margin:0 0 3mm}.grp h2{font-size:10pt;margin:0 0 1mm}"
   + ".band{display:flex;gap:3mm;align-items:center;border-left:4mm solid var(--f);padding:2mm 3mm;margin:0 0 3mm;background:#f2f2f2}.band svg{width:10mm;height:10mm}.band h1{font-size:14pt;margin:0}.cols{columns:2;column-gap:6mm}.aidsec{break-inside:avoid;page-break-inside:avoid;margin:0 0 4mm;border-top:0.6mm solid var(--f);padding-top:1.5mm}.aidsec h2{font-size:10.5pt;margin:0 0 1.5mm}.aidsec h3{font-size:9.5pt;margin:2mm 0 0.5mm}.aidsec p{margin:0 0 1mm}.where{font-style:italic}.sheethead{display:flex;justify-content:center;align-items:center;gap:4mm;margin:0 0 1mm}.sheethead svg{width:11mm;height:11mm}.sheethead h1{font-size:20pt;margin:0}.sheetcols{display:grid;grid-template-columns:1fr 1fr;gap:4mm}.col h2{font-size:12pt;margin:0 0 1.5mm;text-align:center;color:var(--f)}.box{border:0.5mm solid #222;border-radius:2mm;padding:1.5mm 2mm;margin:0 0 3mm;break-inside:avoid;page-break-inside:avoid;font-size:8.5pt}.box p{margin:0 0 0.6mm;padding-left:3mm;text-indent:-3mm}.bt{display:flex;justify-content:space-between;align-items:baseline;gap:2mm;border-bottom:0.5mm solid var(--f);margin:0 0 1mm}.bt h3{font-size:11pt;margin:0}.bt small{font-weight:400;font-size:8pt}.tag{font-weight:700;font-size:8pt;color:var(--f);white-space:nowrap}.box.sa{background:color-mix(in srgb,var(--f) 14%,#fff)}.vic p.mine{background:color-mix(in srgb,var(--f) 28%,#fff);font-weight:600}.vic .i{font-style:italic;text-indent:0}.card-size,.counter-size{border:0.3mm solid #111;flex:none}.card-size{padding:3mm}.counter-size svg{width:100%;height:100%;display:block}.ruler{display:block}table{border-collapse:collapse;width:100%}td,th{border-bottom:0.2mm solid #bbb;text-align:left;padding:0.6mm 1mm;font-size:8.5pt}"
   + ".np{font-size:8pt}.npgrid{display:grid;grid-template-columns:42mm 1fr 1fr;gap:3mm;align-items:start}.np .col h2{font-size:12pt;margin:0 0 1.5mm;text-align:center;color:var(--f)}.np .box{font-size:8pt}.np .box p{margin:0 0 0.5mm}.np .where{font-style:italic;padding-left:0;text-indent:0}.np .pr{padding-left:4mm;text-indent:-4mm}.tb{background:color-mix(in srgb,var(--f) 22%,#fff);border-radius:1mm;padding:0.5mm 1.5mm;margin:0.5mm 0 1mm}.arr{font-size:7.5pt;color:#333;text-indent:0;padding-left:0}.arr b{color:var(--f)}.skip{font-style:italic;text-align:right;text-indent:0}.box.evt{background:#f2f2f2}.gate{font-weight:600;border-bottom:0.2mm solid #999;padding-bottom:0.5mm}.gate b{color:var(--f)}.dia{margin:0 0 3mm;break-inside:avoid;page-break-inside:avoid}.dia .q{clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);background:color-mix(in srgb,var(--f) 22%,#fff);margin:0;padding:6mm 7mm;text-align:center;font-weight:600;font-size:7.5pt;min-height:22mm;display:flex;align-items:center;justify-content:center}.dia .arr{text-align:center;margin:0.3mm 0}.evi{break-inside:avoid;page-break-inside:avoid;border-top:0.6mm solid var(--f);margin-top:2mm;padding-top:1mm}.evi h2{font-size:12pt;margin:0 0 1mm}.evi p{margin:0 0 0.6mm;padding-left:4mm;text-indent:-4mm}.foot{font-size:7pt;color:#333;margin:1mm 0 0}.terms{font-size:7.5pt;margin:1mm 0 0}"
@@ -120,10 +120,11 @@ const head = (g, what) => `<p class="note">${h(g.meta.title)} ${h(what)}, revisi
 const pages = (items, per) => Array.from({ length: Math.ceil(items.length / per) }, (_, i) => items.slice(i * per, i * per + per));
 
 // Cards: 63 x 88 mm, six to a page, with dashed cutting guides.
+const LASTING = { momentum: "Momentum", capability: "Capability" };
 export function cardsHtml(g) {
   const cards = g.deck.cards.map((c) => {
     const order = c.order.map((id) => { const f = faction(g, id); return f ? shapeSvg(g, f) : "?"; }).join("");
-    const sides = (c.sides ?? []).map((s) => `<div class="side ${s.id}"><b>${h(s.label || (s.id === "unshaded" ? "Unshaded" : "Shaded"))}</b>: ${h(s.text)}</div>`).join("");
+    const sides = (c.sides ?? []).map((s) => `<div class="side ${s.id}"><b>${h(s.label || (s.id === "unshaded" ? "Unshaded" : "Shaded"))}</b>${s.lasting ? ` <span class="lasting">${LASTING[s.lasting]}</span>` : ""}: ${h(s.text)}</div>`).join("");
     const body = c.type === "scoring" ? `<div class="side"><b>${h(g.rules.scoring.name)}</b>: ${g.rules.scoring.phases.map((p) => h(p.name)).join(", ")}.${c.final ? " <b>FINAL: the game ends.</b>" : ""}</div>` : sides;
     return `<div class="card"><h3>${h(c.title)}</h3><div class="ord" aria-label="Faction order">${order}</div>${c.flavor ? `<div class="i">${h(c.flavor)}</div>` : ""}${body}<div class="cid">${h(c.id.toUpperCase())} ${c.type === "scoring" ? "scoring" : "event"}${draftNote(g) ? " DRAFT" : ""}</div></div>`;
   });
@@ -271,7 +272,11 @@ export function nonPlayerSheetHtml(g, bot) {
   }).join("");
 
   const card = (id) => g.deck.cards.find((c) => c.id === id)?.title ?? id.toUpperCase();
-  const evi = `<section class="evi"><h2>Event Instructions</h2>${ep.overrides.map((o) => `<p><b>${h(card(o.cardId))}:</b> ${h(o.plain)}${o.directive === "ignore" ? "" : ` (play the ${o.side ?? ep.side} side)`}</p>`).join("") || "<p>None.</p>"}</section>`;
+  // Overrides for lasting cards (card.lasting of the side this bot plays) print in their own box.
+  const playSide = (o) => (o.directive === "ignore" ? "" : ` (play the ${o.side ?? ep.side} side)`);
+  const lasting = (o) => cardLasting(g, bot, o.cardId);
+  const lastingOvs = ep.overrides.filter((o) => lasting(o) !== "none");
+  const evi = `<section class="evi"><h2>Event Instructions</h2>${ep.overrides.filter((o) => lasting(o) === "none").map((o) => `<p><b>${h(card(o.cardId))}:</b> ${h(o.plain)}${playSide(o)}</p>`).join("") || "<p>None.</p>"}</section>${lastingOvs.length ? `<section class="evi"><h2>Momentum, Capability</h2>${lastingOvs.map((o) => `<p><b>${h(card(o.cardId))}</b> (${LASTING[lasting(o)]}): ${h(o.plain)}${playSide(o)}</p>`).join("")}</section>` : ""}`;
   const terms = bot.measures.length ? `<div class="terms"><b>Terms.</b> ${bot.measures.map((m) => `<b>${h(m.name)}:</b> ${h(m.plain)}`).join(" ")}</div>` : "";
   const gain = g.rules.sequence.passGain[bot.factionId] ?? 0;
   const foot = `<p class="foot">Ties after the lettered tie-breaks, when one space or faction is chosen: ${h(bot.randomization.eligibleSet)} ${h(bot.randomization.procedure)} Pass: gain ${gain} Resource${gain === 1 ? "" : "s"}.</p>`;
