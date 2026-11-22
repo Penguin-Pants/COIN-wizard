@@ -144,3 +144,17 @@ test("a space table used by a scoring choice may not read $target", () => {
   const i = b.priorityTables.indexOf(t);
   assert.ok(validate(g).errors.some((e) => e.path.startsWith(`/bots/0/priorityTables/${i}`)), JSON.stringify(validate(g).errors.slice(0, 2)));
 });
+
+test("a chosen move that finds no space moves nothing, so a later moved count is 0", () => {
+  // Step 1 moves 1 Volunteer Dublin -> Belfast. Step 2 finds no source (filter false), so it moves
+  // nothing. Step 3 removes the moved Volunteers in Belfast: none. Step 4 then picks a City with a
+  // Volunteer: Belfast (1, name order before Cork City). If step 3 removed it, Cork City would be picked.
+  const g = withScoring();
+  g.rules.scoring.phases.find((p) => p.id === "agitate").steps = [
+    { op: "move", piece: "ira.volunteer", count: 1, from: "dublin", to: "belfast" },
+    { op: "move", piece: "ira.volunteer", count: 1, from: "choose", to: "limerick", filter: false },
+    { op: "remove", piece: "ira.volunteer", count: "moved", to: "available", space: "belfast" },
+    { op: "markerSet", marker: "curfew", value: true, space: "choose", filter: { op: "gte", args: [{ op: "count", args: ["ira.volunteer", { var: "$space.id" }, "*"] }, 1] } }
+  ];
+  assert.deepEqual(score(g).chosen, ["belfast"]);
+});
