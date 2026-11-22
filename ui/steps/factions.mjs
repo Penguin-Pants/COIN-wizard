@@ -93,7 +93,7 @@ function accompaniesField(a, f, base) {
   const any = a.accompanies === "any", list = Array.isArray(a.accompanies) ? a.accompanies : [];
   const box = (op, label, on) => `<label class="row"><input type="checkbox" data-a="acc-toggle" data-sa="${esc(a.id)}" data-op="${esc(op)}" ${on ? "checked" : ""}> ${esc(label)}</label>`;
   const ops = f.operations.map((id) => S.game.actions.find((x) => x.id === id)).filter(Boolean);
-  return `<div class="grid2"><fieldset class="fld"><legend>Accompanies (Operations it may go with)</legend>${box("any", "Any Operation", any)}${ops.map((o) => box(o.id, o.name, !any && list.includes(o.id))).join("")}<small>None checked: not printed.</small></fieldset>${fld("Max spaces", inp(`${base}/maxSpaces`, a.maxSpaces ?? "", { t: "on", type: "number", attrs: 'min="1"' }), "Empty: no limit printed.")}</div>`;
+  return `<div class="grid2"><fieldset class="fld"><legend>Accompanies (Operations it may go with)</legend>${box("any", "Any Operation", any)}${ops.map((o) => box(o.id, o.name, !any && list.includes(o.id))).join("")}<small>None checked: not printed.</small></fieldset>${fld("Max spaces", inp(`${base}/maxSpaces`, a.maxSpaces ?? "", { t: "on", type: "number", attrs: 'min="1"' }), "Empty: no limit printed.")}${fld("Space tag (printed)", inp(`${base}/spaceText`, a.spaceText ?? "", { t: "o" }), "A phrase such as \"among 3 spaces\". It prints in place of \"max N spaces\". Empty: the max prints.")}</div>`;
 }
 
 export const factionActions = {
