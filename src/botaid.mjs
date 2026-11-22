@@ -48,6 +48,13 @@ function costText(a) {
   return `${a.cost.amount} Resource${a.cost.amount > 1 ? "s" : ""} per ${a.cost.per}`;
 }
 
+// Scoring rounds: one sentence per bot.scoring entry, else the bot makes no choices (schema 1.5.0).
+function scoringText(game, bot, labels) {
+  const phase = (id) => game.rules.scoring.phases.find((p) => p.id === id)?.name ?? id;
+  const lines = (bot.scoring ?? []).map((sc) => `In the ${phase(sc.phaseId)} phase: ${sc.text ? `${sc.text} ` : ""}Choose each space with table ${labels[sc.table]}.`);
+  return lines.length ? `${lines.join(" ")} Every other phase is automatic.` : "The bot makes no choices in a scoring round. Every phase is automatic.";
+}
+
 // Structured model of one aid. Both renderers read this.
 export function aidModel(game, bot) {
   const faction = game.factions.find((f) => f.id === bot.factionId);
@@ -101,7 +108,7 @@ export function aidModel(game, bot) {
     tieRandom: `If spaces are still tied after the lettered tie-breaks: ${bot.randomization.eligibleSet} ${bot.randomization.procedure}`,
     exceptions: bot.eventPolicy.overrides.map((o) => [o.cardId.toUpperCase() + " " + (game.deck.cards.find((c) => c.id === o.cardId)?.title ?? ""), `${o.directive}: ${o.plain}${o.targets ? " Targets: " + o.targets : ""}`]),
     fallback: `If every action has no legal target, or Resources are too low, Pass and gain ${passGain} Resource${passGain === 1 ? "" : "s"}.`,
-    scoring: "The bot makes no choices in a scoring round. Every phase is automatic.",
+    scoring: scoringText(game, bot, labels),
     outcome: "If an Operation runs and its linked Special Activity also runs, count it as Operation plus Special Activity for the sequence of play."
   };
 }

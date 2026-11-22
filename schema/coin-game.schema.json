@@ -2261,7 +2261,8 @@
                   "no-target",
                   "tie",
                   "linked-sa",
-                  "fallback"
+                  "fallback",
+                  "scoring"
                 ]
               },
               "patch": {
@@ -2336,6 +2337,30 @@
               },
               "y": {
                 "type": "number"
+              }
+            }
+          }
+        },
+        "scoring": {
+          "type": "array",
+          "description": "Choices in scoring phases. In each named phase, every step that needs a space (spaces with filter, or a choose space) picks with this table.",
+          "items": {
+            "type": "object",
+            "required": [
+              "phaseId",
+              "table"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "phaseId": {
+                "$ref": "#/$defs/id"
+              },
+              "table": {
+                "$ref": "#/$defs/id"
+              },
+              "text": {
+                "type": "string",
+                "description": "Printed in the scoring box of the Non-Player sheet and the bot aid."
               }
             }
           }

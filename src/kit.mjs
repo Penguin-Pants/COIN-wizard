@@ -2,6 +2,7 @@
 import { aidModel, toHtml, stepNumbers, tableLabels } from "./botaid.mjs";
 import { graphSvg } from "./graphsvg.mjs";
 import { linkedOf, cardLasting } from "./dryrun.mjs";
+import { choiceCounts } from "./effects.mjs";
 import { condText, stepText } from "./plain.mjs";
 import { toCond } from "./exprmodel.mjs";
 
@@ -271,6 +272,13 @@ export function nonPlayerSheetHtml(g, bot) {
     return `<section class="box sa">${title(a?.name ?? l.action, t, a)}${where(a)}${l.trigger !== undefined && l.trigger !== true ? `<p><b>Only if:</b> ${h(condTextOf(g, l.trigger))}.</p>` : ""}${prio(t)}${skip}${arrows}</section>`;
   }).join("");
 
+  // Scoring-phase choices (bot.scoring): one box per phase, like the GMT "Support Phase" box.
+  const phaseOf = (id) => g.rules.scoring.phases.find((p) => p.id === id);
+  // max: the most spaces one choice step picks (its spaces, capped by the table), as runScoring does.
+  const scMax = (sc) => { const t = table(sc.table), n = choiceCounts(phaseOf(sc.phaseId)?.steps); return n.length ? Math.min(t.select === "all" ? t.limit : 1, Math.max(...n)) : 0; };
+  const scTitle = (sc) => `<div class="bt"><h3>${h(phaseOf(sc.phaseId)?.name ?? sc.phaseId)} <small>(${labels[sc.table]})</small></h3>${scMax(sc) ? `<span class="tag">max ${scMax(sc)}</span>` : ""}</div>`;
+  const scBoxes = (bot.scoring ?? []).map((sc) => `<section class="box sa">${scTitle(sc)}${sc.text ? `<p>${h(sc.text)}</p>` : ""}${prio(table(sc.table))}</section>`).join("");
+  const scoring = scBoxes ? `<h2>${h(g.rules.scoring.name)} card</h2>${scBoxes}` : "";
   const card = (id) => g.deck.cards.find((c) => c.id === id)?.title ?? id.toUpperCase();
   // Overrides for lasting cards (card.lasting of the side this bot plays) print in their own box.
   const playSide = (o) => (o.directive === "ignore" ? "" : ` (play the ${o.side ?? ep.side} side)`);
@@ -282,7 +290,7 @@ export function nonPlayerSheetHtml(g, bot) {
   const foot = `<p class="foot">Ties after the lettered tie-breaks, when one space or faction is chosen: ${h(bot.randomization.eligibleSet)} ${h(bot.randomization.procedure)} Pass: gain ${gain} Resource${gain === 1 ? "" : "s"}.</p>`;
   const sym = shapeSvg(g, f);
   const body = `<section class="page np" style="--f:${f.color}"><div class="sheethead">${sym}<h1>Non-Player ${h(f.name)}</h1>${sym}</div>${head(g, "Non-Player sheet")}
-    <div class="npgrid"><div class="col flow">${evt}${dias}</div><div class="col ops"><h2>Operations</h2>${ops || "<p>None.</p>"}</div><div class="col sas"><h2>Special Activities</h2>${saBoxes || "<p>None.</p>"}</div></div>${evi}${terms}${foot}</section>`;
+    <div class="npgrid"><div class="col flow">${evt}${dias}</div><div class="col ops"><h2>Operations</h2>${ops || "<p>None.</p>"}</div><div class="col sas"><h2>Special Activities</h2>${saBoxes || "<p>None.</p>"}${scoring}</div></div>${evi}${terms}${foot}</section>`;
   return doc(g, `Non-Player ${f.name} sheet`, body);
 }
 
