@@ -14,5 +14,7 @@ window.matchMedia?.("(prefers-color-scheme: dark)").addEventListener?.("change",
   const [db, user, sample, downloads] = await Promise.all([c.use("db"), c.use("user"), c.use("sample"), c.use("downloads")].map((p) => p.catch(() => null)));
   S.db = db; S.user = user; S.sample = sample; S.downloads = downloads;
   try { S.uid = user ? await user.id() : null; } catch { S.uid = null; }
+  // Reading map images needs a view that lets Claude see images.
+  try { S.sampleImages = !!(sample?.limits && (await sample.limits()).images); } catch { S.sampleImages = false; }
   await loadSaved(); subscribeSources(); resetHistory(); render();
 })();

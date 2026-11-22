@@ -8,7 +8,7 @@ const DIST = pathToFileURL(resolve("dist/index.html")).href;
 const CHROME = process.env.CHROME_PATH ?? "/usr/bin/google-chrome";
 
 // Runs inside the page, before the app loads.
-function mockClaude({ saved, sources, replies, failWrites }) {
+function mockClaude({ saved, sources, replies, failWrites, sampleImages }) {
   window.__failWrites = failWrites;
   window.__saved = { ...saved };
   window.__dl = [];
@@ -36,7 +36,8 @@ function mockClaude({ saved, sources, replies, failWrites }) {
     user: { id: async () => "u1" },
     // replies: [[text the prompt contains, reply text], ...] checked before the defaults.
     // A third element delays the reply by that many milliseconds.
-    sample: async (p) => { const r = replies.find(([k]) => p.includes(k)); if (r?.[2]) await new Promise((ok) => setTimeout(ok, r[2])); return { text: r?.[1] ?? (p.includes("Suggest 4 Special Activities") ? SA : "[]") }; },
+    // Image counts sent to Claude are kept in __sampleImages. sampleImages: false is a view without images.
+    sample: Object.assign(async (p, o = {}) => { (window.__sampleImages ??= []).push(o.images?.length ?? 0); const r = replies.find(([k]) => p.includes(k)); if (r?.[2]) await new Promise((ok) => setTimeout(ok, r[2])); return { text: r?.[1] ?? (p.includes("Suggest 4 Special Activities") ? SA : "[]") }; }, { limits: async () => ({ images: sampleImages }) }),
     // The last saved file's bytes are kept, so a test can unzip the kit.
     downloads: { save: async (o) => { window.__dl.push(o.filename); if (o.data instanceof Blob) window.__dlBytes = Array.from(new Uint8Array(await o.data.arrayBuffer())); } }
   };
@@ -51,12 +52,12 @@ const DEFAULT_SOURCES = [
 export const launch = () => chromium.launch({ executablePath: CHROME, args: ["--no-sandbox"] });
 
 // example: true loads Tan War through the Project menu, as a designer would. The app itself starts blank.
-export async function openApp(browser, { saved = {}, sources = DEFAULT_SOURCES, colorScheme = "light", viewport = { width: 1280, height: 900 }, example = true, replies = [], failWrites = 0 } = {}) {
+export async function openApp(browser, { saved = {}, sources = DEFAULT_SOURCES, colorScheme = "light", viewport = { width: 1280, height: 900 }, example = true, replies = [], failWrites = 0, sampleImages = true } = {}) {
   const page = await browser.newPage({ viewport, colorScheme });
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));
   page.on("console", (m) => { if (m.type() === "error") errors.push("console:" + m.text()); });
-  await page.addInitScript(mockClaude, { saved, sources, replies, failWrites });
+  await page.addInitScript(mockClaude, { saved, sources, replies, failWrites, sampleImages });
   await page.goto(DIST);
   await page.waitForFunction(() => window.__snap === true);
   await frames(page);

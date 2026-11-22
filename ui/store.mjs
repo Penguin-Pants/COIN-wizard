@@ -1,5 +1,6 @@
 import { validate } from "../src/validate.mjs";
 import { migrate } from "../src/migrate.mjs";
+import { packGame, unpackGame, chunks } from "../src/imagepack.mjs";
 import { S, time } from "./state.mjs";
 import { render, renderRail, renderBanner, renderSaveState, renderStepDone } from "./shell.mjs";
 import { placeIssues } from "./components/issueMarker.mjs";
@@ -36,6 +37,34 @@ export function queueWrite(path, data) {
 
 // The draft saves after a pause in editing. A failed save retries with backoff (1, 2, 4 ... 30 seconds)
 // and the header says so. Only one draft write runs at a time.
+// Map images are stored apart from the game JSON, in chunks (see src/imagepack.mjs).
+const storedImages = new Set();
+async function storeImages(images) {
+  for (const [key, href] of Object.entries(images)) {
+    if (storedImages.has(key)) continue;
+    const parts = chunks(href), dir = `data/users/${S.uid}/images`;
+    const ok = await Promise.all(parts.map((part, i) => queueWrite(`${dir}/${key}-${i}`, { part })));
+    if (ok.every(Boolean) && await queueWrite(`${dir}/${key}`, { parts: parts.length })) storedImages.add(key);
+    else throw Object.assign(new Error("The map image could not be saved."), { code: "image" });
+  }
+}
+async function loadImage(key) {
+  const dir = `data/users/${S.uid}/images`, m = await S.db.doc(`${dir}/${key}`).get();
+  if (!m.exists) return null;
+  const parts = await Promise.all(Array.from({ length: m.data().parts }, (_, i) => S.db.doc(`${dir}/${key}-${i}`).get()));
+  if (parts.some((d) => !d.exists)) return null;
+  storedImages.add(key);
+  return parts.map((d) => d.data().part).join("");
+}
+// The game as saved in the database, with its map image stored apart.
+export async function dbJson(game) { const { json, images } = packGame(game); await storeImages(images); return json; }
+// A saved game read back. A lost map image opens the game without it and says so.
+export async function fromDbJson(json) {
+  const { game, missing } = await unpackGame(json, loadImage);
+  if (missing.length) S.msg.bg = "The saved map image could not be loaded. Upload it again.";
+  return game;
+}
+
 let saveTimer, saving = false, again = false, tries = 0;
 export function scheduleSave(delay = 1500) { clearTimeout(saveTimer); saveTimer = setTimeout(saveDraft, delay); }
 async function saveDraft() {
@@ -44,7 +73,7 @@ async function saveDraft() {
   saving = true; again = false;
   const json = JSON.stringify(S.game), at = new Date().toISOString();
   try {
-    await S.db.doc(`data/users/${S.uid}/draft`).set({ json, savedAt: at });
+    await S.db.doc(`data/users/${S.uid}/draft`).set({ json: await dbJson(JSON.parse(json)), savedAt: at });
     S.draftSavedAt = at; tries = 0; S.saveErr = null; S.retryIn = 0;
     if (JSON.stringify(S.game) === json) { S.dirty = false; S.saved = `Saved ${time()}`; } else again = true;
   } catch (e) {
@@ -66,13 +95,13 @@ export async function deleteSaved(which) {
 }
 export async function saveFinal() {
   if (!S.db || !S.uid) return;
-  try { await S.db.doc(`data/users/${S.uid}/final`).set({ json: JSON.stringify(S.finalGame), savedAt: new Date().toISOString() }); } catch { /* keep in memory */ }
+  try { await S.db.doc(`data/users/${S.uid}/final`).set({ json: await dbJson(S.finalGame), savedAt: new Date().toISOString() }); } catch { /* keep in memory */ }
 }
 export async function loadSaved() {
   if (!S.db || !S.uid) return;
   try {
     const [d, f, pf] = await Promise.all([S.db.doc(`data/users/${S.uid}/draft`).get(), S.db.doc(`data/users/${S.uid}/final`).get(), S.db.doc(`data/users/${S.uid}/prefs`).get()]);
-    if (f.exists) { try { S.finalGame = migrate(JSON.parse(f.data().json)); } catch { /* ignore */ } }
+    if (f.exists) { try { S.finalGame = migrate(await fromDbJson(f.data().json)); } catch { /* ignore */ } }
     if (d.exists) {
       S.draftSavedAt = d.data().savedAt;
       const dismissed = pf.exists && pf.data().dismissedDraftAt === d.data().savedAt;
@@ -107,10 +136,10 @@ export async function writeSource(id, extra = {}) {
 }
 
 // ---------- Claude (sample)
-export async function ask(prompt) {
+export async function ask(prompt, { images } = {}) {
   if (!S.sample) throw new Error("Claude drafting is not available in this view. Edit by hand or paste text.");
   if (S.cancelled) throw Object.assign(new Error("Cancelled."), { code: "cancelled" });
-  const r = await S.sample(prompt, { modelTier: "default", cache: false });
+  const r = await S.sample(prompt, { modelTier: "default", cache: false, ...(images?.length ? { images } : {}) });
   // A cancelled request drops its answer, so nothing it would change is changed.
   if (S.cancelled) throw Object.assign(new Error("Cancelled."), { code: "cancelled" });
   const t = r.text ?? "";

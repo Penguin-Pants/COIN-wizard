@@ -3,7 +3,7 @@ import { diff, applyPatch, invert, compareGames } from "../src/history.mjs";
 import { migrate } from "../src/migrate.mjs";
 import { fingerprint } from "../src/plain.mjs";
 import { S, $, esc, clone, STEPS } from "./state.mjs";
-import { check, scheduleSave, syncSources, queueWrite } from "./store.mjs";
+import { check, scheduleSave, syncSources, queueWrite, dbJson, fromDbJson } from "./store.mjs";
 import { render } from "./shell.mjs";
 import { btn, chip } from "./components/fields.mjs";
 import { confirmButton } from "./components/confirmButton.mjs";
@@ -63,7 +63,7 @@ export async function snapshot(reason) {
   S.lastSnap = fp;
   S.revs ??= [];
   const n = Math.max(0, ...S.revs.map((r) => r.n)) + 1, at = new Date().toISOString();
-  await queueWrite(`${base()}/revisions/${n}`, { json: JSON.stringify(S.game), at, reason });
+  await queueWrite(`${base()}/revisions/${n}`, { json: await dbJson(S.game), at, reason });
   S.revs.push({ n, at, reason, title: S.game.meta.title });
   while (S.revs.length > KEEP) { const old = S.revs.shift(); await queueWrite(`${base()}/revisions/${old.n}`, null); }
   await queueWrite(`${base()}/revisions-index`, { items: S.revs });
@@ -73,7 +73,7 @@ export const stepChanged = (from) => snapshot(`Left step ${from + 1}: ${STEPS[fr
 async function loadRevision(n) {
   const d = await S.db.doc(`${base()}/revisions/${n}`).get();
   if (!d.exists) throw new Error(`Snapshot ${n} is gone.`);
-  return migrate(JSON.parse(d.data().json));
+  return migrate(await fromDbJson(d.data().json));
 }
 
 export function renderRevisions() {

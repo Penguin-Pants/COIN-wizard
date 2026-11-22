@@ -1,7 +1,7 @@
 import { migrate } from "../src/migrate.mjs";
 import { blankGame } from "../src/blank.mjs";
 import { S, $, getP, setP, example, STEPS, EDITOR_STEP } from "./state.mjs";
-import { touch, check, scheduleSave, writeSource, deleteSaved, syncSources, cancelBusy } from "./store.mjs";
+import { touch, check, scheduleSave, writeSource, deleteSaved, syncSources, cancelBusy, fromDbJson } from "./store.mjs";
 import { markDone } from "./progress.mjs";
 import { showIssue, placeIssues } from "./components/issueMarker.mjs";
 import { render } from "./shell.mjs";
@@ -53,7 +53,7 @@ const coreActions = {
   "new-project": () => replaceGame(blankGame()),
   "load-example": (d) => replaceGame(migrate(example(d.ex))),
   dismiss: () => { S.proposal = null; render(); },
-  resume: () => { try { S.game = migrate(JSON.parse(S.draftOffer.json)); } catch (e) { S.msg.offer = `The saved draft could not be opened: ${e.message}`; render(); return; } delete S.msg.offer; S.draftOffer = null; S.dirty = false; syncSources(); resetHistory(); check(); render(); },
+  resume: async () => { try { S.game = migrate(await fromDbJson(S.draftOffer.json)); } catch (e) { S.msg.offer = `The saved draft could not be opened: ${e.message}`; render(); return; } delete S.msg.offer; S.draftOffer = null; S.dirty = false; syncSources(); resetHistory(); check(); render(); },
   "dismiss-offer": () => { const at = S.draftOffer?.savedAt; S.draftOffer = null; S.confirm = null; if (S.db && S.uid && at) S.db.doc(`data/users/${S.uid}/prefs`).set({ dismissedDraftAt: at }).catch(() => {}); render(); },
   "confirm-delete": (d) => deleteSaved(d.w),
   "cancel-busy": () => cancelBusy(),
