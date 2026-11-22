@@ -170,6 +170,8 @@ export function runScoring(game, bot, startState) {
   const state = structuredClone(startState);
   state.self = bot.factionId;
   const tables = Object.fromEntries(bot.priorityTables.map((t) => [t.id, t]));
+  // As in runBot: a dry-run patch may set card.lasting; otherwise it comes from the deck.
+  if (state.card) state.card.lasting ??= cardLasting(game, bot, state.card.id);
   const result = { path: [], chosen: [], linked: undefined, side: undefined, outcome: "none", target: undefined };
   for (const ph of game.rules.scoring.phases) {
     const sc = (bot.scoring ?? []).find((x) => x.phaseId === ph.id);
