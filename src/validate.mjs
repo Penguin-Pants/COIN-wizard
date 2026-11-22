@@ -125,7 +125,8 @@ export function validate(game) {
     for (const p of s.pieces) if (!pieceById[p]) err("missing-ref", path, `Unknown piece ${p}`);
     for (const f of s.factions ?? []) if (!factionIds.has(f)) err("missing-ref", path, `Unknown faction ${f}`);
   };
-  const checkSteps = (steps, path) => {
+  // scope: { target: true } for steps that run with $target (an action node with parts and a target).
+  const checkSteps = (steps, path, scope = {}) => {
     steps.forEach((st, i) => {
       const p = `${path}/${i}`;
       for (const k of ["piece", "fallbackPiece"]) if (st[k] && !pieceById[st[k]]) err("missing-ref", p, `Unknown piece ${st[k]}`);
@@ -138,10 +139,10 @@ export function validate(game) {
       }
       const pc = pieceById[st.piece];
       if (pc) for (const k of st.op === "flip" ? ["from", "to", "state"] : ["state"]) if (st[k] !== undefined && !pc.states.includes(st[k])) err("missing-ref", p, `${pc.name} has no state ${st[k]}`);
-      for (const k of ["test", "filter", "count", "amount"]) if (st[k] && typeof st[k] === "object") checkExpr(st[k], `${p}/${k}`);
-      if (st.then) checkSteps(st.then, `${p}/then`);
-      if (st.else) checkSteps(st.else, `${p}/else`);
-      if (st.options) st.options.forEach((o, j) => checkSteps(o.steps, `${p}/options/${j}`));
+      for (const k of ["test", "filter", "count", "amount"]) if (st[k] && typeof st[k] === "object") checkExpr(st[k], `${p}/${k}`, scope);
+      if (st.then) checkSteps(st.then, `${p}/then`, scope);
+      if (st.else) checkSteps(st.else, `${p}/else`, scope);
+      if (st.options) st.options.forEach((o, j) => checkSteps(o.steps, `${p}/options/${j}`, scope));
     });
   };
 
@@ -287,7 +288,7 @@ function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionByI
         const pp = `${np}/parts/${j}`;
         if (!tables[pt.table]) err("missing-ref", pp, `Part table not found: ${pt.table}`);
         else { used.add(pt.table); if (tables[pt.table].scope === "opponent") err("bad-target", pp, `Table ${pt.table} picks an enemy. A part chooses spaces with a space table`); }
-        checkSteps(pt.steps, `${pp}/steps`);
+        checkSteps(pt.steps, `${pp}/steps`, { target: n.target !== undefined });
       });
       if (n.parts) { if (n.table !== undefined) err("parts-table", np, `Action ${n.id} has parts, so it takes no table of its own: each part has its table`); }
       else if (!n.table) err("solo", np, `Action ${n.id} needs a priority table, so the choice needs no judgment`);

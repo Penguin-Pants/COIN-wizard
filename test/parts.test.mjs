@@ -139,3 +139,23 @@ test("the Non-Player sheet prints the parts as numbered sub-actions in one Opera
   assert.ok(box.indexOf("1. Place 1 Police") < box.indexOf("2. Place 2 Army"));
   assert.match(np(g), new RegExp(`<b>if none</b> → Garrison \\(${label(g, "cw.t.p1")}, ${label(g, "cw.t.p2")}\\)`));
 });
+
+// Codex review of PR 14.
+test("with cost per use, the aid and the sheet say the cost is paid once", () => {
+  const g = withParts();
+  g.actions.find((a) => a.id === "crown.garrison").cost = { track: "res.crown", amount: 3, per: "use" };
+  assert.match(aidStep(g), /Pay the cost once, for the whole Operation\./);
+  assert.doesNotMatch(aidStep(g), /once for each space/);
+  assert.match(opBox(np(g), "Garrison"), /<p class="pr">Pay once, for the whole Operation\.<\/p>/);
+  assert.match(opBox(np(withParts()), "Garrison"), /<p class="pr">Pay once per space, over all parts\.<\/p>/);
+});
+
+test("a part's effects may read $target when the node picks an enemy", () => {
+  const g = withParts(), n = node(g, "cw.garrison");
+  g.bots[0].priorityTables.push({ id: "cw.enemy", scope: "opponent", select: "one", steps: [{ n: 1, text: "Any.", filter: true }], tiebreak: [] });
+  n.target = "cw.enemy";
+  n.parts[0].steps = [{ op: "if", test: { op: "gte", args: [{ op: "factionCount", args: [{ var: "$target.id" }, { var: "$space.id" }, "*"] }, 1] }, then: [{ op: "place", piece: "crown.police", count: 1, from: "available", to: "$space" }] }];
+  assert.deepEqual(errs(g).filter((e) => e.path.startsWith("/bots/0/nodes/6")), []);
+  delete n.target;
+  assert.ok(errs(g).some((e) => e.code === "bad-var" && e.path.startsWith("/bots/0/nodes/6/parts/0/steps/0")));
+});
