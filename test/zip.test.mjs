@@ -30,7 +30,7 @@ test("an independent unzip tool accepts the archive", () => {
   const dir = mkdtempSync(join(tmpdir(), "zip-"));
   try {
     const p = join(dir, "kit.zip"); writeFileSync(p, zip(FILES));
-    const out = execFileSync("python3", ["-I", "-c", "import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); print(z.testzip()); print(z.read('kit/b.md').decode())", p]).toString();
+    const out = execFileSync("python3", ["-I", "-c", "import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); print(z.testzip()); print(z.read('kit/b.md').decode())", p], { env: { ...process.env, PYTHONIOENCODING: "utf-8" } }).toString().replace(/\r\n/g, "\n");
     assert.match(out, /^None\n# Title\nÄrger, naïve, 日本/);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

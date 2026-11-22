@@ -15,7 +15,8 @@ const games = readdirSync(dir).filter((f) => f.endsWith(".game.json")).map((f) =
 
 test("the schema is frozen at coin-game/1.5.0", () => {
   assert.equal(schema.properties.meta.properties.schemaVersion.const, "coin-game/1.5.0");
-  const hash = createHash("sha256").update(schemaText).digest("hex");
+  // Line endings are normalized: Git for Windows checks files out with CRLF by default.
+  const hash = createHash("sha256").update(schemaText.replace(/\r\n/g, "\n")).digest("hex");
   assert.equal(hash, "7537ccff4be3c3c9fc556da4cfee98feff9ea7495e1e0981179e118516ec4f07", "The frozen schema changed. Add a new version with a migrate step instead.");
 });
 
