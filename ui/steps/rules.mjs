@@ -1,11 +1,53 @@
 import { S, esc } from "../state.mjs";
-import { fld, inp, area } from "../components/fields.mjs";
+import { fld, inp, area, btn } from "../components/fields.mjs";
 import { valueEditor } from "../components/exprEditor.mjs";
 import { stepList } from "../components/stepList.mjs";
 import { renderDeck } from "./deck.mjs";
 import { renderBots } from "./bots.mjs";
 import { addButton } from "../components/listEditor.mjs";
+import { touch, check, ask, guard } from "../store.mjs";
+import { step4Prompt, fillStep4 } from "../../src/step4suggest.mjs";
 import { render } from "../shell.mjs";
+
+// One Claude button per tab. It fills only what is still empty or at its default; the designer
+// reviews the result before Apply, and Undo restores it.
+const SUGGEST = {
+  rules: ["Fill empty rulebook text and scoring phases", "Claude writes rulebook sections that are still empty and the scoring phases when there are none."],
+  deck: ["Suggest Event cards", "Claude adds Event cards from the sources. With an empty deck it also adds scoring cards and builds the piles. Your cards stay."],
+  victory: ["Fill default victory rules", "Claude rewrites victory rules still at the preset default, plus empty timing and tie-break fields."],
+  bots: ["Suggest bots", "Claude adds a bot for each faction that has none. You add the 6 dry runs after."]
+};
+const APPLY = { rules: (g, x) => { g.rules = x.rules; }, deck: (g, x) => { g.deck = x.deck; }, victory: (g, x) => { g.victory = x.victory; }, bots: (g, x) => { g.bots = x.bots; } };
+const keyOf = (part) => `s4${part}`;
+
+function suggestPanel(part) {
+  const g = S.game, k = keyOf(part), [label, help] = SUGGEST[part];
+  const read = g.brief.sources.filter((s) => s.status === "read" && S.texts[s.id]).map((s) => s.id);
+  const p = S.proposal?.kind === k ? S.proposal : null;
+  const list = (title, xs) => (xs.length ? `<details ${title === "Apply adds" ? "open" : ""}><summary>${title} (${xs.length})</summary><ul>${xs.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details>` : "");
+  const prev = p ? `<div class="proposal" role="region" aria-label="Claude's suggestion"><h4>Claude's suggestion</h4>
+    ${p.report.added.length ? list("Apply adds", p.report.added) : "<p>Nothing to add: every part is already filled.</p>"}
+    ${p.report.notes ? `<p><small>${esc(p.report.notes)}</small></p>` : ""}
+    ${list("Kept as you set it", p.report.skipped)}${list("Parts of the answer not used", p.report.dropped)}
+    <div class="row">${btn("step4-accept", "Apply to this tab", { cls: "primary", data: `data-part="${part}"`, dis: !p.report.added.length })}${btn("dismiss", "Keep mine")}</div></div>` : "";
+  return `<section class="panel"><h3>Suggest from sources</h3><p><small>${help} Sources: ${read.join(", ") || "none yet"}.</small></p>
+  <div class="row">${btn("step4-suggest", S.busy[k] ? "Asking Claude..." : label, { cls: "primary", data: `data-part="${part}"`, dis: S.busy[k] || !S.sample || !read.length })}</div>${S.msg[k] ? `<p class="err">${esc(S.msg[k])}</p>` : ""}${prev}</section>`;
+}
+async function suggest(part) {
+  const g = S.game;
+  const r = await ask(step4Prompt(part, g, S.texts));
+  S.proposal = { kind: keyOf(part), part, raw: r, ...fillStep4(part, g, r) };
+}
+function accept(part) {
+  const p = S.proposal, k = keyOf(part);
+  if (p?.kind !== k) return;
+  // Apply fills the game as it is now, so edits made during the preview stay. When that changes what
+  // Apply would do, the preview updates first and the designer applies again.
+  let next;
+  try { next = fillStep4(part, S.game, p.raw); } catch (e) { S.proposal = null; S.msg[k] = e.message; render(); return; }
+  if (JSON.stringify(next.report) !== JSON.stringify(p.report)) { S.proposal = { ...p, ...next }; S.msg[k] = "The game changed since the preview. Check the updated suggestion, then apply again."; render(); return; }
+  delete S.msg[k]; APPLY[part](S.game, next.game); S.proposal = null; touch(); check(); render();
+}
 
 export function renderRules() {
   const g = S.game, T = S.tab;
@@ -28,9 +70,11 @@ export function renderRules() {
   } else {
     body = renderBots();
   }
-  return `<h2 tabindex="-1" id="h">Complete the rules, cards and bots</h2>${nav}${body}`;
+  return `<h2 tabindex="-1" id="h">Complete the rules, cards and bots</h2>${nav}${suggestPanel(T)}${body}`;
 }
 
 export const rulesActions = {
   tab: (d) => { S.tab = d.tab; render(); },
+  "step4-suggest": (d) => guard(keyOf(d.part), () => suggest(d.part)),
+  "step4-accept": (d) => accept(d.part),
 };
