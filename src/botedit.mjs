@@ -1,6 +1,6 @@
 // Bot graph editing and dry-run helpers. Pure functions on the game data.
 import { deriveState, applyPatch } from "./state.mjs";
-import { runBot } from "./dryrun.mjs";
+import { runCase } from "./dryrun.mjs";
 
 export const CASES = ["ineligible", "event-override", "no-target", "tie", "linked-sa", "fallback"];
 const BRANCHES = ["yes", "no", "then", "onEmpty"];
@@ -82,7 +82,7 @@ export function newDryRun(bot, kase) {
 
 // Runs one dry run against the setup with its patch. Returns the result, or { error } when it cannot run.
 export function runDry(game, bot, dry) {
-  try { return runBot(game, bot, applyPatch(deriveState(game, bot.factionId), dry.patch)); } catch (e) { return { error: e.message }; }
+  try { return runCase(game, bot, applyPatch(deriveState(game, bot.factionId), dry.patch), dry.case); } catch (e) { return { error: e.message }; }
 }
 
 // The expected block that a result satisfies. Empty parts are left out.

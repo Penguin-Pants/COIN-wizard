@@ -39,10 +39,11 @@ test("a comparator change in a legal-space row rewrites the expression", () => w
 
 test("changing a step's effect gives a complete step of the new kind", () => withApp(async ({ page, db }) => {
   await goStep(page, 1); await openAction(page, "crown.garrison");
-  await pick(page.locator('select[data-sop="actions/0/steps/0"]'), "pay");
-  assert.equal(await page.locator('select[data-sf="actions/0/steps/0/track"]').count(), 1);
+  // Step 2 (Police): the Army of step 1 still reach the Martial Law dry runs.
+  await pick(page.locator('select[data-sop="actions/0/steps/1"]'), "pay");
+  assert.equal(await page.locator('select[data-sf="actions/0/steps/1/track"]').count(), 1);
   const g = await saved(page, db);
-  assert.deepEqual(g.actions[0].steps[0], { op: "pay", track: "res.crown", amount: 1 });
+  assert.deepEqual(g.actions[0].steps[1], { op: "pay", track: "res.crown", amount: 1 });
   assert.equal(await page.innerText("#blockers"), "No blockers");
 }));
 
@@ -81,3 +82,33 @@ test("a shape the rows cannot show opens as data and stays editable", () => {
     assert.deepEqual(out.actions[0].targets, { op: "gte", args: [{ op: "mul", args: [3, { var: "$space.pop" }] }, 2] });
   }, opts);
 });
+
+// Schema 1.4.0 sheet fields: Purpose, Rule section, Accompanies and Max spaces.
+test("sheet fields of an action are set without JSON and an empty one is removed", () => withApp(async ({ page, db }) => {
+  await goStep(page, 1); await openAction(page, "crown.martial-law");
+  const law = 'details.act[data-k="act-crown.martial-law"]';
+  await page.fill(`${law} input[data-b="actions/3/purpose"]`, "Tighten control.");
+  await page.fill(`${law} input[data-b="actions/3/ruleRef"]`, "4.2.1");
+  await page.fill(`${law} input[data-b="actions/3/maxSpaces"]`, "1");
+  await page.click(`${law} input[data-a="acc-toggle"][data-op="crown.garrison"]`); await frames(page);
+  await page.click(`${law} input[data-a="acc-toggle"][data-op="crown.crackdown"]`); await frames(page);
+  let a = (await saved(page, db)).actions[3];
+  assert.deepEqual([a.purpose, a.ruleRef, a.maxSpaces, a.accompanies], ["Tighten control.", "4.2.1", 1, ["crown.garrison", "crown.crackdown"]]);
+  assert.equal(await page.innerText("#blockers"), "No blockers");
+  await page.fill(`${law} input[data-b="actions/3/maxSpaces"]`, "");
+  await page.click(`${law} input[data-a="acc-toggle"][data-op="any"]`); await frames(page);
+  a = (await saved(page, db)).actions[3];
+  assert.equal("maxSpaces" in a, false);
+  assert.equal(a.accompanies, "any");
+}));
+
+// Schema 1.5.0: the space tag phrase of a Special Activity (spaceText).
+test("a designer sets a Special Activity's space tag and clears it", () => withApp(async ({ page, db }) => {
+  await goStep(page, 1); await openAction(page, "crown.martial-law");
+  const law = 'details.act[data-k="act-crown.martial-law"]';
+  assert.equal(await page.locator(`${law} input[data-b="actions/3/spaceText"]`).count(), 1, "the Special Activity has a space tag field");
+  await page.fill(`${law} input[data-b="actions/3/spaceText"]`, "among 3 spaces");
+  assert.equal((await saved(page, db)).actions[3].spaceText, "among 3 spaces");
+  await page.fill(`${law} input[data-b="actions/3/spaceText"]`, "");
+  assert.equal("spaceText" in (await saved(page, db)).actions[3], false);
+}));

@@ -1,6 +1,7 @@
 // Generate bot exports from the same definition the validator and dry-runs use:
 // Mermaid source, printable aid (Markdown and HTML), policy YAML, structured JSON.
 import YAML from "yaml";
+import { linkedOf } from "./dryrun.mjs";
 
 const esc = (s) => String(s).replace(/"/g, "'").replace(/[<>]/g, "");
 const mid = (id) => id.replace(/[^a-z0-9]/gi, "_");
@@ -47,6 +48,13 @@ function costText(a) {
   return `${a.cost.amount} Resource${a.cost.amount > 1 ? "s" : ""} per ${a.cost.per}`;
 }
 
+// Scoring rounds: one sentence per bot.scoring entry, else the bot makes no choices (schema 1.5.0).
+function scoringText(game, bot, labels) {
+  const phase = (id) => game.rules.scoring.phases.find((p) => p.id === id)?.name ?? id;
+  const lines = (bot.scoring ?? []).map((sc) => `In the ${phase(sc.phaseId)} phase: ${sc.text ? `${sc.text} ` : ""}Choose each space with table ${labels[sc.table]}.`);
+  return lines.length ? `${lines.join(" ")} Every other phase is automatic.` : "The bot makes no choices in a scoring round. Every phase is automatic.";
+}
+
 // Structured model of one aid. Both renderers read this.
 export function aidModel(game, bot) {
   const faction = game.factions.find((f) => f.id === bot.factionId);
@@ -68,10 +76,18 @@ export function aidModel(game, bot) {
     if (n.kind === "condition") return { n: num[n.id], text: `${n.text} Yes: ${goto(n.yes)}. No: ${goto(n.no)}.` };
     if (n.kind === "event-check") return { n: num[n.id], text: `${n.text} If you play the Event: ${goto(n.yes)}. If not: ${goto(n.no)}.` };
     const a = actions[n.action];
-    let t = `${a.name} (cost ${costText(a)}). ${n.target ? `First choose the target: one enemy faction with table ${labels[n.target]}. If no enemy qualifies: ${goto(n.onEmpty)}. ` : ""}Choose ${select(tableById[n.table])} with table ${labels[n.table]}. If no space is legal or affordable: ${goto(n.onEmpty)}. Otherwise resolve it, then ${goto(n.then)}.`;
-    if (n.linked) {
-      const sa = actions[n.linked.action];
-      t += ` Before you end: Special Activity ${sa.name} (cost ${costText(sa)}) may follow, ${n.linked.timing} the Operation. ${n.linked.skipText ?? "Skip it if it cannot be used."} Choose its space with table ${labels[n.linked.table]}.`;
+    // parts: numbered sub-actions, each with its own table (schema 1.5.0, docs/SCHEMA.md "Action node parts").
+    const choose = n.parts
+      ? `Do these parts in order, each in its own spaces: ${n.parts.map((pt, i) => `${i + 1}. ${pt.text} Choose ${select(tableById[pt.table])} with table ${labels[pt.table]}.`).join(" ")} ${a.cost.per === "use" ? "Pay the cost once, for the whole Operation." : "Pay the cost once for each space, over all parts."} If no part finds a legal or affordable space`
+      : `Choose ${select(tableById[n.table])} with table ${labels[n.table]}. If no space is legal or affordable`;
+    let t = `${a.name} (cost ${costText(a)}). ${n.target ? `First choose the target: one enemy faction with table ${labels[n.target]}. If no enemy qualifies: ${goto(n.onEmpty)}. ` : ""}${choose}: ${goto(n.onEmpty)}. Otherwise resolve it, then ${goto(n.then)}.`;
+    const links = linkedOf(n);
+    const saText = (L) => `${actions[L.action].name} (cost ${costText(actions[L.action])}). ${L.skipText ?? "Skip it if it cannot be used."} Choose its space with table ${labels[L.table]}.`;
+    if (links.length === 1) {
+      const L = links[0], sa = actions[L.action];
+      t += ` Before you end: Special Activity ${sa.name} (cost ${costText(sa)}) may follow, ${L.timing} the Operation. ${L.skipText ?? "Skip it if it cannot be used."} Choose its space with table ${labels[L.table]}.`;
+    } else if (links.length) {
+      t += ` Before you end: Special Activities may follow, ${links[0].timing} the Operation. Try them in order; the first one that can be used runs. ${links.map((L, i) => `${i + 1}. ${i ? "If none: " : ""}${saText(L)}`).join(" ")}`;
     }
     return { n: num[n.id], text: t };
   });
@@ -96,7 +112,7 @@ export function aidModel(game, bot) {
     tieRandom: `If spaces are still tied after the lettered tie-breaks: ${bot.randomization.eligibleSet} ${bot.randomization.procedure}`,
     exceptions: bot.eventPolicy.overrides.map((o) => [o.cardId.toUpperCase() + " " + (game.deck.cards.find((c) => c.id === o.cardId)?.title ?? ""), `${o.directive}: ${o.plain}${o.targets ? " Targets: " + o.targets : ""}`]),
     fallback: `If every action has no legal target, or Resources are too low, Pass and gain ${passGain} Resource${passGain === 1 ? "" : "s"}.`,
-    scoring: "The bot makes no choices in a scoring round. Every phase is automatic.",
+    scoring: scoringText(game, bot, labels),
     outcome: "If an Operation runs and its linked Special Activity also runs, count it as Operation plus Special Activity for the sequence of play."
   };
 }
@@ -126,7 +142,7 @@ export function toHtml(m) {
 
 export function toPolicyYaml(game, bot) {
   const used = new Set();
-  for (const n of bot.nodes) { if (n.action) used.add(n.action); if (n.linked) used.add(n.linked.action); }
+  for (const n of bot.nodes) { if (n.action) used.add(n.action); for (const L of linkedOf(n)) used.add(L.action); }
   const actions = game.actions.filter((a) => used.has(a.id)).map((a) => ({ id: a.id, name: a.name, kind: a.kind, cost: a.cost, plain: a.plain, dependsOn: a.dependsOn }));
   const { dryRuns, ...policy } = bot;
   const f = game.factions.find((x) => x.id === bot.factionId);

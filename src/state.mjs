@@ -3,7 +3,9 @@
 export function deriveState(game, selfFactionId) {
   const spaces = {};
   for (const s of game.board.spaces) {
+    // Markers (mutable space attributes) start from setup; markerSet changes them.
     spaces[s.id] = {
+      ...game.setup.spaceAttributes?.[s.id],
       id: s.id, name: s.name, type: s.type, pop: s.attrs.pop,
       opinion: game.setup.spaceAttributes?.[s.id]?.opinion ?? 0,
       pieces: {}
@@ -26,6 +28,8 @@ export function deriveState(game, selfFactionId) {
     eligible: { ...game.setup.eligibility },
     resources,
     tracks: { ...game.setup.tracks },
+    // Pieces off the map, so effect steps can place and remove (src/effects.mjs).
+    pools: structuredClone(game.setup.pools ?? {}),
     card: { id: "e03", hasEffect: true, raisesSelf: false, lowersEnemy: false },
     dice: [],
     vars: {},

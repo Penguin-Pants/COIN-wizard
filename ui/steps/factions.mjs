@@ -15,6 +15,8 @@ function actionEditor(a, f) {
   const cost = a.cost.amount === 0 ? "free" : `cost ${a.cost.amount} per ${a.cost.per}`;
   return `<details class="act" data-k="${esc(k)}" ${isOpen(k, false) ? "open" : ""}><summary><span class="${sa ? "sam" : `opm s-${SHAPES[fidx(f.id) % 4]}`}" aria-hidden="true"></span><b>${esc(a.name)}</b><span class="grow"></span>${sa ? `<span class="chip tag">${esc(a.timing ?? "after")}</span>` : ""}<span class="chip tag">${esc(cost)}</span></summary>
     <div class="grid2">${fld("Name", inp(`${base}/name`, a.name, { r: true }))}${fld("Cost", `<span class="row">${inp(`${base}/cost/amount`, a.cost.amount, { t: "n", type: "number", attrs: 'min="0"', r: true })}${sel(`${base}/cost/per`, a.cost.per, ["space", "use"], { r: true })}${sel(`${base}/cost/track`, a.cost.track, S.game.tracks.map((t) => t.id))}</span>`)}</div>
+    <div class="grid2">${fld("Purpose (one line, printed on the faction sheet)", inp(`${base}/purpose`, a.purpose ?? "", { t: "o" }))}${fld("Rule section", inp(`${base}/ruleRef`, a.ruleRef ?? "", { t: "o", attrs: 'placeholder="3.3.1"' }), "Printed after the name, such as (3.3.1).")}</div>
+    ${sa ? accompaniesField(a, f, base) : ""}
     ${fld(`What it does (plain text, printed in the rulebook)${staleChip(a)}`, area(`${base}/plain`, a.plain, { rows: 3 }))}${draftButton(base, "plain")}
     <div class="grid2">${sa ? fld("Timing", sel(`${base}/timing`, a.timing ?? "after", ["before", "during", "after", "any"], { r: true })) : fld("Allowed as Limited Operation", `<input type="checkbox" ${bound(`${base}/limitedAllowed`, "b")} ${a.limitedAllowed ? "checked" : ""}>`)}${fld("Depends on (one per line)", area(`${base}/dependsOn`, a.dependsOn ?? [], { t: "l", rows: 2 }), "Pieces, tracks or board features. Missing ones are flagged.")}</div>
     <h4>Legal spaces</h4><p><small>A space is legal when this holds. It is checked once for each space.</small></p>${condEditor(`${base}/targets`, a.targets, { space: true })}
@@ -86,7 +88,25 @@ function delAction(id) {
   touch(); check(); render();
 }
 
+// Which Operations a Special Activity may go with, and its space limit. Both print on the faction sheet.
+function accompaniesField(a, f, base) {
+  const any = a.accompanies === "any", list = Array.isArray(a.accompanies) ? a.accompanies : [];
+  const box = (op, label, on) => `<label class="row"><input type="checkbox" data-a="acc-toggle" data-sa="${esc(a.id)}" data-op="${esc(op)}" ${on ? "checked" : ""}> ${esc(label)}</label>`;
+  const ops = f.operations.map((id) => S.game.actions.find((x) => x.id === id)).filter(Boolean);
+  return `<div class="grid2"><fieldset class="fld"><legend>Accompanies (Operations it may go with)</legend>${box("any", "Any Operation", any)}${ops.map((o) => box(o.id, o.name, !any && list.includes(o.id))).join("")}<small>None checked: not printed.</small></fieldset>${fld("Max spaces", inp(`${base}/maxSpaces`, a.maxSpaces ?? "", { t: "on", type: "number", attrs: 'min="1"' }), "Empty: no limit printed.")}${fld("Space tag (printed)", inp(`${base}/spaceText`, a.spaceText ?? "", { t: "o" }), "A phrase such as \"among 3 spaces\". It prints in place of \"max N spaces\". Empty: the max prints.")}</div>`;
+}
+
 export const factionActions = {
+  "acc-toggle": (d) => {
+    const a = S.game.actions.find((x) => x.id === d.sa); if (!a) return;
+    if (d.op === "any") { if (a.accompanies === "any") delete a.accompanies; else a.accompanies = "any"; }
+    else {
+      const list = new Set(Array.isArray(a.accompanies) ? a.accompanies : []);
+      if (list.has(d.op)) list.delete(d.op); else list.add(d.op);
+      if (list.size) a.accompanies = [...list]; else delete a.accompanies;
+    }
+    touch(); render();
+  },
   "fac-tab": (d) => { S.ftab = d.f; render(); },
   "fac-preset": (d) => { const f = S.game.factions[Number(d.i)]; f.pieces = presetPieces(f.id, f.type); for (const p of f.pieces) S.game.setup.pools[p.id] = { available: p.supply, outOfPlay: 0 }; touch(); render(); },
   "suggest-factions": () => guard("factions", suggestFactions),
