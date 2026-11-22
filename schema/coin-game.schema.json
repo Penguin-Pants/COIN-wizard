@@ -2438,6 +2438,34 @@
         "target": {
           "$ref": "#/$defs/id",
           "description": "An opponent table. The action picks this enemy first; its space table can read $target."
+        },
+        "parts": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Numbered sub-actions of one Operation. Each part picks spaces with its own table and runs its own steps there. The Operation's cost is paid once per distinct space over all parts. The node is empty only when every part is empty.",
+          "items": {
+            "type": "object",
+            "required": [
+              "text",
+              "table",
+              "steps"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "text": {
+                "type": "string"
+              },
+              "table": {
+                "$ref": "#/$defs/id"
+              },
+              "steps": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/step"
+                }
+              }
+            }
+          }
         }
       }
     },

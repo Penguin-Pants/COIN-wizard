@@ -246,12 +246,12 @@ export function validate(game) {
   for (const f of factionIds) if (game.bots.filter((b) => b.factionId === f).length !== 1) err("bot-coverage", "/bots", `Faction ${f} needs exactly one bot`);
   const codes = game.bots.map((b) => b.code);
   codes.forEach((c, i) => { if (codes.indexOf(c) !== i) err("duplicate-code", `/bots/${i}/code`, `Bot code ${c} is used by more than one bot`); });
-  game.bots.forEach((bot, bi) => validateBot(game, bot, `/bots/${bi}`, { err, warn, checkExpr, actionById, cardById, seq }));
+  game.bots.forEach((bot, bi) => validateBot(game, bot, `/bots/${bi}`, { err, warn, checkExpr, checkSteps, actionById, cardById, seq }));
 
   return result(issues);
 }
 
-function validateBot(game, bot, p, { err, warn, checkExpr, actionById, cardById, seq }) {
+function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionById, cardById, seq }) {
   const faction = game.factions.find((f) => f.id === bot.factionId);
   if (!faction) { err("missing-ref", p, `Bot ${bot.id} names unknown faction ${bot.factionId}`); return; }
   const nodes = Object.fromEntries(bot.nodes.map((n) => [n.id, n]));
@@ -282,7 +282,16 @@ function validateBot(game, bot, p, { err, warn, checkExpr, actionById, cardById,
       if (!a) err("missing-ref", np, `Action not found: ${n.action}`);
       else if (a.faction !== bot.factionId || a.kind !== "operation") err("wrong-owner", np, `Node ${n.id} must use an Operation of ${bot.factionId}`);
       // Solo rule: a bot never asks the player to pick. Every action chooses its spaces through a table.
-      if (!n.table) err("solo", np, `Action ${n.id} needs a priority table, so the choice needs no judgment`);
+      // parts: each part chooses with its own space table; the node then has no table of its own.
+      (n.parts ?? []).forEach((pt, j) => {
+        const pp = `${np}/parts/${j}`;
+        if (!tables[pt.table]) err("missing-ref", pp, `Part table not found: ${pt.table}`);
+        else { used.add(pt.table); if (tables[pt.table].scope === "opponent") err("bad-target", pp, `Table ${pt.table} picks an enemy. A part chooses spaces with a space table`); }
+        checkSteps(pt.steps, `${pp}/steps`);
+      });
+      if (n.parts && n.table !== undefined) err("parts-table", np, `Action ${n.id} has parts, so it takes no table of its own: each part has its table`);
+      else if (n.parts) { /* tables checked per part */ }
+      else if (!n.table) err("solo", np, `Action ${n.id} needs a priority table, so the choice needs no judgment`);
       else if (!tables[n.table]) err("missing-ref", np, `Priority table not found: ${n.table}`);
       else { used.add(n.table); if (tables[n.table].scope === "opponent") err("bad-target", np, `Table ${n.table} picks an enemy. Use it as the target table and choose spaces with a space table`); }
       if (n.target !== undefined) {
@@ -364,7 +373,7 @@ function validateBot(game, bot, p, { err, warn, checkExpr, actionById, cardById,
 
 // What chooses with a table: nodes (as the node's table or a linked entry's table) and scoring
 // entries. A scoring entry has no target, so a table it uses may not read $target.
-export const tableUsers = (bot, id) => [...bot.nodes.filter((n) => n.table === id || linkedOf(n).some((L) => L.table === id)), ...(bot.scoring ?? []).filter((sc) => sc.table === id)];
+export const tableUsers = (bot, id) => [...bot.nodes.filter((n) => n.table === id || linkedOf(n).some((L) => L.table === id) || (n.parts ?? []).some((pt) => pt.table === id)), ...(bot.scoring ?? []).filter((sc) => sc.table === id)];
 
 function result(issues) {
   return { ok: !issues.some((i) => i.severity === "error"), errors: issues.filter((i) => i.severity === "error"), warnings: issues.filter((i) => i.severity === "warning") };

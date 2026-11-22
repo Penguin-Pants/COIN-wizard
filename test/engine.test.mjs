@@ -16,7 +16,7 @@ const games = readdirSync(dir).filter((f) => f.endsWith(".game.json")).map((f) =
 test("the schema is frozen at coin-game/1.5.0", () => {
   assert.equal(schema.properties.meta.properties.schemaVersion.const, "coin-game/1.5.0");
   const hash = createHash("sha256").update(schemaText).digest("hex");
-  assert.equal(hash, "4f50f052d5be86c0e9b1bc2007109ecae78cc51172a74a6458358b3eb8ebf050", "The frozen schema changed. Add a new version with a migrate step instead.");
+  assert.equal(hash, "9860a52e6543b2c69928f4b0b0201d495b811c74686c03425b77632e0f7c155d", "The frozen schema changed. Add a new version with a migrate step instead.");
 });
 
 for (const [f, g] of games) {

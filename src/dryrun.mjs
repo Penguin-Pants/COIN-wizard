@@ -88,6 +88,63 @@ function eventDecision(bot, state, game) {
   return { play: !!evalExpr(bot.eventPolicy.playIf, ctx), side: bot.eventPolicy.side };
 }
 
+// Tries a node's linked Special Activities in order (first trigger that holds and finds a space runs).
+function runLinked(game, state, links, actions, tables, ctx, extra) {
+  for (const L of links) {
+    const sa = actions[L.action];
+    if (!evalExpr(L.trigger, { ...ctx, ...extra })) continue;
+    const sel = selectByTable(game, state, tables[L.table], legalSpaces(game, state, sa, extra), sa, extra);
+    if (sel.length) { applyAction(game, state, sa, sel.map((s) => s.id), extra); return `${sa.id}:${sel.map((s) => s.id).join(",")}`; }
+  }
+  return "skipped";
+}
+
+// Action node parts (docs/SCHEMA.md, "Action node parts", rules 1 to 8). Each part picks spaces with
+// its own table from the Operation's legal spaces, on the board the earlier parts left, and runs its
+// own steps there. Cost: once per distinct space (per "space"), or once on the first pick (per "use").
+// Returns false when the node is empty (no part picked; with timing "before", no part could pick).
+function runParts(game, state, node, action, tables, actions, extra, result) {
+  const links = linkedOf(node), ctx = { state, links: game.board.links };
+  const { amount, per } = action.cost, paid = new Set();
+  const legalNow = () => Object.values(state.spaces).filter((sp) => !!evalExpr(action.targets, { ...ctx, $space: sp, ...extra }));
+  // New spaces a part may still pay for. Spaces already paid for are free.
+  const canNew = () => {
+    const have = state.resources[state.self];
+    if (amount === 0) return Infinity;
+    if (per === "use") return paid.size || have >= amount ? Infinity : 0;
+    return Math.floor(have / amount);
+  };
+  const pool = () => { const n = canNew(); return legalNow().filter((sp) => n > 0 || paid.has(sp.id)); };
+  const env = (sp) => ({ ...ctx, $space: sp, ...extra });
+  const anyMatch = (pt) => { const p = pool(); return tables[pt.table].steps.some((st) => p.some((sp) => !!evalExpr(st.filter, env(sp)))); };
+  const before = links[0]?.timing === "before";
+  if (before) {
+    if (!node.parts.some(anyMatch)) return false;
+    result.linked = runLinked(game, state, links, actions, tables, ctx, extra);
+  }
+  const chosen = [];
+  for (const pt of node.parts) {
+    const t = tables[pt.table], p = pool();
+    // The table ranks the pool; then new spaces stop at what is left to pay.
+    const ranked = selectByTable(game, state, t.select === "all" ? { ...t, limit: p.length || 1 } : t, p, { cost: { amount: 0 } }, extra);
+    let room = canNew();
+    const picked = [];
+    for (const sp of ranked) {
+      if (t.select === "all" && picked.length >= t.limit) break;
+      if (!paid.has(sp.id)) { if (room <= 0) continue; room--; if (per === "space" || !paid.size) payCost(game, state, action, [sp.id]); paid.add(sp.id); }
+      picked.push(sp.id);
+    }
+    applyAction(game, state, { ...action, steps: pt.steps }, picked, extra, { pay: false });
+    for (const id of picked) if (!chosen.includes(id)) chosen.push(id);
+  }
+  if (!before && !chosen.length) return false;
+  result.path.push(node.id);
+  result.chosen = chosen;
+  if (extra.$target) result.target = extra.$target;
+  if (links.length && !before) result.linked = runLinked(game, state, links, actions, tables, ctx, extra);
+  return true;
+}
+
 export function runBot(game, bot, startState) {
   const state = structuredClone(startState);
   state.self = bot.factionId;
@@ -117,6 +174,11 @@ export function runBot(game, bot, startState) {
       const target = node.target ? selectOpponent(game, state, tables[node.target]) : null;
       if (node.target && !target) { result.path.push(`${node.id}:empty`); cur = node.onEmpty; continue; }
       const extra = target ? { $target: target } : {};
+      if (node.parts) {
+        if (!runParts(game, state, node, action, tables, actions, extra, result)) { result.path.push(`${node.id}:empty`); cur = node.onEmpty; continue; }
+        cur = node.then;
+        continue;
+      }
       const legal = legalSpaces(game, state, action, extra);
       const chosen = selectByTable(game, state, tables[node.table], legal, action, extra);
       if (!chosen.length) { result.path.push(`${node.id}:empty`); cur = node.onEmpty; continue; }
