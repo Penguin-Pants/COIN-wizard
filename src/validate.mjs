@@ -289,8 +289,7 @@ function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionByI
         else { used.add(pt.table); if (tables[pt.table].scope === "opponent") err("bad-target", pp, `Table ${pt.table} picks an enemy. A part chooses spaces with a space table`); }
         checkSteps(pt.steps, `${pp}/steps`);
       });
-      if (n.parts && n.table !== undefined) err("parts-table", np, `Action ${n.id} has parts, so it takes no table of its own: each part has its table`);
-      else if (n.parts) { /* tables checked per part */ }
+      if (n.parts) { if (n.table !== undefined) err("parts-table", np, `Action ${n.id} has parts, so it takes no table of its own: each part has its table`); }
       else if (!n.table) err("solo", np, `Action ${n.id} needs a priority table, so the choice needs no judgment`);
       else if (!tables[n.table]) err("missing-ref", np, `Priority table not found: ${n.table}`);
       else { used.add(n.table); if (tables[n.table].scope === "opponent") err("bad-target", np, `Table ${n.table} picks an enemy. Use it as the target table and choose spaces with a space table`); }
