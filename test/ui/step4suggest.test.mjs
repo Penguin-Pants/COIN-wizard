@@ -37,6 +37,18 @@ test("Suggest Event cards previews the new card and adds it on Apply, keeping th
   assert.deepEqual(await titles(page), [...before, "Flying column"]);
 }, { sources, replies: [["Write Event cards", CARD]] }));
 
+test("an edit made while the preview is open stays after Apply", () => withApp(async ({ page }) => {
+  await goStep(page, 3); await tab(page, "deck");
+  await page.click('[data-a="step4-suggest"][data-part="deck"]');
+  await page.waitForSelector(PREV);
+  await page.click("details.card summary >> nth=0");
+  const title = page.locator('input[data-path="/deck/cards/0/title"]');
+  await title.fill("Edited during preview"); await title.dispatchEvent("change"); await frames(page);
+  await page.click('[data-a="step4-accept"]'); await frames(page);
+  const t = await titles(page);
+  assert.equal(t[0], "Edited during preview"); assert.equal(t.at(-1), "Flying column");
+}, { sources, replies: [["Write Event cards", CARD]] }));
+
 test("a tab with nothing left to fill cannot apply", () => withApp(async ({ page }) => {
   await goStep(page, 3); await tab(page, "bots");
   await page.click('[data-a="step4-suggest"][data-part="bots"]');

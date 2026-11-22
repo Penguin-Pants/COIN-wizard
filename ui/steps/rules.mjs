@@ -6,7 +6,7 @@ import { renderDeck } from "./deck.mjs";
 import { renderBots } from "./bots.mjs";
 import { addButton } from "../components/listEditor.mjs";
 import { touch, check, ask, guard } from "../store.mjs";
-import { step4Prompt, fillStep4, step4Base } from "../../src/step4suggest.mjs";
+import { step4Prompt, fillStep4 } from "../../src/step4suggest.mjs";
 import { render } from "../shell.mjs";
 
 // One Claude button per tab. It fills only what is still empty or at its default; the designer
@@ -36,14 +36,17 @@ function suggestPanel(part) {
 async function suggest(part) {
   const g = S.game;
   const r = await ask(step4Prompt(part, g, S.texts));
-  S.proposal = { kind: keyOf(part), part, base: step4Base(g), ...fillStep4(part, g, r) };
+  S.proposal = { kind: keyOf(part), part, raw: r, ...fillStep4(part, g, r) };
 }
 function accept(part) {
   const p = S.proposal, k = keyOf(part);
   if (p?.kind !== k) return;
-  // Factions, pieces, spaces, tracks, actions or cards changed after the suggestion: ids in it may no longer fit.
-  if (p.base !== step4Base(S.game)) { S.proposal = null; S.msg[k] = "The game changed after this suggestion, so it was discarded. Ask Claude again."; render(); return; }
-  APPLY[part](S.game, p.game); S.proposal = null; touch(); check(); render();
+  // Apply fills the game as it is now, so edits made during the preview stay. When that changes what
+  // Apply would do, the preview updates first and the designer applies again.
+  let next;
+  try { next = fillStep4(part, S.game, p.raw); } catch (e) { S.proposal = null; S.msg[k] = e.message; render(); return; }
+  if (JSON.stringify(next.report) !== JSON.stringify(p.report)) { S.proposal = { ...p, ...next }; S.msg[k] = "The game changed since the preview. Check the updated suggestion, then apply again."; render(); return; }
+  delete S.msg[k]; APPLY[part](S.game, next.game); S.proposal = null; touch(); check(); render();
 }
 
 export function renderRules() {

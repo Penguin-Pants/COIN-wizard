@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { step4Prompt, fillStep4, step4Base } from "../src/step4suggest.mjs";
+import { step4Prompt, fillStep4 } from "../src/step4suggest.mjs";
 import { validate } from "../src/validate.mjs";
 import { blankGame } from "../src/blank.mjs";
 import { newBot } from "../src/botedit.mjs";
@@ -119,11 +119,33 @@ test("bots: adds a working bot for each faction without one, using only what val
   assert.ok(report.skipped.some((s) => /no Operation yet/.test(s)));
 });
 
-test("a suggestion made before factions, pieces, spaces, tracks, actions or cards changed is detected", () => {
-  const g = load("tan-war"), base = step4Base(g);
-  assert.equal(step4Base(structuredClone(g)), base);
-  for (const change of [(x) => { x.factions[0].pieces[0].supply++; }, (x) => { x.board.spaces[0].id = "zz"; }, (x) => { x.actions.pop(); }, (x) => { x.deck.cards.pop(); }, (x) => { x.tracks[0].max++; }]) {
-    const h = load("tan-war"); change(h); assert.notEqual(step4Base(h), base);
-  }
+// Review findings on PR 20.
+test("a game the schema rejects is refused, because the checks of each item would not run", () => {
+  const g = fresh(); g.meta.title = 5;
+  assert.throws(() => fillStep4("victory", g, { perFaction: [] }), /Fix the problems/);
 });
+test("the prompt describes sumSpaces as the evaluator runs it", () => {
+  const p = step4Prompt("victory", fresh(), TEXTS);
+  assert.ok(!p.includes("sumSpaces [condition, value]"));
+  assert.match(p, /sumSpaces \[value\]/);
+  assert.match(p, /"op":"mul","args":\[condition, \{"var":"\$space.pop"\}\]/);
+});
+test("a bot's Event rule text is used only with a matching side and condition that validate", () => {
+  const g = fresh(); const [a, b] = g.factions.map((f) => f.id);
+  const { game, report } = fillStep4("bots", g, { bots: [
+    { factionId: a, eventPlain: "Play the shaded side if it raises your score.", eventSide: "shaded", playIf: { var: "card.raisesSelf" } },
+    { factionId: b, eventPlain: "Only odd cards.", eventSide: "shaded", playIf: { op: "nosuch", args: [] } }
+  ] });
+  const bot = (id) => game.bots.find((x) => x.factionId === id);
+  assert.deepEqual([bot(a).eventPolicy.side, bot(a).eventPolicy.playIf, bot(a).eventPolicy.plain], ["shaded", { var: "card.raisesSelf" }, "Play the shaded side if it raises your score."]);
+  assert.deepEqual(bot(b).eventPolicy, newBot(g, b).eventPolicy, "text, side and condition stay at the default together");
+  assert.ok(report.dropped.some((s) => /Event rule/.test(s)));
+});
+test("an untouched default victory rule still counts as default after its piece is renamed", () => {
+  const g = fresh(); const f = g.factions.find((x) => x.type !== "state" && x.pieces.some((p) => p.isBase));
+  f.pieces.find((p) => p.isBase).name = "Camp";
+  const { game } = fillStep4("victory", g, { perFaction: [{ factionId: f.id, plain: "New rule.", threshold: 7, formula: 1 }] });
+  assert.equal(game.victory.perFaction.find((v) => v.factionId === f.id).plain, "New rule.");
+});
+
 

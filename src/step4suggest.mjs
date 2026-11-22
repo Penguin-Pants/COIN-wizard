@@ -21,7 +21,8 @@ const KIND_TEXT = {
   steps: "list of steps", options: "list of {label, steps}"
 };
 const opsText = () => Object.entries(OPS).map(([op, { req, opt }]) => `${op}: ${Object.entries(req).map(([k, v]) => `${k} (${KIND_TEXT[v]})`).join(", ")}${Object.keys(opt).length ? `; optional ${Object.entries(opt).map(([k, v]) => `${k} (${KIND_TEXT[v]})`).join(", ")}` : ""}`).join("\n");
-const EXPR_TEXT = `Expressions: a number, true/false, {"var":"name"} or {"op":"name","args":[...]}. Ops: and, or, not, eq, ne, gt, gte, lt, lte, add, sub, mul, min, max; count [piece id, space id or "$space" or "*", state or "*"]; adjCount; sumSpaces [condition, value]; anySpace [condition]; attr; factionCount [faction id, space or "*", state or "*"]. Variables match ${VAR_OK.source.replace(/\\/g, "")}.`;
+// Arguments as src/expr.mjs evaluates them. sumSpaces takes one value, read once per space.
+const EXPR_TEXT = `Expressions: a number, true/false, {"var":"name"} or {"op":"name","args":[...]}. Ops: and, or, not, eq, ne, gt, gte, lt, lte, add, sub, mul, min, max; count [piece id, space id or "$space" or "*", state or "*"]; adjCount [piece id, space id or "$space", state or "*"]: pieces in the adjacent spaces; sumSpaces [value]: the sum of value over every space, with $space as that space (true counts 1); to sum Pop where a condition holds use {"op":"sumSpaces","args":[{"op":"mul","args":[condition, {"var":"$space.pop"}]}]}; anySpace [condition]; attr [space id, attribute name]; factionCount [faction id, space or "*", state or "*"]. Variables match ${VAR_OK.source.replace(/\\/g, "")}.`;
 
 function material(game, texts) {
   const srcs = game.brief.sources.filter((s) => s.status === "read" && texts[s.id]);
@@ -62,7 +63,8 @@ Return only JSON: {"perFaction":[{"factionId":"","plain":"","formula":0,"thresho
 priorities: 1 to 4 rules in order (first match wins), each a short text and a condition on the space ($space.id, $space.pop, $space.opinion, count of pieces in "$space").
 tiebreak: one rule with text, a value expression and "max" or "min".
 ${EXPR_TEXT}
-Return only JSON: {"bots":[{"factionId":"","objective":"","eventPlain":"","priorities":[{"text":"","filter":true}],"tiebreak":{"text":"","key":{"var":"$space.pop"},"order":"max"}}],"notes":""}`
+eventPlain is the rule in words; eventSide ("unshaded" or "shaded") and playIf (a condition on the card: card.hasEffect, card.raisesSelf, card.lowersEnemy, card.lasting, card.id) must do exactly what it says.
+Return only JSON: {"bots":[{"factionId":"","objective":"","eventPlain":"","eventSide":"unshaded","playIf":{"var":"card.hasEffect"},"priorities":[{"text":"","filter":true}],"tiebreak":{"text":"","key":{"var":"$space.pop"},"order":"max"}}],"notes":""}`
 };
 
 export function step4Prompt(part, game, texts) {
@@ -70,8 +72,6 @@ export function step4Prompt(part, game, texts) {
   return `${context(game)}\n\n${ASK[part](game)}\n\n${m}`;
 }
 
-// What a suggestion depends on. A proposal is applied only while this is unchanged.
-export const step4Base = (g) => JSON.stringify([g.factions.map((f) => [f.id, f.type, f.pieces]), g.board.spaces.map((s) => s.id), g.tracks.map((t) => [t.id, t.min, t.max]), g.actions.map((a) => a.id), g.deck.cards.map((c) => c.id)]);
 
 // The problems the validator finds under a path. Missing dry runs are expected for a new bot.
 const problems = (g, prefix) => validate(g).errors.filter((e) => (e.path === prefix || e.path.startsWith(`${prefix}/`)) && e.code !== "dry-run-missing");
@@ -131,13 +131,23 @@ function fillDeck(g, r, rep) {
   try { buildPiles(g, n); rep.added.push(`${n} piles`); } catch (e) { rep.dropped.push(`Piles: ${e.message}`); }
 }
 
+// A rule is still the preset default when its formula and threshold are the default ones and its text
+// is the default text, allowing for a renamed piece (the default text names the base piece).
+function isDefaultVictory(f, v) {
+  const d = victoryFor(f);
+  if (JSON.stringify([v.formula, v.threshold]) !== JSON.stringify([d.formula, d.threshold])) return false;
+  const base = f.pieces.find((p) => p.isBase)?.name;
+  const pattern = base && d.plain.includes(base) ? new RegExp(`^${d.plain.split(base).map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".+")}$`) : null;
+  return v.plain === d.plain || !!pattern?.test(v.plain);
+}
+
 function fillVictory(g, r, rep) {
   for (const v of arr(r?.perFaction)) {
     const i = g.victory.perFaction.findIndex((x) => x.factionId === v?.factionId);
     const f = g.factions.find((x) => x.id === v?.factionId);
     if (!f || i < 0) { rep.dropped.push(`Victory for unknown faction ${v?.factionId}`); continue; }
     const cur = g.victory.perFaction[i];
-    if (JSON.stringify(cur) !== JSON.stringify(victoryFor(f))) { rep.skipped.push(`${f.name} victory: kept yours`); continue; }
+    if (!isDefaultVictory(f, cur)) { rep.skipped.push(`${f.name} victory: kept yours`); continue; }
     const next = { factionId: f.id, plain: str(v.plain) || cur.plain, formula: v.formula ?? cur.formula, threshold: Number.isInteger(v.threshold) ? v.threshold : cur.threshold };
     if (!fits(g, `/victory/perFaction/${i}`, (t) => { t.victory.perFaction[i] = next; })) { rep.dropped.push(`${f.name} victory (the formula is not valid)`); continue; }
     g.victory.perFaction[i] = next; rep.added.push(`${f.name} victory`);
@@ -155,7 +165,12 @@ function fillBots(g, r, rep) {
     const b = newBot(g, f.id), plain = structuredClone(b), at = `/bots/${g.bots.length}`;
     const asDefault = (x) => x.bots.push(plain);
     if (str(s.objective)) b.objective = str(s.objective);
-    if (str(s.eventPlain)) b.eventPolicy.plain = str(s.eventPlain);
+    // The printed Event rule must say what the bot does: text, side and condition are used together or not at all.
+    if (str(s.eventPlain)) {
+      const pol = { ...b.eventPolicy, plain: str(s.eventPlain), side: ["unshaded", "shaded"].includes(s.eventSide) ? s.eventSide : b.eventPolicy.side, playIf: s.playIf ?? b.eventPolicy.playIf };
+      if (s.playIf !== undefined && fits(g, at, (x) => x.bots.push({ ...b, eventPolicy: pol }), asDefault)) b.eventPolicy = pol;
+      else rep.dropped.push(`${f.name} bot Event rule (${s.playIf === undefined ? "no condition given" : "condition not valid"}; the default rule is kept)`);
+    }
     const t = b.priorityTables[0];
     const steps = arr(s.priorities).slice(0, 4).map((p, n) => ({ n: n + 1, text: str(p?.text), filter: p?.filter ?? true })).filter((p) => p.text);
     if (steps.length) {
@@ -174,6 +189,9 @@ function fillBots(g, r, rep) {
 
 const FILL = { rules: fillRules, deck: fillDeck, victory: fillVictory, bots: fillBots };
 export function fillStep4(part, game, r) {
+  // The validator stops at a schema problem, so no item could be checked against the rest of the game.
+  const schema = validate(game).errors.filter((e) => e.code === "schema");
+  if (schema.length) throw new Error(`Fix the problems marked in the game first (${schema[0].path}: ${schema[0].message}), then ask Claude again.`);
   const g = structuredClone(game), report = { added: [], skipped: [], dropped: [], notes: str(r?.notes) };
   FILL[part](g, r, report);
   return { game: g, report };
