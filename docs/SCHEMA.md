@@ -69,6 +69,7 @@ Ordered list. Fields per op come from `src/ops.mjs`; the schema's `$defs.step` i
 
 - Nodes: `condition` (yes and no), `event-check` (yes and no), `action` (`then` and `onEmpty`, optional `linked` Special Activity), `end` (outcome `none`, `event`, `operation`, `operationSpecial`, `pass`).
 - Every non-end node needs both branches. Loops are not allowed. Every node must be reachable.
+- Loop pattern (GMT "Loop: Pass", "If loop: Transport"). The graph has no cycles, so a second pass is written out. On the `onEmpty` path of the last Operation, add more action nodes for the same Operations, each with a looser priority table (fewer or wider steps). The last `onEmpty` goes to an `end` node, such as `pass`. Name the nodes and tables so the second pass is clear, for example `Rally (loop)`. No schema field is needed (`docs/proposals/bot-model-gaps.md`, part B).
 - Event check order: override for the card id (`force`, `ignore`, `conditional`), else `playIf`. A card needs an effect to be played.
 - Opponent table (`scope: opponent`): picks one enemy faction. Steps and tie-breaks read `$faction`. Ties left after the lettered tie-breaks go to the die, as for spaces.
 - Action node `target`: an opponent table. The bot picks the enemy first; no enemy qualifies means the same as no space (`onEmpty`). The space table and the linked Special Activity read `$target`. A dry-run result records `target`.
