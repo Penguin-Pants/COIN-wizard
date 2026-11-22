@@ -22,7 +22,7 @@ const KIND_TEXT = {
 };
 const opsText = () => Object.entries(OPS).map(([op, { req, opt }]) => `${op}: ${Object.entries(req).map(([k, v]) => `${k} (${KIND_TEXT[v]})`).join(", ")}${Object.keys(opt).length ? `; optional ${Object.entries(opt).map(([k, v]) => `${k} (${KIND_TEXT[v]})`).join(", ")}` : ""}`).join("\n");
 // Arguments as src/expr.mjs evaluates them. sumSpaces takes one value, read once per space.
-const EXPR_TEXT = `Expressions: a number, true/false, {"var":"name"} or {"op":"name","args":[...]}. Ops: and, or, not, eq, ne, gt, gte, lt, lte, add, sub, mul, min, max; count [piece id, space id or "$space" or "*", state or "*"]; adjCount [piece id, space id or "$space", state or "*"]: pieces in the adjacent spaces; sumSpaces [value]: the sum of value over every space, with $space as that space (true counts 1); to sum Pop where a condition holds use {"op":"sumSpaces","args":[{"op":"mul","args":[condition, {"var":"$space.pop"}]}]}; anySpace [condition]; attr [space id, attribute name]; factionCount [faction id, space or "*", state or "*"]. Variables match ${VAR_OK.source.replace(/\\/g, "")}.`;
+const EXPR_TEXT = `Expressions: a number, true/false, {"var":"name"} or {"op":"name","args":[...]}. Ops: and, or, not, eq, ne, gt, gte, lt, lte, add, sub, mul, min, max; count [piece id, space, state or "*"]; adjCount [piece id, space, state or "*"]: pieces in the adjacent spaces; sumSpaces [value]: the sum of value over every space, with $space as that space (true counts 1); to sum Pop where a condition holds use {"op":"sumSpaces","args":[{"op":"mul","args":[condition, {"var":"$space.pop"}]}]}; anySpace [condition]; attr [space id, attribute name]; factionCount [faction id, space, state or "*"]. A space argument is a space id, "*" for the whole map (count and factionCount), or {"var":"$space.id"} for the space being checked; never the text "$space". Variables match ${VAR_OK.source.replace(/\\/g, "")}.`;
 
 function material(game, texts) {
   const srcs = game.brief.sources.filter((s) => s.status === "read" && texts[s.id]);
@@ -60,7 +60,7 @@ Return only JSON: {"events":[{"title":"","flavor":"","order":[],"unshaded":{"lab
 ${EXPR_TEXT}
 Return only JSON: {"perFaction":[{"factionId":"","plain":"","formula":0,"threshold":0}],"checkAt":"","finalScoring":"","tieBreaks":[""],"notes":""}`,
   bots: (g) => `Write a solo bot for each faction: what it tries to do, when it plays an Event, and how it picks the space for its Operation.
-priorities: 1 to 4 rules in order (first match wins), each a short text and a condition on the space ($space.id, $space.pop, $space.opinion, count of pieces in "$space").
+priorities: 1 to 4 rules in order (first match wins), each a short text and a condition on the space ($space.id, $space.pop, $space.opinion, count of pieces in {"var":"$space.id"}).
 tiebreak: one rule with text, a value expression and "max" or "min".
 ${EXPR_TEXT}
 eventPlain is the rule in words; eventSide ("unshaded" or "shaded") and playIf (a condition on the card: card.hasEffect, card.raisesSelf, card.lowersEnemy, card.lasting, card.id) must do exactly what it says.
@@ -187,12 +187,23 @@ function fillBots(g, r, rep) {
   }
 }
 
+// The text "$space" as a space argument names no space: the evaluator would count zero. It is read as
+// the space being checked, which is what it means.
+const SPACE_ARG = new Set(["count", "adjCount", "factionCount"]);
+function fixSpaceArgs(v) {
+  if (Array.isArray(v)) return v.map(fixSpaceArgs);
+  if (!v || typeof v !== "object") return v;
+  const o = Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fixSpaceArgs(x)]));
+  if (SPACE_ARG.has(o.op) && Array.isArray(o.args) && o.args[1] === "$space") o.args[1] = { var: "$space.id" };
+  return o;
+}
+
 const FILL = { rules: fillRules, deck: fillDeck, victory: fillVictory, bots: fillBots };
 export function fillStep4(part, game, r) {
   // The validator stops at a schema problem, so no item could be checked against the rest of the game.
   const schema = validate(game).errors.filter((e) => e.code === "schema");
   if (schema.length) throw new Error(`Fix the problems marked in the game first (${schema[0].path}: ${schema[0].message}), then ask Claude again.`);
   const g = structuredClone(game), report = { added: [], skipped: [], dropped: [], notes: str(r?.notes) };
-  FILL[part](g, r, report);
+  FILL[part](g, fixSpaceArgs(r), report);
   return { game: g, report };
 }

@@ -141,6 +141,14 @@ test("a bot's Event rule text is used only with a matching side and condition th
   assert.deepEqual(bot(b).eventPolicy, newBot(g, b).eventPolicy, "text, side and condition stay at the default together");
   assert.ok(report.dropped.some((s) => /Event rule/.test(s)));
 });
+test("a space argument is the space being checked, never the text \"$space\"", () => {
+  const p = step4Prompt("bots", fresh(), TEXTS);
+  assert.ok(!/count \[piece id, space id or "\$space"/.test(p));
+  assert.ok(p.includes('{"var":"$space.id"}'));
+  const g = fresh(); const a = g.factions[0].id, piece = g.factions[1].pieces[0].id;
+  const { game } = fillStep4("bots", g, { bots: [{ factionId: a, priorities: [{ text: "Enemy here.", filter: { op: "gt", args: [{ op: "count", args: [piece, "$space", "*"] }, 0] } }] }] });
+  assert.deepEqual(game.bots[0].priorityTables[0].steps[0].filter.args[0].args[1], { var: "$space.id" });
+});
 test("an untouched default victory rule still counts as default after its piece is renamed", () => {
   const g = fresh(); const f = g.factions.find((x) => x.type !== "state" && x.pieces.some((p) => p.isBase));
   f.pieces.find((p) => p.isBase).name = "Camp";
