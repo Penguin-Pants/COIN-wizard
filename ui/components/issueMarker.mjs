@@ -1,4 +1,4 @@
-import { S, $, esc, EDITOR_STEP } from "../state.mjs";
+import { S, $, esc, EDITOR_STEP, STEPS } from "../state.mjs";
 import { btn, chip } from "./fields.mjs";
 
 // Finds the one field that shows an issue. Walks up the issue path until exactly one element has that data-path.
@@ -14,9 +14,18 @@ export function findField(path, root = $("#main")) {
 
 const here = (i) => { const st = EDITOR_STEP[i.editor] ?? [4]; return st[0] === S.step && (!st[1] || st[1] === S.tab); };
 
+// Where an issue is, in the designer's words: the step, and the action or bot it belongs to.
+const TAB = { rules: "Rules tab", deck: "Deck tab", victory: "Victory tab", bots: "Bots tab" };
+export function whereOf(i) {
+  const [step, tab] = EDITOR_STEP[i.editor] ?? [4];
+  const g = S.game, m = /^\/(actions|bots|deck\/cards)\/(\d+)/.exec(i.path ?? "");
+  const owner = !m ? "" : m[1] === "actions" ? g.actions[+m[2]]?.name : m[1] === "bots" ? `${g.factions.find((f) => f.id === g.bots[+m[2]]?.factionId)?.name ?? ""} bot` : g.deck.cards[+m[2]]?.title;
+  return `Step ${step + 1}, ${STEPS[step].name}${tab ? ` (${TAB[tab] ?? tab})` : ""}${owner ? `: ${owner}` : ""}`;
+}
+
 export function issueList(items) {
   if (!items.length) return "";
-  return `<ul class="issues">${items.map((i) => `<li class="${i.severity}"><span>${esc(i.message)}</span> <code>${esc(i.path)}</code> ${btn("show-issue", "Show", { cls: "link", data: `data-editor="${esc(i.editor ?? "")}" data-ipath="${esc(i.path)}"` })}</li>`).join("")}</ul>`;
+  return `<ul class="issues">${items.map((i) => `<li class="${i.severity}"><small class="where">${esc(whereOf(i))}</small> <span>${esc(i.message)}</span> ${btn("show-issue", "Show", { cls: "link", data: `data-editor="${esc(i.editor ?? "")}" data-ipath="${esc(i.path)}"` })}</li>`).join("")}</ul>`;
 }
 
 // Puts each issue of the open step under its field. The rest go to the step list (#stepissues).
