@@ -80,11 +80,19 @@ test("each enemy option carries its own legal spaces, and an action used against
   for (const o of a.steps[0].options) assert.ok(o.legal && o.legal !== true, `${o.faction} has its own legality`);
   const [o1, o2] = a.steps[0].options;
   assert.deepEqual(legalityOf(a, { $target: o2.faction }), { op: "and", args: [a.targets, o2.legal] });
-  assert.equal(legalityOf(a, {}), a.targets, "a player sees the spaces legal against any enemy");
-  assert.equal(legalityOf(a, { $target: "nobody" }), a.targets);
+  // A bot without a target runs the first option, so it may only pick spaces legal for that option.
+  assert.deepEqual(legalityOf(a, {}), { op: "and", args: [a.targets, o1.legal] });
+  assert.deepEqual(legalityOf(a, { $target: "nobody" }), { op: "and", args: [a.targets, o1.legal] });
+  // An enemy choice after another step counts too.
+  const later = { ...a, steps: [{ op: "track", id: g.tracks[0].id, delta: 0 }, a.steps[0]] };
+  assert.deepEqual(legalityOf(later, { $target: o2.faction }), { op: "and", args: [a.targets, o2.legal] });
   g.actions.push(a);
   o1.legal = { op: "nosuch", args: [] };
   assert.ok(validate(g).errors.some((e) => e.path.endsWith("/options/0/legal")), "an option's legality is checked like any condition");
-  o1.legal = true; delete o1.faction; // a schema problem would stop the checks, so the condition is valid here
+  // legal works only on a choice at the top level of an action: nested in an "if" it might not run.
+  o1.legal = true;
+  a.steps = [{ op: "if", test: true, then: [a.steps[0]] }];
+  assert.ok(validate(g).errors.some((e) => e.code === "option-legal" && e.path.includes("/then/0/options/0/legal")));
+  a.steps = a.steps[0].then; delete o1.faction; // a schema problem would stop the checks, so the condition is valid here
   assert.ok(validate(g).errors.some((e) => e.code === "option-legal"), "legal needs a faction");
 });

@@ -140,16 +140,18 @@ export function validate(game) {
       const pc = pieceById[st.piece];
       if (pc) for (const k of st.op === "flip" ? ["from", "to", "state"] : ["state"]) if (st[k] !== undefined && !pc.states.includes(st[k])) err("missing-ref", p, `${pc.name} has no state ${st[k]}`);
       for (const k of ["test", "filter", "count", "amount"]) if (st[k] && typeof st[k] === "object") checkExpr(st[k], `${p}/${k}`, scope);
-      if (st.then) checkSteps(st.then, `${p}/then`, scope);
-      if (st.else) checkSteps(st.else, `${p}/else`, scope);
+      const inner = { ...scope, nested: true };
+      if (st.then) checkSteps(st.then, `${p}/then`, inner);
+      if (st.else) checkSteps(st.else, `${p}/else`, inner);
       if (st.options) {
-        st.options.forEach((o, j) => checkSteps(o.steps, `${p}/options/${j}`, scope));
+        st.options.forEach((o, j) => checkSteps(o.steps, `${p}/options/${j}`, { ...scope, nested: true }));
         // An option's faction is an enemy of the acting faction, and each enemy has at most one option.
         const seenF = new Set();
         st.options.forEach((o, j) => {
           if (o.legal !== undefined) {
             checkExpr(o.legal, `${p}/options/${j}/legal`, scope);
             if (o.faction === undefined) err("option-legal", `${p}/options/${j}/legal`, "An option's legal spaces need the faction it acts against");
+            else if (scope.nested || scope.owner === undefined) err("option-legal", `${p}/options/${j}/legal`, "Legal spaces work only on a choice at the top level of an action's effects");
           }
           if (o.faction === undefined) return;
           const op = `${p}/options/${j}/faction`;
