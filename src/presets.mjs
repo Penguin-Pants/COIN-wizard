@@ -21,7 +21,7 @@ export function presetPieces(fid, type) {
 
 // Victory by preset: Support Pop for the state side, Opposition Pop plus own bases for the others,
 // own pieces on the map for a custom faction.
-function victoryFor(f) {
+export function victoryFor(f) {
   const pop = (side) => ({ k: "sumWhere", cond: { k: "cmp", cmp: "eq", a: { k: "var", name: "$space.opinion" }, b: { k: "lit", value: side } }, v: { k: "var", name: "$space.pop" } });
   const base = f.pieces.find((p) => p.isBase), unit = f.pieces[0];
   const kind = PRESETS[f.type].victory;
