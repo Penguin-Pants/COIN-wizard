@@ -87,3 +87,14 @@ test("the prompt lists the spaces the designer set, so new spaces link to them, 
   assert.match(p, /Spaces the designer already set \(keep these names exactly and link new spaces to them\): Harare\./);
   assert.doesNotMatch(p, /Space 2/);
 });
+
+// Codex review of PR 19: a placeholder named by its displayed name elsewhere is kept too.
+test("a placeholder named by its displayed name in rules or victory text is kept", () => {
+  const g = blankGame(2);
+  g.victory.finalScoring = "Control of Space 3 wins ties.";
+  const r = fill(g, answer(g));
+  assert.equal(r.error, undefined);
+  assert.ok(names(r.game).includes("Space 3"));
+  assert.ok(!names(r.game).includes("Space 30"), "sanity");
+  assert.ok(!names(r.game).includes("Space 2"), "unreferenced placeholders are still replaced");
+});

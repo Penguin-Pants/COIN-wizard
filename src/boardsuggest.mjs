@@ -146,11 +146,14 @@ const PLACEHOLDER = /^(new )?space \d+$/i;
 const RES_DEFAULT = 5;
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-// Placeholder spaces: a default name, no starting pieces, and not named anywhere outside the board.
+// Placeholder spaces: a default name, no starting pieces, and not named (by id or displayed name)
+// anywhere outside the board.
 export function placeholderIds(game) {
   const refs = JSON.stringify([game.actions, game.deck, game.bots, game.victory, game.rules]);
   const named = (id) => new RegExp(`(^|[^a-z0-9._-])${esc(id)}($|[^a-z0-9._-])`, "i").test(refs);
-  return new Set(game.board.spaces.filter((sp) => PLACEHOLDER.test(sp.name.trim()) && !game.setup.placements.some((p) => p.space === sp.id) && !named(sp.id)).map((sp) => sp.id));
+  // Text can name a space by its displayed name too, such as "Control of Space 3".
+  const shown = (name) => new RegExp(`(^|[^a-z0-9])${esc(name.trim())}($|[^a-z0-9])`, "i").test(refs);
+  return new Set(game.board.spaces.filter((sp) => PLACEHOLDER.test(sp.name.trim()) && !game.setup.placements.some((p) => p.space === sp.id) && !named(sp.id) && !shown(sp.name)).map((sp) => sp.id));
 }
 
 export function fillBoard(game, r) {
