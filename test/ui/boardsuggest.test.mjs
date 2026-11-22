@@ -24,19 +24,22 @@ async function withApp(fn, opts) {
   try { await fn(app); assert.deepEqual(app.errors, []); } finally { await app.close(); }
 }
 
-test("Claude's board suggestion shows a preview, then fills the step on Apply", () => withApp(async ({ page }) => {
+test("Claude's board suggestion shows a preview, then fills only empty fields on Apply", () => withApp(async ({ page }) => {
   await goStep(page, 2);
+  const before = await page.$$eval('input[data-path^="/board/spaces/"][data-path$="/name"]', (e) => e.map((x) => x.value));
+  const links = await page.$$eval("ul.links li", (e) => e.length);
   await page.click('[data-a="suggest-board"]');
   await page.waitForSelector('[aria-label="Suggested board"]');
   const prev = await page.textContent('[aria-label="Suggested board"]');
-  assert.match(prev, /3 spaces, 2 legal connections, 4 starting pieces/);
+  // Tan War already has Dublin and Volunteers on the board: those are kept. Midlands and Border are new.
+  assert.match(prev, /Apply adds 2 spaces \(Midlands, Border\) and 2 legal connections/);
+  assert.match(prev, /Kept as you set it \(\d+\)/);
   assert.match(prev, /Parts of the answer not used \(1\)/);
-  const before = await page.$$eval('input[data-path^="/board/spaces/"][data-path$="/name"]', (e) => e.map((x) => x.value));
-  assert.ok(before.length > 3, "nothing changes before Apply");
+  assert.deepEqual(await page.$$eval('input[data-path^="/board/spaces/"][data-path$="/name"]', (e) => e.map((x) => x.value)), before, "nothing changes before Apply");
   await page.click('[data-a="board-accept"]'); await frames(page);
-  assert.deepEqual(await page.$$eval('input[data-path^="/board/spaces/"][data-path$="/name"]', (e) => e.map((x) => x.value)), ["Dublin", "Midlands", "Border"]);
-  assert.equal(await page.inputValue('[data-pc="border|ira.volunteer|underground"]'), "4");
-  assert.equal(await page.$$eval("ul.links li", (e) => e.length), 2);
+  assert.deepEqual(await page.$$eval('input[data-path^="/board/spaces/"][data-path$="/name"]', (e) => e.map((x) => x.value)), [...before, "Midlands", "Border"]);
+  assert.equal(await page.$$eval("ul.links li", (e) => e.length), links + 2);
+  assert.equal(await page.inputValue('[data-pc="border|ira.volunteer|underground"]'), "0", "Volunteers were already placed, so none are added");
 }, { sources, replies: [["suggest the map and the starting setup", ANSWER]] }));
 
 test("a suggestion is discarded when pieces change before Apply", () => withApp(async ({ page }) => {
