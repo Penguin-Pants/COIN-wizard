@@ -28,7 +28,7 @@ export const KINDS = {
   steps: { type: "array", items: { $ref: "#/$defs/step" } },
   options: {
     type: "array", minItems: 1,
-    items: { type: "object", required: ["label", "steps"], additionalProperties: false, properties: { label: { type: "string" }, steps: { type: "array", minItems: 1, items: { $ref: "#/$defs/step" } } } }
+    items: { type: "object", required: ["label", "steps"], additionalProperties: false, properties: { label: { type: "string" }, faction: { $ref: "#/$defs/id", description: "The enemy faction this option acts against (1.6.0). A bot whose action node picked an enemy ($target) takes the option for that faction." }, steps: { type: "array", minItems: 1, items: { $ref: "#/$defs/step" } } } }
   }
 };
 

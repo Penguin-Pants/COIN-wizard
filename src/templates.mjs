@@ -179,21 +179,47 @@ export function unmet(tpl, roles) {
   return miss.length ? `needs ${miss.map((n) => NEED_TEXT[n]).join(" and ")}` : "";
 }
 
-export function templatesFor(game, factionId, targetId) {
-  const roles = defaultRoles(game, factionId, targetId);
-  const type = roles.faction.type;
-  return TEMPLATES.map((t) => ({ tpl: t, reason: unmet(t, roles), fit: t.fits.includes(type) })).sort((a, b) => (a.reason ? 1 : 0) - (b.reason ? 1 : 0) || (b.fit ? 1 : 0) - (a.fit ? 1 : 0));
+// A template that needs an enemy can be used against any enemy whose pieces meet its needs.
+const needsFoe = (tpl) => tpl.needs.some((n) => n.startsWith("foe"));
+function enemiesFor(game, factionId, tpl) {
+  return game.factions.filter((x) => x.id !== factionId).map((x) => ({ f: x, roles: defaultRoles(game, factionId, x.id) })).filter((e) => !unmet(tpl, e.roles));
+}
+// Why a template cannot be added: empty when it can.
+function reasonFor(game, factionId, tpl) {
+  const roles = defaultRoles(game, factionId);
+  if (!needsFoe(tpl)) return unmet(tpl, roles);
+  return enemiesFor(game, factionId, tpl).length ? "" : unmet(tpl, roles) || "needs an enemy piece";
+}
+
+export function templatesFor(game, factionId) {
+  const type = game.factions.find((x) => x.id === factionId).type;
+  return TEMPLATES.map((t) => ({ tpl: t, reason: reasonFor(game, factionId, t), fit: t.fits.includes(type) })).sort((a, b) => (a.reason ? 1 : 0) - (b.reason ? 1 : 0) || (b.fit ? 1 : 0) - (a.fit ? 1 : 0));
 }
 
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "action";
 
-export function instantiate(game, factionId, templateId, name, targetId) {
+// With one possible enemy the action's steps name that enemy's pieces. With more, the steps are one
+// choice with an option per enemy (option.faction, schema 1.6.0): the player picks the enemy on the
+// table, and a bot whose action node picked an enemy takes that enemy's option.
+function build(game, factionId, tpl) {
+  if (!needsFoe(tpl)) return tpl.build(defaultRoles(game, factionId));
+  const enemies = enemiesFor(game, factionId, tpl);
+  if (enemies.length === 1) return tpl.build(enemies[0].roles);
+  const parts = enemies.map((e) => ({ f: e.f, a: tpl.build(e.roles) }));
+  return {
+    ...parts[0].a,
+    plain: `Choose an enemy faction. ${parts.map(({ f, a }) => `Against ${f.name}: ${a.plain}`).join(" ")}`,
+    targets: { op: "or", args: parts.map(({ a }) => a.targets) },
+    dependsOn: [...new Set(parts.flatMap(({ a }) => a.dependsOn ?? []))],
+    steps: [{ op: "choose", options: parts.map(({ f, a }) => ({ label: `Against ${f.name}`, faction: f.id, steps: a.steps })) }]
+  };
+}
+
+export function instantiate(game, factionId, templateId, name) {
   const tpl = TEMPLATES.find((t) => t.id === templateId);
-  if (!tpl) return null;
-  const roles = defaultRoles(game, factionId, targetId ?? defaultTarget(game, factionId));
-  if (unmet(tpl, roles)) return null;
+  if (!tpl || reasonFor(game, factionId, tpl)) return null;
   const nm = (name ?? "").trim() || tpl.name;
   let id = `${factionId}.${slug(nm)}`, n = 2;
   while (game.actions.some((a) => a.id === id)) id = `${factionId}.${slug(nm)}-${n++}`;
-  return { id, faction: factionId, kind: tpl.kind, name: nm, templateId: tpl.id, ...tpl.build(roles) };
+  return { id, faction: factionId, kind: tpl.kind, name: nm, templateId: tpl.id, ...build(game, factionId, tpl) };
 }

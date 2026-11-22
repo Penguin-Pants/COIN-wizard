@@ -93,7 +93,7 @@ export function stepText(s, g) {
       const sub = (list) => list.map((x) => stepText(x, g).replace(/\.$/, "").replace(/^./, (c) => c.toLowerCase())).join(", then ");
       return `If ${condText(toCond(s.test), g)}, ${sub(s.then)}${s.else?.length ? `; otherwise ${sub(s.else)}` : ""}.`;
     }
-    case "choose": return `Choose one: ${s.options.map((o) => `${o.label} (${o.steps.map((x) => stepText(x, g).replace(/\.$/, "").replace(/^./, (c) => c.toLowerCase())).join(", then ")})`).join(" or ")}.`;
+    case "choose": return `${s.options.some((o) => o.faction) ? "Choose an enemy faction" : "Choose one"}: ${s.options.map((o) => `${o.label} (${o.steps.map((x) => stepText(x, g).replace(/\.$/, "").replace(/^./, (c) => c.toLowerCase())).join(", then ")})`).join(" or ")}.`;
     default: return `Do ${s.op}.`;
   }
 }
