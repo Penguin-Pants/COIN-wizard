@@ -88,6 +88,19 @@ const CHOICE_FIELD = { place: "to", remove: "space", flip: "space", shift: "spac
 // A step that needs a space ("spaces" with "filter", or a "choose" space) asks ctx.choose(filter, n)
 // when the dry run gives one (bot.scoring, runScoring in src/dryrun.mjs). It then runs once in each
 // chosen space. Without ctx.choose the step is an error, as before.
+// How many spaces each choice step of a list may pick (its "spaces", 1 for a "choose" space or move
+// end), in nested steps too. The Non-Player sheet prints the largest, capped by the table.
+export function choiceCounts(steps) {
+  const out = [];
+  for (const s of steps ?? []) {
+    const f = CHOICE_FIELD[s.op];
+    if (f && (s.spaces !== undefined || s.filter !== undefined || s[f] === "choose")) out.push(s.spaces ?? 1);
+    if (s.op === "move" && (s.to === "choose" || s.from === "choose")) out.push(1);
+    out.push(...choiceCounts(s.then), ...choiceCounts(s.else), ...(s.options ?? []).flatMap((o) => choiceCounts(o.steps)));
+  }
+  return out;
+}
+
 function chosenRun(game, s, ctx) {
   const f = CHOICE_FIELD[s.op];
   if (f && (s.spaces !== undefined || s.filter !== undefined || s[f] === "choose")) {

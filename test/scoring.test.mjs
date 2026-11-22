@@ -172,3 +172,15 @@ test("a move from a chosen source to a pool binds the source as the space", () =
   // Dublin's 1 Volunteer goes to Available; the Cities with a Volunteer are then only Cork City.
   assert.deepEqual(r.chosen, ["dublin", "cork-city"]);
 });
+
+test("the scoring box prints the most spaces one step picks, not the table limit", () => {
+  // Table: all, limit 3. Step: spaces 2. The bot picks min(3, 2) = 2.
+  const g = withScoring(), html = np(g, "ira");
+  const i = html.indexOf("<h3>Agitate", html.indexOf("<h2>Truce Talks card</h2>"));
+  const box = html.slice(i, html.indexOf("</section>", i));
+  assert.match(box, /<span class="tag">max 2<\/span>/);
+  // A choose step picks 1.
+  g.rules.scoring.phases.find((p) => p.id === "agitate").steps = [{ op: "markerSet", marker: "curfew", value: true, space: "choose" }];
+  const h2 = np(g, "ira"), j = h2.indexOf("<h3>Agitate", h2.indexOf("<h2>Truce Talks card</h2>"));
+  assert.match(h2.slice(j, h2.indexOf("</section>", j)), /<span class="tag">max 1<\/span>/);
+});

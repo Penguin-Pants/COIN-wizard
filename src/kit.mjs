@@ -2,6 +2,7 @@
 import { aidModel, toHtml, stepNumbers, tableLabels } from "./botaid.mjs";
 import { graphSvg } from "./graphsvg.mjs";
 import { linkedOf, cardLasting } from "./dryrun.mjs";
+import { choiceCounts } from "./effects.mjs";
 import { condText, stepText } from "./plain.mjs";
 import { toCond } from "./exprmodel.mjs";
 
@@ -273,7 +274,10 @@ export function nonPlayerSheetHtml(g, bot) {
 
   // Scoring-phase choices (bot.scoring): one box per phase, like the GMT "Support Phase" box.
   const phaseOf = (id) => g.rules.scoring.phases.find((p) => p.id === id);
-  const scBoxes = (bot.scoring ?? []).map((sc) => `<section class="box sa">${title(phaseOf(sc.phaseId)?.name ?? sc.phaseId, table(sc.table))}${sc.text ? `<p>${h(sc.text)}</p>` : ""}${prio(table(sc.table))}</section>`).join("");
+  // max: the most spaces one choice step picks (its spaces, capped by the table), as runScoring does.
+  const scMax = (sc) => { const t = table(sc.table), n = choiceCounts(phaseOf(sc.phaseId)?.steps); return n.length ? Math.min(t.select === "all" ? t.limit : 1, Math.max(...n)) : 0; };
+  const scTitle = (sc) => `<div class="bt"><h3>${h(phaseOf(sc.phaseId)?.name ?? sc.phaseId)} <small>(${labels[sc.table]})</small></h3>${scMax(sc) ? `<span class="tag">max ${scMax(sc)}</span>` : ""}</div>`;
+  const scBoxes = (bot.scoring ?? []).map((sc) => `<section class="box sa">${scTitle(sc)}${sc.text ? `<p>${h(sc.text)}</p>` : ""}${prio(table(sc.table))}</section>`).join("");
   const scoring = scBoxes ? `<h2>${h(g.rules.scoring.name)} card</h2>${scBoxes}` : "";
   const card = (id) => g.deck.cards.find((c) => c.id === id)?.title ?? id.toUpperCase();
   // Overrides for lasting cards (card.lasting of the side this bot plays) print in their own box.
