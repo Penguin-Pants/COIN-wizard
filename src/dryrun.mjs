@@ -49,7 +49,6 @@ function rollDie(state) {
 function pick(state, table, items, env, nameOf, limitOf, itemsOf = () => items) {
   const steps = [...table.steps].sort((a, b) => a.n - b.n);
   const tag = (list, stOf) => { const out = [...list]; out.targetOf = new Map(); for (const it of out) { const t = stOf(it)?.target; if (t) out.targetOf.set(it.id, t); } return out; };
-  if (!items.length) return tag([], () => null);
   const match = (st) => itemsOf(st).filter((it) => !!evalExpr(st.filter, env(it, st)));
   let pool = [], hit = null;
   for (const st of steps) { pool = match(st); if (pool.length) { hit = st; break; } }
@@ -87,10 +86,13 @@ function pick(state, table, items, env, nameOf, limitOf, itemsOf = () => items) 
 // action is legal against it.
 export function selectByTable(game, state, table, legal, action, extra = {}) {
   const env = (sp, st) => ({ state, links: game.board.links, $space: sp, ...extra, ...(st?.target ? { $target: st.target } : {}) });
+  // The step's pool starts from every space: a space illegal against the node's target (or the
+  // first enemy option) may be legal against the step's own target. Affordability still applies.
   const itemsOf = (st) => {
     if (!st.target || !action.steps) return legal;
+    if (!affordable(state, action, game)) return [];
     const lg = legalityOf(action, { ...extra, $target: st.target });
-    return legal.filter((sp) => !!evalExpr(lg, env(sp, st)));
+    return Object.values(state.spaces).filter((sp) => !!evalExpr(lg, env(sp, st)));
   };
   const limitOf = (n) => {
     let limit = Math.min(table.limit ?? n, action.maxSpaces ?? Infinity);
@@ -234,7 +236,8 @@ export function runBot(game, bot, startState) {
         // Spaces the Special Activity made illegal are dropped and their cost is refunded. The
         // recheck reads a view without the Operation's own reserved cost.
         const view = withoutCost(game, state, action, result.chosen);
-        const legalNow = (id) => !!evalExpr(legalityOf(action, extra), { state: view, links: game.board.links, $space: view.spaces[id], ...extra });
+        // Each space is checked against its own step target (schema 1.8.0), else the node's.
+        const legalNow = (id) => { const ex = targetOf?.get(id) ? { ...extra, $target: targetOf.get(id) } : extra; return !!evalExpr(legalityOf(action, ex), { state: view, links: game.board.links, $space: view.spaces[id], ...ex }); };
         const kept = result.chosen.filter(legalNow);
         refundCost(game, state, action, result.chosen, kept);
         result.chosen = kept;

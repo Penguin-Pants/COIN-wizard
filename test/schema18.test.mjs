@@ -152,3 +152,51 @@ test("a chosen space runs the action against its step's target", () => {
   applyAction(g, s2, a, [ids[0], ids[1]], {}, { targetOf: new Map([[ids[0], "f2"], [ids[1], "f2"]]) });
   assert.deepEqual([s2.resources.f2, s2.resources.f4], [7, 9]);
 });
+
+// Codex review on #27.
+// An action with one option per enemy: option f2 is never legal, option f4 is legal in ids[1] only.
+function optionAction() {
+  const { g, b, t, ids } = stepTargets();
+  const a = g.actions.find((x) => x.id === "f3.strike");
+  const track = (fid) => g.factions.find((f) => f.id === fid).resourceTrack;
+  a.targets = true; a.maxSpaces = 2;
+  a.steps = [{ op: "choose", options: [
+    { label: "f2", faction: "f2", legal: false, steps: [{ op: "track", id: track("f2"), delta: -1 }] },
+    { label: "f4", faction: "f4", legal: { op: "eq", args: [S, ids[1]] }, steps: [{ op: "track", id: track("f4"), delta: -1 }] }
+  ] }];
+  const node = b.nodes.find((n) => n.id === "mf.strike"); node.table = t.id; delete node.linked;
+  return { g, b, t, ids, a, node };
+}
+
+test("a step's spaces are the spaces legal against its own target, not the node's", () => {
+  const { g, b, ids } = optionAction();
+  const r = runBot(g, b, applyPatch(deriveState(g, "f3"), { resources: { f2: 9 }, dice: [1, 1, 1] }));
+  assert.ok(r.path.includes("mf.strike"), `Strike runs: ${r.path.join(">")}`);
+  assert.deepEqual(r.chosen, [ids[1]], "row 2 (against f4) finds its space although option f2 is never legal");
+  assert.deepEqual(r.targets, { [ids[1]]: "f4" });
+});
+
+test("after a before-timed Special Activity, each space is checked again against its own target", () => {
+  const { g, b, ids, a, node } = optionAction();
+  // Option f2 is always legal. Option f4 is legal in ids[1] only while f4 has 5+ Resources.
+  // The linked activity takes 9 from f4 first.
+  a.steps[0].options[0].legal = true;
+  a.steps[0].options[1].legal = { op: "and", args: [{ op: "eq", args: [S, ids[1]] }, { op: "gte", args: [{ var: "resources.f4" }, 5] }] };
+  const sa = g.actions.find((x) => x.id === "f3.ambush");
+  sa.targets = true; sa.steps = [{ op: "track", id: g.factions.find((f) => f.id === "f4").resourceTrack, delta: -9 }]; sa.cost = { ...sa.cost, amount: 0 };
+  const any = { id: "f3.t.any", scope: "space", select: "one", tiebreak: [], steps: [{ n: 1, text: "Any.", filter: true }] };
+  b.priorityTables.push(any);
+  node.linked = { action: "f3.ambush", timing: "before", trigger: true, table: any.id };
+  const r = runBot(g, b, applyPatch(deriveState(g, "f3"), { resources: { f2: 9, f4: 9 }, dice: [1, 1, 1] }));
+  assert.ok(r.path.includes("mf.strike"), `Strike runs: ${r.path.join(">")}`);
+  assert.deepEqual(r.chosen, [ids[0]], "row 1 (against f2) keeps its space; row 2's space is no longer legal against f4");
+});
+
+test("canDo reads another faction's action as that faction", () => {
+  const g = tan(), a = g.actions.find((x) => x.id === "ira.attack");
+  a.targets = { op: "gte", args: [{ var: "self.resources" }, 5] };
+  const q = { op: "canDo", args: ["ira.attack", "*"] };
+  const p = { resources: { ira: 10, crown: 0 } };
+  assert.equal(ev(g, "ira", q, p), true);
+  assert.equal(ev(g, "crown", q, p), true, "the same board gives the same answer from Crown");
+});

@@ -116,8 +116,11 @@ export function evalExpr(e, ctx) {
       const act = ctx.state.actions?.[ev(a[0])], sid = ev(a[1]), st = ctx.state;
       if (!act) throw new Error(`Unknown action ${ev(a[0])}`);
       if (act.cost.amount > 0 && !(st.resources[act.faction] >= act.cost.amount)) return false;
-      const legal = legalityOf(act, ctx.$target ? { $target: ctx.$target } : {});
-      const ok = (sp) => !!evalExpr(legal, { ...ctx, $space: sp });
+      // The action is read as its own faction: its legality may use self.resources and similar.
+      // A target from the caller applies only to the caller's own actions.
+      const own = act.faction === st.self, view = own ? st : { ...st, self: act.faction };
+      const legal = legalityOf(act, own && ctx.$target ? { $target: ctx.$target } : {});
+      const ok = (sp) => !!evalExpr(legal, { state: view, links: ctx.links, $space: sp, ...(own && ctx.$target ? { $target: ctx.$target } : {}) });
       return sid === "*" ? Object.values(st.spaces).some(ok) : !!st.spaces[sid] && ok(st.spaces[sid]);
     }
     default: throw new Error(`Unknown op: ${e.op}`);
