@@ -159,3 +159,28 @@ test("a part's effects may read $target when the node picks an enemy", () => {
   delete n.target;
   assert.ok(errs(g).some((e) => e.code === "bad-var" && e.path.startsWith("/bots/0/nodes/6/parts/0/steps/0")));
 });
+
+// Parts and schema 1.6.0 enemy options: part steps are top-level effects of the acting faction.
+import { templatesFor, instantiate } from "../src/templates.mjs";
+
+test("part steps may hold an enemy choice with legal spaces, as an action's effects may", () => {
+  const g = JSON.parse(readFileSync(new URL("../examples/four-valleys.game.json", import.meta.url), "utf8"));
+  const b = g.bots[0], f = b.factionId;
+  const t = templatesFor(g, f).find((x) => !x.reason && x.tpl.kind === "operation" && x.tpl.needs.some((n) => n.startsWith("foe")));
+  const a = instantiate(g, f, t.tpl.id, "Strike test"); g.actions.push(a);
+  const n = b.nodes.find((x) => x.kind === "action");
+  n.action = a.id; n.parts = [{ text: "Part 1", table: n.table, steps: structuredClone(a.steps) }]; delete n.table; delete n.linked;
+  const at = (code) => errs(g).filter((e) => e.path.includes("/parts/") && e.code === code);
+  assert.deepEqual(at("option-legal"), []);
+  // The acting faction may not be an option's enemy inside a part either.
+  n.parts[0].steps[0].options[0].faction = f;
+  assert.equal(at("option-faction").length, 1);
+});
+
+test("a part's enemy option limits that part's legal spaces", () => {
+  // Part 1 is one choice whose only option is legal in Dublin. Without the option's legal spaces,
+  // part 1 would pick Cork City and Dublin (fewest Police, name order).
+  const g = withParts(), n = node(g, "cw.garrison");
+  n.parts[0].steps = [{ op: "choose", options: [{ label: "Against Republic", faction: "ira", legal: { op: "eq", args: [{ var: "$space.id" }, "dublin"] }, steps: [{ op: "place", piece: "crown.police", count: 1, from: "available", to: "$space" }] }] }];
+  assert.equal(run(g).chosen?.[0], "dublin");
+});

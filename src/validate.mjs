@@ -306,7 +306,7 @@ function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionByI
         const pp = `${np}/parts/${j}`;
         if (!tables[pt.table]) err("missing-ref", pp, `Part table not found: ${pt.table}`);
         else { used.add(pt.table); if (tables[pt.table].scope === "opponent") err("bad-target", pp, `Table ${pt.table} picks an enemy. A part chooses spaces with a space table`); }
-        checkSteps(pt.steps, `${pp}/steps`, { target: n.target !== undefined });
+        checkSteps(pt.steps, `${pp}/steps`, { target: n.target !== undefined, owner: bot.factionId });
       });
       if (n.parts) { if (n.table !== undefined) err("parts-table", np, `Action ${n.id} has parts, so it takes no table of its own: each part has its table`); }
       else if (!n.table) err("solo", np, `Action ${n.id} needs a priority table, so the choice needs no judgment`);

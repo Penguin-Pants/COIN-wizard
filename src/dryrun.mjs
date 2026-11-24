@@ -107,8 +107,8 @@ function runLinked(game, state, links, actions, tables, ctx, extra) {
 function runParts(game, state, node, action, tables, actions, extra, result) {
   const links = linkedOf(node), ctx = { state, links: game.board.links };
   const { amount, per } = action.cost, paid = new Set();
-  const legal = legalityOf(action, extra);
-  const legalNow = () => Object.values(state.spaces).filter((sp) => !!evalExpr(legal, { ...ctx, $space: sp, ...extra }));
+  // Each part runs its own steps, so the legal spaces of its own enemy option apply (schema 1.6.0).
+  const legalNow = (pt) => { const legal = legalityOf({ ...action, steps: pt.steps }, extra); return Object.values(state.spaces).filter((sp) => !!evalExpr(legal, { ...ctx, $space: sp, ...extra })); };
   // New spaces a part may still pay for. Spaces already paid for are free.
   const canNew = () => {
     const have = state.resources[state.self];
@@ -116,9 +116,9 @@ function runParts(game, state, node, action, tables, actions, extra, result) {
     if (per === "use") return paid.size || have >= amount ? Infinity : 0;
     return Math.floor(have / amount);
   };
-  const pool = () => { const n = canNew(); return legalNow().filter((sp) => n > 0 || paid.has(sp.id)); };
+  const pool = (pt) => { const n = canNew(); return legalNow(pt).filter((sp) => n > 0 || paid.has(sp.id)); };
   const env = (sp) => ({ ...ctx, $space: sp, ...extra });
-  const anyMatch = (pt) => { const p = pool(); return tables[pt.table].steps.some((st) => p.some((sp) => !!evalExpr(st.filter, env(sp)))); };
+  const anyMatch = (pt) => { const p = pool(pt); return tables[pt.table].steps.some((st) => p.some((sp) => !!evalExpr(st.filter, env(sp)))); };
   const before = links[0]?.timing === "before";
   if (before) {
     if (!node.parts.some(anyMatch)) return false;
@@ -126,7 +126,7 @@ function runParts(game, state, node, action, tables, actions, extra, result) {
   }
   const chosen = [];
   for (const pt of node.parts) {
-    const t = tables[pt.table], p = pool();
+    const t = tables[pt.table], p = pool(pt);
     // The table ranks the pool; then new spaces stop at what is left to pay.
     const ranked = selectByTable(game, state, t.select === "all" ? { ...t, limit: p.length || 1 } : t, p, { cost: { amount: 0 } }, extra);
     let room = canNew();
