@@ -140,7 +140,8 @@ function runParts(game, state, node, action, tables, actions, extra, result) {
   const links = linkedOf(node), ctx = { state, links: game.board.links };
   const { amount, per } = action.cost, paid = new Set();
   // Each part runs its own steps, so the legal spaces of its own enemy option apply (schema 1.6.0).
-  const legalNow = (pt) => { const legal = legalityOf({ ...action, steps: pt.steps }, extra); return Object.values(state.spaces).filter((sp) => !!evalExpr(legal, { ...ctx, $space: sp, ...extra })); };
+  // ex: the node's extra, or a step's own target (schema 1.8.0).
+  const legalNow = (pt, ex = extra) => { const legal = legalityOf({ ...action, steps: pt.steps }, ex); return Object.values(state.spaces).filter((sp) => !!evalExpr(legal, { ...ctx, $space: sp, ...ex })); };
   // New spaces a part may still pay for. Spaces already paid for are free.
   const canNew = () => {
     const have = state.resources[state.self];
@@ -148,9 +149,10 @@ function runParts(game, state, node, action, tables, actions, extra, result) {
     if (per === "use") return paid.size || have >= amount ? Infinity : 0;
     return Math.floor(have / amount);
   };
-  const pool = (pt) => { const n = canNew(); return legalNow(pt).filter((sp) => n > 0 || paid.has(sp.id)); };
-  const env = (sp) => ({ ...ctx, $space: sp, ...extra });
-  const anyMatch = (pt) => { const p = pool(pt); return tables[pt.table].steps.some((st) => p.some((sp) => !!evalExpr(st.filter, env(sp)))); };
+  const pool = (pt, ex = extra) => { const n = canNew(); return legalNow(pt, ex).filter((sp) => n > 0 || paid.has(sp.id)); };
+  const exOf = (st) => (st.target ? { ...extra, $target: st.target } : extra);
+  // The precheck reads each step as the selection does: with its own target and its own legal spaces.
+  const anyMatch = (pt) => tables[pt.table].steps.some((st) => { const ex = exOf(st); return pool(pt, ex).some((sp) => !!evalExpr(st.filter, { ...ctx, $space: sp, ...ex })); });
   const before = links[0]?.timing === "before";
   if (before) {
     if (!node.parts.some(anyMatch)) return false;
