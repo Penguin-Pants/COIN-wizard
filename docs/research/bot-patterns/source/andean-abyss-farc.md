@@ -2,14 +2,14 @@
 
 > © GMT Games. Research source only: transcribed from `examples/non-player-bot-sheets/Non-Player-FARC.JPEG` to derive generic bot logic. Never copied into the product, the kit or the artifact.
 > Transcribed word for word. Layout: boxes in reading order; arrows written as `->`. Circled numbers ❶ are priorities; circled letters ⓐ are tie-breaks (shaded on the sheet).
-> Unclear marks are kept as they appear and noted with [?].
+> Unclear marks are kept as they appear and noted with [?]. Bold italic on the sheet is kept as ***text***; it marks the move verbs (onto, To), the From clause and "target:".
 
 ## Event? (8.1)
 
 Play Event (shaded)* if has effect and:
 [ (FARC symbol) ? ? ? ]
 or
-2nd Eligible and no (2) [?: green circled "2" symbol]
+2nd Eligible and no (2) [?: green circled "2" symbol. The sheet does not say what it means; open question, see README]
 \* 2-player/Non-player Govt: see 8.1
 
 ## Decision diamonds (left column, top to bottom)
@@ -29,11 +29,11 @@ Badge: **None: Pass**
 ⓐ At exactly 1 or 2 FARC Guerrillas
 Arrow: **then** -> Extort
 
-### March — With all FARC Guerrillas except 1 FARC Guerrilla (Underground if possible) where any Faction's Base. From Active Opposition, 0 Population, and Sabotaged LoCs (only):
-❶ Unless next Propaganda final, onto all unSabotaged LoCs until Guerrilla on each
-❷ To up to 3 spaces with 1+ Population at Support or Neutral and no FARC Control
+### March — With all FARC Guerrillas except 1 FARC Guerrilla (Underground if possible) where any Faction's Base. ***From*** Active Opposition, 0 Population, and Sabotaged LoCs (only):
+❶ Unless next Propaganda final, ***onto*** all unSabotaged LoCs until Guerrilla on each
+❷ ***To*** up to 3 spaces with 1+ Population at Support or Neutral and no FARC Control
 ⓐ Where Guerrillas stay Underground
-❸ To 1 space with 1+ Population adjacent to a space with the most FARC Guerrillas yet to move
+❸ ***To*** 1 space with 1+ Population adjacent to a space with the most FARC Guerrillas yet to move
 Arrows: **then** -> Extort. **if none** -> Rally [arrowhead into Rally]
 
 ### Attack
@@ -41,7 +41,7 @@ Arrows: **then** -> Extort. **if none** -> Rally [arrowhead into Rally]
 ❷ In 1 space where FARC would Ambush
 ⓐ City or Department
 ⓑ LoC
-❸ For ❶ & ❷, **target:**
+❸ For ❶ & ❷, ***target:***
 ① Shipments ② AUC ③ Government ④ Cartels
 Within ①-④:
 ⓐ At most FARC Guerrillas

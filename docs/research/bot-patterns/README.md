@@ -5,7 +5,7 @@ Goal: derive generic, faction-agnostic bot logic from the Non-Player flowcharts 
 ## Files
 
 - `source/<game>-<faction>.md`: the sheet's text, transcribed word for word, for research only (© GMT Games). Not used by the build, the print kit or the artifact.
-- `<game>-<faction>.yaml`: the same logic normalized: game terms replaced by role variables, in the shape of the repo's bot model (`docs/SCHEMA.md`, "Bot decision graph"). `gap:` marks logic the current schema cannot express.
+- `<game>-<faction>.yaml`: the same logic normalized: game terms replaced by role variables, in the shape of the repo's bot model (`docs/SCHEMA.md`, "Bot decision graph"). `gap:` marks logic the current schema (1.7.0) cannot express. `reading:` marks an interpretation of the sheet's words that the sheet does not state.
 
 ## Status
 
@@ -24,15 +24,16 @@ Goal: derive generic, faction-agnostic bot logic from the Non-Player flowcharts 
 - `self`, `state`, `rival.<kind>`: factions by role. `self.guerrilla`, `self.base`, `state.cube`, `state.police`: pieces by role; `[underground]`, `[active]` select a state.
 - `count(piece, $space)`: pieces in the space being judged (`$space` may be left out). `avail(piece)`: pieces Available.
 - `$space.type`: `city`, `province`, `line`. `$space.pop`, `$space.opinion`, `$space.control`.
-- Opinion levels: `active_opposition < opposition < neutral < support < active_support` (GMT uses 5 levels; the 1.6.0 model has 3).
-- `priorities` are the numbered rows. `mode: sequence` (the usual GMT reading): work down the rows in order and do each row's selection or effect as far as possible, until the limit or the Resources run out. `mode: first`: only the first row with a match applies (the repo's priority-table rule today). `tiebreak` are lettered tie-breaks: under a row (`{ do, tiebreak }`) they apply to that row only, as printed on the sheet; at list level they apply to every row; `then` / `with` link a Special Activity; `onEmpty` is the "if none" arrow.
+- Opinion levels: `active_opposition < opposition < neutral < support < active_support` (GMT uses 5 levels; the model has 3).
+- `priorities` are the numbered rows. `mode: sequence` (the usual GMT reading): work down the rows in order and do each row's selection or effect as far as possible, until the limit or the Resources run out. `mode: first`: only the first row with a match applies. Both exist in the model since 1.7.0 (priority table `mode`). `tiebreak` are lettered tie-breaks: under a row (`{ do, tiebreak }`) they apply to that row only, as printed on the sheet; at list level they apply to every row; `then` / `with` link a Special Activity; `onEmpty` is the "if none" arrow.
 
 ## Variables found so far (pilot)
 
-| Variable | Meaning | In 1.6.0 model? |
+| Variable | Meaning | In 1.7.0 model? |
 |---|---|---|
 | `avail(piece)` | pieces Available | Partly (pools exist; no expression) |
 | `canPlace(piece)` | a legal space has room | No |
+| `canAmbush($space)` | the linked Special Activity is legal in the space | No |
 | `card.order[0]` | first faction on the card | No |
 | `turn.position` | 1st or 2nd Eligible | No |
 | `scoring.next.final` | next scoring card is the last | No |
@@ -41,5 +42,15 @@ Goal: derive generic, faction-agnostic bot logic from the Non-Player flowcharts 
 | `marker.sabotage`, `marker.terror` | markers on spaces | Yes (markerSet) |
 | `attr.econ` | value of a line | Yes (space attrs) |
 | cargo pieces (Shipments) as targets | target list mixing pieces and factions | No |
-| tie-breaks per row | a tie-break that applies to one numbered row only | No: a table's tie-breaks apply to all its steps |
-| `mode: sequence` | numbered rows applied in order, each as far as possible | No: a priority table takes only the first row with a match; `parts` (1.5.0) covers rows with different effects |
+| tie-breaks per row | a tie-break that applies to one numbered row only | Yes (1.7.0: step `tiebreak`) |
+| `mode: sequence` | numbered rows applied in order, each as far as possible | Yes (1.7.0: table `mode`); `parts` (1.5.0) covers rows with different effects |
+| per-card event logic | structured actions for one card | No: `eventPolicy.overrides` holds plain text |
+
+## Open questions (need the rulebook, not the sheet)
+
+| Sheet | Item | Question |
+|---|---|---|
+| AA FARC | Event box, green circled "2" | What does the symbol mean in "2nd Eligible and no (2)"? |
+| AA FARC | Event footnote "*" | What does rule 8.1 change for 2-player games or a Non-player Government? |
+| AA FARC | Kidnap "selected or Terror" | Is it "selected for Terror" (the reading used)? |
+| AA FARC | Attack rows 2 and 3 | Which comes first: the row 2 space tie-break or the row 3 target order? |
