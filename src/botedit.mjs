@@ -34,7 +34,7 @@ export function newBot(game, factionId) {
       { id: `${p}.end-op`, kind: "end", text: "Operation done.", outcome: "operation" },
       { id: `${p}.pass`, kind: "end", text: "Pass.", outcome: "pass" }
     ],
-    priorityTables: [{ id: t, scope: "space", select: "one", steps: [{ n: 1, text: "Any legal space.", filter: true }], tiebreak: [{ letter: "a", text: "Highest Pop.", key: { var: "$space.pop" }, order: "max" }] }],
+    priorityTables: [{ id: t, scope: "space", select: "one", mode: "sequence", steps: [{ n: 1, text: "Any legal space.", filter: true }], tiebreak: [{ letter: "a", text: "Highest Pop.", key: { var: "$space.pop" }, order: "max" }] }],
     randomization: { die: "d6", eligibleSet: "All spaces still tied after the lettered tie-breaks, in alphabetical order of space name.", procedure: "Roll one die. With N tied spaces, divide the faces into N equal groups in list order and use the group the roll falls in." },
     maxSteps: 12, dryRuns: []
   };

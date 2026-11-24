@@ -106,7 +106,8 @@ export function aidModel(game, bot) {
     tables: bot.priorityTables.map((t) => ({
       label: labels[t.id], select: t.scope === "opponent" ? "one enemy faction" : t.select === "all" ? `all matching spaces, up to ${t.limit}` : "one space",
       what: t.scope === "opponent" ? "Choose an enemy faction that is" : "Choose a space that is",
-      rows: t.steps.map((s) => [String(s.n), s.text]),
+      rows: t.steps.map((s) => [String(s.n), `${s.text}${s.tiebreak?.length ? ` Ties in this step: ${s.tiebreak.map((tb) => `${tb.letter}. ${tb.text} (${tb.order === "max" ? "highest" : "lowest"} wins)`).join("; ")}` : ""}`]),
+      how: t.mode === "sequence" && t.select === "all" && t.scope !== "opponent" ? "Work down the steps in order. Take every match of each step, in tie-break order, until the limit." : "The first step with a match wins.",
       ties: t.tiebreak.map((tb) => [tb.letter, `${tb.text} (${tb.order === "max" ? "highest" : "lowest"} wins)`])
     })),
     tieRandom: `If spaces are still tied after the lettered tie-breaks: ${bot.randomization.eligibleSet} ${bot.randomization.procedure}`,
@@ -120,7 +121,7 @@ export function aidModel(game, bot) {
 export function toMarkdown(m) {
   const L = [`# ${m.title}`, `${m.game}, revision ${m.revision}${m.status === "draft" ? " (DRAFT)" : ""}`, "", `**Goal.** ${m.objective}`, "", "## Before you act", ...m.before.map((b) => `- ${b}`), "", "## Terms", ...m.measures.map(([a, b]) => `- **${a}.** ${b}`), "", "## Events", m.eventRule, "", "### Event exceptions", ...(m.exceptions.length ? m.exceptions.map(([a, b]) => `- **${a}.** ${b}`) : ["- None."]), "", "## Steps (follow in order)", ...m.steps.map((s) => `${s.n}. ${s.text}`), "", "## Priority tables"];
   for (const t of m.tables) {
-    L.push("", `### Table ${t.label} (choose ${t.select})`, `| Step | ${t.what} |`, "|---|---|", ...t.rows.map(([a, b]) => `| ${a} | ${b} |`), "", "Tie-breaks, in order:", ...t.ties.map(([a, b]) => `- ${a}. ${b}`));
+    L.push("", `### Table ${t.label} (choose ${t.select})`, `| Step | ${t.what} |`, "|---|---|", ...t.rows.map(([a, b]) => `| ${a} | ${b} |`), "", t.how, "", "Tie-breaks, in order:", ...t.ties.map(([a, b]) => `- ${a}. ${b}`));
   }
   L.push("", "## Ties and dice", m.tieRandom, "", "## Fallback", m.fallback, "", "## Scoring rounds", m.scoring, "", "## Counting the turn", m.outcome, "");
   return L.join("\n");
@@ -136,7 +137,7 @@ export function toHtml(m) {
 <h2>Terms</h2><ul>${m.measures.map(([a, b]) => `<li><b>${h(a)}.</b> ${h(b)}</li>`).join("")}</ul>
 <h2>Events</h2><p>${h(m.eventRule)}</p><h3>Event exceptions</h3><ul>${(m.exceptions.length ? m.exceptions : [["None", ""]]).map(([a, b]) => `<li><b>${h(a)}.</b> ${h(b)}</li>`).join("")}</ul>
 <h2>Steps (follow in order)</h2><ol>${m.steps.map((s) => `<li value="${s.n}">${h(s.text)}</li>`).join("")}</ol>
-<h2>Priority tables</h2>${m.tables.map((t) => `<h3>Table ${h(t.label)} (choose ${h(t.select)})</h3><table><tr><th>Step</th><th>${h(t.what)}</th></tr>${t.rows.map(([a, b]) => `<tr><td>${a}</td><td>${h(b)}</td></tr>`).join("")}</table><p>Tie-breaks, in order:</p><ul>${t.ties.map(([a, b]) => `<li>${a}. ${h(b)}</li>`).join("")}</ul>`).join("")}
+<h2>Priority tables</h2>${m.tables.map((t) => `<h3>Table ${h(t.label)} (choose ${h(t.select)})</h3><table><tr><th>Step</th><th>${h(t.what)}</th></tr>${t.rows.map(([a, b]) => `<tr><td>${a}</td><td>${h(b)}</td></tr>`).join("")}</table><p>${h(t.how)}</p><p>Tie-breaks, in order:</p><ul>${t.ties.map(([a, b]) => `<li>${a}. ${h(b)}</li>`).join("")}</ul>`).join("")}
 <h2>Ties and dice</h2><p>${h(m.tieRandom)}</p><h2>Fallback</h2><p>${h(m.fallback)}</p><h2>Scoring rounds</h2><p>${h(m.scoring)}</p><h2>Counting the turn</h2><p>${h(m.outcome)}</p></body></html>`;
 }
 
