@@ -148,3 +148,18 @@ test("the part effect editor offers the target when the node picks an enemy", ()
   assert.ok(flags.length > 0, "the count formula has an expression editor");
   assert.ok(flags.every((x) => x === "1"), JSON.stringify(flags));
 }));
+
+// Schema 1.7.0: a table's mode, sequence (GMT) or first. New tables start in sequence mode.
+test("a designer sets a table to work in sequence, and a new table starts that way", () => withApp(async ({ page, db }) => {
+  await botsTab(page);
+  await page.locator("details.act > summary", { hasText: "cw.t.crack" }).click(); await frames(page);
+  const mode = page.locator('select[data-b="bots/0/priorityTables/0/mode"]');
+  assert.equal(await mode.count(), 1, "the table has a mode field");
+  await mode.selectOption("sequence"); await frames(page);
+  await page.click('[data-a="bot-addtable"]'); await frames(page);
+  await page.waitForTimeout(1800);
+  const t = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].priorityTables;
+  assert.equal(t[0].mode, "sequence");
+  assert.equal(t.at(-1).mode, "sequence", "a new table starts in sequence mode");
+  assert.equal(await page.locator("#stepissues li.error").count(), 0);
+}));

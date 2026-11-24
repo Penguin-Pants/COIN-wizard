@@ -78,7 +78,8 @@ function tableEditor(t, bi, ti) {
   const ties = t.tiebreak.map((x, xi) => `<li class="step"><div class="shead"><b>${x.letter}.</b>${sel(`${p}/tiebreak/${xi}/order`, x.order, [["max", "Highest"], ["min", "Lowest"]], { attrs: `aria-label="Tie-break ${x.letter} direction"` })}${inp(`${p}/tiebreak/${xi}/text`, x.text, { attrs: `aria-label="Tie-break ${x.letter} description"` })}${removeButton("tbreaks", { i: xi, data: `data-p="${p}/tiebreak"` })}</div>${valueEditor(`${p}/tiebreak/${xi}/key`, x.key, ctx)}</li>`).join("");
   return `<details class="act" data-k="tbl-${esc(t.id)}" ${S.dopen[`tbl-${t.id}`] ? "open" : ""}><summary><b>${esc(t.id)}</b> <small>${t.scope === "opponent" ? "picks one enemy faction" : `${t.select === "all" ? `all, up to ${t.limit ?? "?"}` : "one"} space`}</small></summary>
     <div class="grid4">${fld("Chooses", sel(`${p}/scope`, t.scope, [["space", "spaces"], ["opponent", "an enemy faction"]], { r: true }))}${t.scope === "opponent" ? "" : `${fld("How many", sel(`${p}/select`, t.select, [["one", "one"], ["all", "all that match"]], { r: true }))}${t.select === "all" ? fld("Up to", inp(`${p}/limit`, t.limit ?? 1, { t: "n", type: "number", attrs: 'min="1"' })) : ""}`}</div>
-    <h4>Steps: the first step with a match wins</h4><ol class="steps">${steps}</ol>${addButton("tsteps", "Add step", { cls: "link", data: `data-p="${p}/steps"` })}
+    ${t.scope === "opponent" ? "" : fld("How the steps work", sel(`${p}/mode`, t.mode ?? "first", [["sequence", "In order: every step, as far as possible (GMT)"], ["first", "Only the first step with a match"]]), "With one space chosen, both work the same.")}
+    <h4>${t.mode === "sequence" && t.select === "all" ? "Steps: work down in order, each as far as possible" : "Steps: the first step with a match wins"}</h4><ol class="steps">${steps}</ol>${addButton("tsteps", "Add step", { cls: "link", data: `data-p="${p}/steps"` })}
     <h4>Tie-breaks, in letter order</h4><ol class="steps">${ties}</ol>${addButton("tbreaks", "Add tie-break", { cls: "link", data: `data-p="${p}/tiebreak"` })}
     <div class="row">${confirmButton(`tbl-${t.id}`, "Delete table", { action: "bot-deltable", data: `data-p="bots/${bi}" data-i="${ti}"` })}</div></details>`;
 }
@@ -219,7 +220,7 @@ export const botActions = {
     if (!n.parts.length) { delete n.parts; n.table = gone.table; }
     done();
   },
-  "bot-addtable": (d) => { const b = botOf(d.p); const id = freeId(new Set(b.priorityTables.map((t) => t.id)), `${b.code.toLowerCase()}.t`); b.priorityTables.push({ id, scope: "space", select: "one", steps: [{ n: 1, text: "Any legal space.", filter: true }], tiebreak: [] }); S.dopen[`tbl-${id}`] = true; done(); },
+  "bot-addtable": (d) => { const b = botOf(d.p); const id = freeId(new Set(b.priorityTables.map((t) => t.id)), `${b.code.toLowerCase()}.t`); b.priorityTables.push({ id, scope: "space", select: "one", mode: "sequence", steps: [{ n: 1, text: "Any legal space.", filter: true }], tiebreak: [] }); S.dopen[`tbl-${id}`] = true; done(); },
   "bot-addenemy": (d) => { const b = botOf(d.p); const id = freeId(new Set(b.priorityTables.map((t) => t.id)), `${b.code.toLowerCase()}.enemy`); b.priorityTables.push({ id, scope: "opponent", select: "one", steps: [{ n: 1, text: "Any enemy.", filter: true }], tiebreak: [{ letter: "a", text: "Highest victory margin.", key: { var: "$faction.margin" }, order: "max" }] }); S.dopen[`tbl-${id}`] = true; done(); },
   "bot-deltable": (d) => { S.confirm = null; botOf(d.p).priorityTables.splice(Number(d.i), 1); done(); },
   "bot-addov": (d) => { getP(S.game, d.p).push({ cardId: d.card, directive: "force", plain: "Always play this Event when it has an effect." }); done(); },

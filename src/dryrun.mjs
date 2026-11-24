@@ -33,7 +33,7 @@ function rollDie(state) {
   return state.dice.shift();
 }
 
-// Picks by a priority table: the first step with any match wins, then the lettered tie-breaks,
+// Picks by a priority table: the first step with any match wins (mode "sequence": see below), then the lettered tie-breaks,
 // then a die over the rest in name order. items: spaces or factions. env(item): the expression context.
 function pick(state, table, items, env, nameOf, limitOf) {
   if (!items.length) return [];
@@ -43,8 +43,16 @@ function pick(state, table, items, env, nameOf, limitOf) {
   if (!pool.length) return [];
   const keyOf = (tb, it) => evalExpr(tb.key, env(it));
   const byN = (x, y) => nameOf(x).localeCompare(nameOf(y));
+  const cmp = (x, y) => { for (const tb of table.tiebreak) { const d = keyOf(tb, x) - keyOf(tb, y); if (d !== 0) return tb.order === "max" ? -d : d; } return byN(x, y); };
+  // Mode "sequence" (schema 1.7.0, the GMT reading): every row in order, each row's matches in
+  // tie-break order, until the limit. Mode "first" (default): only the first row with a match.
+  if (table.select === "all" && table.mode === "sequence") {
+    const out = [];
+    for (const st of steps) out.push(...items.filter((it) => !out.includes(it) && !!evalExpr(st.filter, env(it))).sort(cmp));
+    return out.slice(0, limitOf(out.length));
+  }
   if (table.select === "all") {
-    const sorted = [...pool].sort((x, y) => { for (const tb of table.tiebreak) { const d = keyOf(tb, x) - keyOf(tb, y); if (d !== 0) return tb.order === "max" ? -d : d; } return byN(x, y); });
+    const sorted = [...pool].sort(cmp);
     return sorted.slice(0, limitOf(sorted.length));
   }
   for (const tb of table.tiebreak) {

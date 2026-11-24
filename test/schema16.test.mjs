@@ -15,13 +15,12 @@ const read = (rel) => JSON.parse(readFileSync(new URL(rel, import.meta.url), "ut
 const codes = (g) => validate(g).errors.map((e) => e.code);
 const three = () => { const g = blankGame(3); g.meta.factionCount = 3; return g; };
 
-test("the latest version is 1.6.0", () => { assert.equal(LATEST, "coin-game/1.6.0"); });
 
-test("a frozen 1.5.0 file migrates to 1.6.0, only its version changes, and it validates", () => {
+test("a frozen 1.5.0 file migrates to the latest version, only its version changes, and it validates", () => {
   const old = read("./fixtures/tan-war.1.5.0.game.json");
   assert.equal(old.meta.schemaVersion, "coin-game/1.5.0");
   const m = migrate(old);
-  assert.equal(m.meta.schemaVersion, "coin-game/1.6.0");
+  assert.equal(m.meta.schemaVersion, LATEST);
   assert.deepEqual(validate(m).errors, []);
   m.meta.schemaVersion = old.meta.schemaVersion; assert.deepEqual(m, old);
 });

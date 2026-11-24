@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coin-wizard.local/schema/coin-game/1.6.0",
+  "$id": "https://coin-wizard.local/schema/coin-game/1.7.0",
   "title": "COIN game definition",
   "description": "Single source of truth for one COIN-style prototype. All printable text and diagrams are generated from a confirmed revision of this document.",
   "type": "object",
@@ -32,7 +32,7 @@
       "additionalProperties": false,
       "properties": {
         "schemaVersion": {
-          "const": "coin-game/1.6.0"
+          "const": "coin-game/1.7.0"
         },
         "gameId": {
           "$ref": "#/$defs/id"
@@ -2222,6 +2222,13 @@
                     }
                   }
                 }
+              },
+              "mode": {
+                "enum": [
+                  "first",
+                  "sequence"
+                ],
+                "description": "first (default): only the first step with a match applies. sequence (1.7.0, the GMT reading): every step in order, each step's matches in tie-break order, until the limit."
               }
             }
           }
