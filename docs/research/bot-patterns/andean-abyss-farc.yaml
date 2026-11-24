@@ -3,7 +3,8 @@
 # Notation and variables: README.md. Shape follows the repo's bot model (docs/SCHEMA.md,
 # "Bot decision graph"): condition / action nodes, priority tables (steps + tiebreak), linked
 # Special Activities, onEmpty fallbacks, scoring choices. mode: sequence = numbered rows applied in order
-# (GMT reading); mode: first = first row with a match only. "gap:" marks logic the 1.6.0 model cannot
+# (GMT reading); mode: first = first row with a match only. A tie-break printed under one row
+# belongs to that row only (row: {do, tiebreak}); a tiebreak at list level applies to every row. "gap:" marks logic the 1.6.0 model cannot
 # yet express.
 
 archetype: guerrilla
@@ -56,9 +57,9 @@ operations:
       1: flip self.guerrilla[active] -> underground where count(self.base) >= 1 and count(state.cube) >= 1 and count(self.guerrilla[underground]) == 0
       2: place self.base where count(self.guerrilla) >= 3
       3: place self.guerrilla where count(self.base) >= 1
-      4: place 1 self.guerrilla in 1 other space
-    tiebreak:
-      a: count(self.guerrilla) in [1, 2]
+      4:
+        do: place 1 self.guerrilla in 1 other space
+        tiebreak: { a: "count(self.guerrilla) in [1, 2]" }
     then: extort
     onEmpty: pass
     gap: each priority has its own effect -> fits action node `parts` (1.5.0), one part per priority.
@@ -69,10 +70,10 @@ operations:
     from: $space.opinion == active_opposition or $space.pop == 0 or ($space.type == line and sabotaged)
     priorities:
       1: unless scoring.next.final, onto every line without sabotage until each has a self.guerrilla
-      2: to up to 3 spaces with pop >= 1 and opinion >= neutral and control != self
+      2:
+        do: to up to 3 spaces with pop >= 1 and opinion >= neutral and control != self
+        tiebreak: { a: "guerrillas stay underground (movement does not activate them)" }
       3: to 1 space with pop >= 1 adjacent to the space with the most self.guerrilla yet to move
-    tiebreak:
-      a: guerrillas stay underground (movement does not activate them)
     then: extort
     onEmpty: rally
     gap:
@@ -84,10 +85,9 @@ operations:
     mode: sequence
     priorities:
       1: wherever count(self.guerrilla) >= 3
-      2: in 1 space where self would ambush
-    tiebreak:
-      a: $space.type in [city, province]
-      b: $space.type == line
+      2:
+        do: in 1 space where self would ambush
+        tiebreak: { a: "$space.type in [city, province]", b: "$space.type == line" }
     target:                      # opponent table, scope: opponent
       order: [cargo.shipment, rival.paramilitary, state, rival.criminal]
       tiebreak: { a: most self.guerrilla in the space }
@@ -111,8 +111,9 @@ special_activities:
     where: count(self.*) > count(all others) and count(self.guerrilla[underground]) >= 1
     priorities:
       1: wherever count(self.guerrilla[underground]) >= 2
-      2: on 1 other line
-    tiebreak: { a: lowest econ }
+      2:
+        do: on 1 other line
+        tiebreak: { a: lowest econ }
     skip: no Special Activity
   ambush:
     mode: first
