@@ -362,7 +362,10 @@ function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionByI
     t.steps.forEach((s, j) => { if (s.n !== j + 1) err("numbering", tp, `Table ${t.id} steps must be numbered 1, 2, 3 in order`); });
     // A step's own tie-breaks (1.7.0): same checks as the table's.
     t.steps.forEach((s, j) => (s.tiebreak ?? []).forEach((tb, k) => { checkExpr(tb.key, `${tp}/steps/${j}/tiebreak/${k}`, stepScope(s)); if (tb.letter !== String.fromCharCode(97 + k)) err("numbering", `${tp}/steps/${j}`, `Table ${t.id} step ${s.n} tie-breaks must be lettered a, b, c in order`); }));
-    t.tiebreak.forEach((tb, j) => { checkExpr(tb.key, `${tp}/tiebreak/${j}`, scope); if (tb.letter !== String.fromCharCode(97 + j)) err("numbering", tp, `Table ${t.id} tie-breaks must be lettered a, b, c in order`); });
+    // The table's tie-breaks apply to the steps without their own; they read $target when every such step has a target.
+    const inheritors = t.steps.filter((s) => !s.tiebreak);
+    const tbScope = inheritors.length && inheritors.every((s) => s.target) ? { ...scope, target: true } : scope;
+    t.tiebreak.forEach((tb, j) => { checkExpr(tb.key, `${tp}/tiebreak/${j}`, tbScope); if (tb.letter !== String.fromCharCode(97 + j)) err("numbering", tp, `Table ${t.id} tie-breaks must be lettered a, b, c in order`); });
     if (t.select === "all" && !t.limit) err("unbounded", tp, `Table ${t.id} selects all targets without a limit`);
     if (!used.has(t.id)) warn("unused-table", tp, `Table ${t.id} is never used`);
   });

@@ -180,7 +180,7 @@ function runParts(game, state, node, action, tables, actions, extra, result) {
   result.path.push(node.id);
   result.chosen = chosen;
   // Steps with their own target (schema 1.8.0), as for an action node without parts.
-  if (Object.keys(targets).length) result.targets = targets;
+  if (Object.keys(targets).length) result.targets = targets; else delete result.targets;
   if (extra.$target) result.target = extra.$target;
   if (links.length && !before) result.linked = runLinked(game, state, links, actions, tables, ctx, extra);
   return true;
@@ -226,7 +226,8 @@ export function runBot(game, bot, startState) {
       result.chosen = chosen.map((s) => s.id);
       if (target) result.target = target;
       // Steps with their own target (schema 1.8.0): each chosen space with the faction it acts against.
-      if (chosen.targetOf?.size) result.targets = Object.fromEntries(chosen.targetOf);
+      // A later node replaces the earlier node's spaces, so its targets go too.
+      if (chosen.targetOf?.size) result.targets = Object.fromEntries(chosen.targetOf); else delete result.targets;
       const targetOf = chosen.targetOf;
       // A linked Special Activity with timing "before" resolves on the board before the Operation;
       // "after" and "during" resolve after the Operation's steps.

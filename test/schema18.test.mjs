@@ -272,3 +272,26 @@ test("canDo reads card.lasting as the action's faction", () => {
   const r = runBot(g, cb, applyPatch(deriveState(g, "crown"), { card: { id: "e03" }, dice: [3, 3, 3, 3, 3, 3] }));
   assert.ok(r.side !== undefined, "IRA plays the shaded side, which is momentum");
 });
+
+test("a table tie-break may read $target when every step that uses it has a target", () => {
+  const { g, t } = stepTargets();
+  t.tiebreak = [{ letter: "a", text: "Most target pieces.", key: { op: "factionCount", args: [{ var: "$target.id" }, S, "*"] }, order: "max" }];
+  assert.deepEqual(validate(g).errors.filter((e) => e.code === "bad-var"), []);
+  delete t.steps[1].target; // step 2 now uses the table tie-break with no target
+  assert.ok(validate(g).errors.some((e) => e.code === "bad-var"));
+});
+
+test("a later action node without step targets clears the earlier node's targets", () => {
+  const { g, b, ids, node } = optionAction();
+  // After Strike (with step targets), go to a second action node whose table has no targets.
+  const any = { id: "f3.t.any2", scope: "space", select: "one", tiebreak: [], steps: [{ n: 1, text: "Space 3.", filter: { op: "eq", args: [S, ids[2]] } }] };
+  b.priorityTables.push(any);
+  const a2 = g.actions.find((x) => x.id === "f3.strike");
+  g.actions.push({ ...structuredClone(a2), id: "f3.strike2", steps: [], targets: true });
+  b.nodes.push({ id: "mf.strike2", kind: "action", text: "Again.", action: "f3.strike2", table: any.id, then: node.then, onEmpty: node.then });
+  node.then = "mf.strike2";
+  const r = runBot(g, b, applyPatch(deriveState(g, "f3"), { resources: { f2: 9 }, dice: [1, 1, 1] }));
+  assert.ok(r.path.includes("mf.strike2"), r.path.join(">"));
+  assert.deepEqual(r.chosen, [ids[2]]);
+  assert.equal(r.targets, undefined, "no targets for the second node's spaces");
+});
