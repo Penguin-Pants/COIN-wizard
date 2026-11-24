@@ -2,7 +2,8 @@
 # Source: source/andean-abyss-farc.md. Archetype: guerrilla insurgent.
 # Notation and variables: README.md. Shape follows the repo's bot model (docs/SCHEMA.md,
 # "Bot decision graph"): condition / action nodes, priority tables (steps + tiebreak), linked
-# Special Activities, onEmpty fallbacks, scoring choices. "gap:" marks logic the 1.6.0 model cannot
+# Special Activities, onEmpty fallbacks, scoring choices. mode: sequence = numbered rows applied in order
+# (GMT reading); mode: first = first row with a match only. "gap:" marks logic the 1.6.0 model cannot
 # yet express.
 
 archetype: guerrilla
@@ -49,6 +50,7 @@ decision:
 
 operations:
   rally:
+    mode: sequence
     where: $space.type in [city, province] and $space.opinion < support
     priorities:
       1: flip self.guerrilla[active] -> underground where count(self.base) >= 1 and count(state.cube) >= 1 and count(self.guerrilla[underground]) == 0
@@ -62,6 +64,7 @@ operations:
     gap: each priority has its own effect -> fits action node `parts` (1.5.0), one part per priority.
 
   march:
+    mode: sequence
     moving: all self.guerrilla except 1 (underground if possible) where any base
     from: $space.opinion == active_opposition or $space.pop == 0 or ($space.type == line and sabotaged)
     priorities:
@@ -78,6 +81,7 @@ operations:
       - opinion has 5 levels here (active/passive support, neutral, passive/active opposition); the model has 3 (-1, 0, 1).
 
   attack:
+    mode: sequence
     priorities:
       1: wherever count(self.guerrilla) >= 3
       2: in 1 space where self would ambush
@@ -92,6 +96,7 @@ operations:
     gap: '"Shipments" are not a faction (cargo pieces); a target list that mixes pieces and factions does not fit the opponent table.'
 
   terror:
+    mode: sequence
     where: count(self.guerrilla[underground]) >= 1
     priorities:
       1: on all lines without sabotage
@@ -102,6 +107,7 @@ operations:
 
 special_activities:
   extort:
+    mode: sequence
     where: count(self.*) > count(all others) and count(self.guerrilla[underground]) >= 1
     priorities:
       1: wherever count(self.guerrilla[underground]) >= 2
@@ -109,6 +115,7 @@ special_activities:
     tiebreak: { a: lowest econ }
     skip: no Special Activity
   ambush:
+    mode: first
     max: 1
     where: an attack space with count(self.guerrilla[underground]) >= 1
     priorities:
@@ -116,6 +123,7 @@ special_activities:
     tiebreak: { a: targeted cargo.shipment, b: rival.paramilitary, c: state }
     skip: no Special Activity
   kidnap:
+    mode: sequence
     max: 3
     where: spaces selected for terror where count(self.guerrilla) > count(state.police)
     priorities:

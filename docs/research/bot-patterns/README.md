@@ -25,7 +25,7 @@ Goal: derive generic, faction-agnostic bot logic from the Non-Player flowcharts 
 - `count(piece, $space)`: pieces in the space being judged (`$space` may be left out). `avail(piece)`: pieces Available.
 - `$space.type`: `city`, `province`, `line`. `$space.pop`, `$space.opinion`, `$space.control`.
 - Opinion levels: `active_opposition < opposition < neutral < support < active_support` (GMT uses 5 levels; the 1.6.0 model has 3).
-- `priorities` are numbered steps (first with a match wins); `tiebreak` are lettered tie-breaks; `then` / `with` link a Special Activity; `onEmpty` is the "if none" arrow.
+- `priorities` are the numbered rows. `mode: sequence` (the usual GMT reading): work down the rows in order and do each row's selection or effect as far as possible, until the limit or the Resources run out. `mode: first`: only the first row with a match applies (the repo's priority-table rule today). `tiebreak` are lettered tie-breaks; `then` / `with` link a Special Activity; `onEmpty` is the "if none" arrow.
 
 ## Variables found so far (pilot)
 
@@ -41,3 +41,4 @@ Goal: derive generic, faction-agnostic bot logic from the Non-Player flowcharts 
 | `marker.sabotage`, `marker.terror` | markers on spaces | Yes (markerSet) |
 | `attr.econ` | value of a line | Yes (space attrs) |
 | cargo pieces (Shipments) as targets | target list mixing pieces and factions | No |
+| `mode: sequence` | numbered rows applied in order, each as far as possible | No: a priority table takes only the first row with a match; `parts` (1.5.0) covers rows with different effects |
