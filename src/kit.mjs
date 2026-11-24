@@ -246,7 +246,11 @@ export function nonPlayerSheetHtml(g, bot) {
   const max = (t, a) => (t.scope === "opponent" ? "" : `<span class="tag">max ${Math.min(t.select === "all" ? t.limit : 1, a?.maxSpaces ?? Infinity)}</span>`);
   // A table that selects several spaces breaks its last ties by space name, not by the die (pick in src/dryrun.mjs).
   const byName = (t) => (t.select === "all" && t.scope !== "opponent" ? '<p class="pr">Still tied: take spaces in alphabetical order of name.</p>' : "");
-  const prio = (t) => `${t.steps.map((s) => `<p class="pr">${NUM(s.n)} ${h(s.text)}</p>`).join("")}${t.tiebreak.length ? `<div class="tb">${t.tiebreak.map((x) => `<p>${LET(x.letter)} ${h(x.text)} (${x.order === "max" ? "highest" : "lowest"} wins)</p>`).join("")}</div>` : ""}${byName(t)}`;
+  // A sequence table (schema 1.7.0) says how its rows are read: in order, each as far as possible.
+  const seq = (t) => (t.mode === "sequence" && t.select === "all" && t.scope !== "opponent" && t.steps.length > 1 ? `<p class="pr">Work down ${NUM(t.steps[0].n)} to ${NUM(t.steps.at(-1).n)} in order, each as far as possible.</p>` : "");
+  // Tie-breaks: a step's own (1.7.0) print under that step; the table's print after the steps.
+  const tbs = (list, cls) => (list?.length ? `<div class="${cls}">${list.map((x) => `<p>${LET(x.letter)} ${h(x.text)} (${x.order === "max" ? "highest" : "lowest"} wins)</p>`).join("")}</div>` : "");
+  const prio = (t) => `${seq(t)}${t.steps.map((s) => `<p class="pr">${NUM(s.n)} ${h(s.text)}</p>${tbs(s.tiebreak, "tb step")}`).join("")}${tbs(t.tiebreak, "tb")}${byName(t)}`;
   const title = (name, t, a) => `<div class="bt"><h3>${h(name)} <small>(${labels[t.id]})</small></h3>${max(t, a)}</div>`;
 
   const evNodes = order.filter((n) => n.kind === "event-check");

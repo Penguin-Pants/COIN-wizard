@@ -351,6 +351,8 @@ function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionByI
     const scope = t.scope === "opponent" ? { faction: true } : { target: users.length > 0 && users.every((n) => n.target !== undefined) };
     t.steps.forEach((s, j) => checkExpr(s.filter, `${tp}/steps/${j}`, scope));
     t.steps.forEach((s, j) => { if (s.n !== j + 1) err("numbering", tp, `Table ${t.id} steps must be numbered 1, 2, 3 in order`); });
+    // A step's own tie-breaks (1.7.0): same checks as the table's.
+    t.steps.forEach((s, j) => (s.tiebreak ?? []).forEach((tb, k) => { checkExpr(tb.key, `${tp}/steps/${j}/tiebreak/${k}`, scope); if (tb.letter !== String.fromCharCode(97 + k)) err("numbering", `${tp}/steps/${j}`, `Table ${t.id} step ${s.n} tie-breaks must be lettered a, b, c in order`); }));
     t.tiebreak.forEach((tb, j) => { checkExpr(tb.key, `${tp}/tiebreak/${j}`, scope); if (tb.letter !== String.fromCharCode(97 + j)) err("numbering", tp, `Table ${t.id} tie-breaks must be lettered a, b, c in order`); });
     if (t.select === "all" && !t.limit) err("unbounded", tp, `Table ${t.id} selects all targets without a limit`);
     if (!used.has(t.id)) warn("unused-table", tp, `Table ${t.id} is never used`);
