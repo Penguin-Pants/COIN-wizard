@@ -84,11 +84,13 @@ function pick(state, table, items, env, nameOf, limitOf, itemsOf = () => items) 
 // Selects spaces. extra: { $target } when the action node picked an enemy first.
 // A step with a target (schema 1.8.0) reads that target, and picks only from the spaces where the
 // action is legal against it.
-export function selectByTable(game, state, table, legal, action, extra = {}) {
+// poolFor(step): optional; the caller's own pool for a step with a target (action-node parts).
+export function selectByTable(game, state, table, legal, action, extra = {}, poolFor) {
   const env = (sp, st) => ({ state, links: game.board.links, $space: sp, ...extra, ...(st?.target ? { $target: st.target } : {}) });
   // The step's pool starts from every space: a space illegal against the node's target (or the
   // first enemy option) may be legal against the step's own target. Affordability still applies.
   const itemsOf = (st) => {
+    if (st.target && poolFor) return poolFor(st);
     if (!st.target || !action.steps) return legal;
     if (!affordable(state, action, game)) return [];
     const lg = legalityOf(action, { ...extra, $target: st.target });
@@ -162,7 +164,8 @@ function runParts(game, state, node, action, tables, actions, extra, result) {
   for (const pt of node.parts) {
     const t = tables[pt.table], p = pool(pt);
     // The table ranks the pool; then new spaces stop at what is left to pay.
-    const ranked = selectByTable(game, state, t.select === "all" ? { ...t, limit: p.length || 1 } : t, p, { cost: { amount: 0 } }, extra);
+    // A step with a target ranks the spaces legal against that target, under the same payment rules.
+    const ranked = selectByTable(game, state, t.select === "all" ? { ...t, limit: Object.values(state.spaces).length } : t, p, { cost: { amount: 0 } }, extra, (st) => pool(pt, exOf(st)));
     let room = canNew();
     const picked = [];
     for (const sp of ranked) {

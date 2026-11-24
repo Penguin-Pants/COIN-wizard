@@ -217,3 +217,18 @@ test("with parts and a before-timed Special Activity, the precheck reads each st
   assert.ok(r.path.includes("mf.strike"), `Strike runs: ${r.path.join(">")}`);
   assert.ok(r.chosen.includes(ids[0]));
 });
+
+test("in parts, a step's spaces are the spaces legal against its own target", () => {
+  const asParts = (o) => { const a = o.g.actions.find((x) => x.id === "f3.strike"); o.node.parts = [{ text: "Strike.", table: o.t.id, steps: a.steps }]; delete o.node.table; return o; };
+  // Option f2 never legal, f4 legal in ids[1]: row 2 (against f4) finds ids[1].
+  let o = asParts(optionAction());
+  let r = runBot(o.g, o.b, applyPatch(deriveState(o.g, "f3"), { resources: { f2: 9 }, dice: [1, 1, 1] }));
+  assert.ok(r.path.includes("mf.strike"), `Strike runs: ${r.path.join(">")}`);
+  assert.deepEqual(r.chosen, [o.ids[1]]);
+  // Reversed: f2 always legal, f4 never. Row 2 must not act against f4.
+  o = optionAction();
+  o.a.steps[0].options[0].legal = true; o.a.steps[0].options[1].legal = false;
+  asParts(o);
+  r = runBot(o.g, o.b, applyPatch(deriveState(o.g, "f3"), { resources: { f2: 9 }, dice: [1, 1, 1] }));
+  assert.deepEqual(r.chosen, [o.ids[0]], "row 1 against f2 only");
+});
