@@ -118,7 +118,17 @@ export function evalExpr(e, ctx) {
       if (act.cost.amount > 0 && !(st.resources[act.faction] >= act.cost.amount)) return false;
       // The action is read as its own faction: its legality may use self.resources and similar.
       // A target from the caller applies only to the caller's own actions.
-      const own = act.faction === st.self, view = own ? st : { ...st, self: act.faction };
+      const own = act.faction === st.self;
+      // card.position and card.lasting are read as the action's faction. hasEffect, raisesSelf and
+      // lowersEnemy are the caller's (a dry run sets them for the running bot).
+      let card = st.card;
+      if (!own && card) {
+        const pos = st.cardOrder?.[card.id] ? st.cardOrder[card.id].indexOf(act.faction) + 1 : card.position;
+        const so = st.sideOf?.[act.faction], side = so ? so.overrides[card.id] ?? so.side : undefined;
+        const lasting = side !== undefined ? st.lastingOf?.[card.id]?.[side] ?? "none" : card.lasting;
+        card = { ...card, position: pos, lasting };
+      }
+      const view = own ? st : { ...st, self: act.faction, card };
       const legal = legalityOf(act, own && ctx.$target ? { $target: ctx.$target } : {});
       const ok = (sp) => !!evalExpr(legal, { state: view, links: ctx.links, $space: sp, ...(own && ctx.$target ? { $target: ctx.$target } : {}) });
       return sid === "*" ? Object.values(st.spaces).some(ok) : !!st.spaces[sid] && ok(st.spaces[sid]);

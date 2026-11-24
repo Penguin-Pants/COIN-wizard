@@ -232,3 +232,42 @@ test("in parts, a step's spaces are the spaces legal against its own target", ()
   r = runBot(o.g, o.b, applyPatch(deriveState(o.g, "f3"), { resources: { f2: 9 }, dice: [1, 1, 1] }));
   assert.deepEqual(r.chosen, [o.ids[0]], "row 1 against f2 only");
 });
+
+test("a space dropped after a before-timed Special Activity is not in the reported targets", () => {
+  const { g, b, ids, a, node } = optionAction();
+  a.steps[0].options[0].legal = true;
+  a.steps[0].options[1].legal = { op: "and", args: [{ op: "eq", args: [S, ids[1]] }, { op: "gte", args: [{ var: "resources.f4" }, 5] }] };
+  const sa = g.actions.find((x) => x.id === "f3.ambush");
+  sa.targets = true; sa.steps = [{ op: "track", id: g.factions.find((f) => f.id === "f4").resourceTrack, delta: -9 }]; sa.cost = { ...sa.cost, amount: 0 };
+  const any = { id: "f3.t.any", scope: "space", select: "one", tiebreak: [], steps: [{ n: 1, text: "Any.", filter: true }] };
+  b.priorityTables.push(any);
+  node.linked = { action: "f3.ambush", timing: "before", trigger: true, table: any.id };
+  const r = runBot(g, b, applyPatch(deriveState(g, "f3"), { resources: { f2: 9, f4: 9 }, dice: [1, 1, 1] }));
+  assert.deepEqual(r.chosen, [ids[0]]);
+  assert.deepEqual(r.targets, { [ids[0]]: "f2" }, "only the spaces the Operation runs in");
+});
+
+test("canDo reads card.position as the action's faction", () => {
+  const g = tan(), a = g.actions.find((x) => x.id === "ira.attack");
+  a.targets = { op: "eq", args: [{ var: "card.position" }, 2] }; // e03: Crown first, IRA second
+  const q = { op: "canDo", args: ["ira.attack", "*"] };
+  for (const self of ["ira", "crown"]) {
+    const b = g.bots.find((x) => x.factionId === self);
+    b.eventPolicy.playIf = q; b.eventPolicy.overrides = [];
+    const r = runBot(g, b, applyPatch(deriveState(g, self), { card: { id: "e03" }, dice: [3, 3, 3, 3, 3, 3] }));
+    assert.ok(r.side !== undefined, `${self}: IRA is second on e03, so ira.attack is possible`);
+  }
+});
+
+test("canDo reads card.lasting as the action's faction", () => {
+  const g = tan(), a = g.actions.find((x) => x.id === "ira.attack");
+  // IRA's bot plays the shaded side of e03; give only that side a momentum effect.
+  const ib = g.bots.find((x) => x.factionId === "ira"); ib.eventPolicy.side = "shaded"; ib.eventPolicy.overrides = [];
+  const card = g.deck.cards.find((c) => c.id === "e03");
+  for (const sd of card.sides) sd.lasting = sd.id === "shaded" ? "momentum" : "none";
+  a.targets = { op: "eq", args: [{ var: "card.lasting" }, "momentum"] };
+  const cb = g.bots.find((x) => x.factionId === "crown"); cb.eventPolicy.side = "unshaded"; cb.eventPolicy.overrides = [];
+  cb.eventPolicy.playIf = { op: "canDo", args: ["ira.attack", "*"] };
+  const r = runBot(g, cb, applyPatch(deriveState(g, "crown"), { card: { id: "e03" }, dice: [3, 3, 3, 3, 3, 3] }));
+  assert.ok(r.side !== undefined, "IRA plays the shaded side, which is momentum");
+});

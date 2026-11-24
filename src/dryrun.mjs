@@ -246,6 +246,8 @@ export function runBot(game, bot, startState) {
         const kept = result.chosen.filter(legalNow);
         refundCost(game, state, action, result.chosen, kept);
         result.chosen = kept;
+        // Report targets only for the spaces the Operation still runs in.
+        if (result.targets) { result.targets = Object.fromEntries(Object.entries(result.targets).filter(([id]) => kept.includes(id))); if (!Object.keys(result.targets).length) delete result.targets; }
         applyAction(game, state, action, kept, extra, { pay: false, targetOf });
       }
       cur = node.then;

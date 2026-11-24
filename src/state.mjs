@@ -26,8 +26,14 @@ export function deriveState(game, selfFactionId) {
   // canPlace and canDo (schema 1.8.0) read piece limits and actions.
   const maxPer = Object.fromEntries(game.factions.flatMap((f) => f.pieces.filter((p) => p.maxPerSpace).map((p) => [p.id, p.maxPerSpace])));
   const actions = Object.fromEntries(game.actions.map((a) => [a.id, a]));
+  // Faction order per card, so canDo can read card.position as another faction (schema 1.8.0).
+  const cardOrder = Object.fromEntries(game.deck.cards.map((c) => [c.id, c.order ?? []]));
+  // The side each faction's bot plays per card (its override's side, else its Event policy side),
+  // so canDo can read card.lasting as another faction.
+  const sideOf = Object.fromEntries(game.bots.map((b) => [b.factionId, { side: b.eventPolicy.side, overrides: Object.fromEntries(b.eventPolicy.overrides.filter((o) => o.side).map((o) => [o.cardId, o.side])) }]));
+  const lastingOf = Object.fromEntries(game.deck.cards.map((c) => [c.id, Object.fromEntries((c.sides ?? []).map((sd) => [sd.id, sd.lasting ?? "none"]))]));
   return {
-    self: selfFactionId, factions, owner, victory, maxPer, actions,
+    self: selfFactionId, factions, owner, victory, maxPer, actions, cardOrder, sideOf, lastingOf,
     eligible: { ...game.setup.eligibility },
     resources,
     tracks: { ...game.setup.tracks },
