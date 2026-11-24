@@ -1,0 +1,186 @@
+# Normalized bot logic: Non-Player FARC (Andean Abyss)
+# Source: source/andean-abyss-farc.md. Archetype: guerrilla insurgent.
+# Notation and variables: README.md. Shape follows the repo's bot model (docs/SCHEMA.md,
+# "Bot decision graph"): condition / action nodes, priority tables (steps + tiebreak), linked
+# Special Activities, onEmpty fallbacks, scoring choices. mode: sequence = numbered rows applied in order
+# (GMT reading); mode: first = first row with a match only. A tie-break printed under one row
+# belongs to that row only (row: {do, tiebreak}); a tiebreak at list level applies to every row. Both now exist in the
+# model (1.7.0: table mode, step tiebreak). "gap:" marks logic the current model (1.7.0) cannot yet express.
+# "reading:" marks an interpretation of the sheet's words that the sheet does not state.
+
+archetype: guerrilla
+roles:
+  self: FARC                       # guerrilla insurgent
+  state: Government                # counter-insurgent state
+  rival.paramilitary: AUC          # anti-insurgent militia, not the state
+  rival.criminal: Cartels          # profit-driven criminal faction
+  piece.self.guerrilla: FARC Guerrilla   # states: underground, active
+  piece.self.base: FARC Base
+  piece.state.cube: Troops | Police
+  piece.state.police: Police
+  space.city: City
+  space.province: Department
+  space.line: LoC
+  marker.sabotage: Sabotage        # on lines
+  marker.terror: Terror
+  attr.econ: Econ                  # economic value of a line
+  phase.scoring: Propaganda
+
+event:
+  play: shaded
+  when: card.hasEffect and (card.order[0] == self or (turn.position == 2 and not card.icon["2"]))
+  footnote: '"*" on "Play Event (shaded)": in a 2-player game or with a Non-player state, see rule 8.1 (text not on the sheet).'
+  gap:
+    - The footnote's rule 8.1 is not on the sheet; the change it makes to "play shaded" is unknown until the rulebook is read.
+    - card.order (faction order on the card) is not a variable; only card.id/hasEffect/raisesSelf/lowersEnemy/lasting exist.
+    - turn.position (1st or 2nd Eligible) is not a variable.
+    - card.icon["2"] [?] meaning of the green circled 2 not confirmed from the sheet (open question, README).
+
+decision:
+  - id: d1
+    if: avail(self.guerrilla) >= 9 or canPlace(self.base)
+    yes: rally
+    no: d2
+    gap: 'canPlace(piece) is not a variable (needs: a legal space with room under the base limit).'
+  - id: d2
+    if: anySpace(($space.opinion >= support or $space.type == line) and (count(self.*, $space) >= 3 or count(self.guerrilla[underground], $space) >= 1))
+    yes: d3
+    no: march
+    note: Reading of "Support or LoC has 3+ or Underground FARC forces" (confidence medium).
+  - id: d3
+    if: self.resources > resources(state)
+    yes: attack
+    no: terror
+
+operations:
+  rally:
+    mode: sequence
+    where: $space.type in [city, province] and $space.opinion < support
+    priorities:
+      1: flip self.guerrilla[active] -> underground where count(self.base) >= 1 and count(state.cube) >= 1 and count(self.guerrilla[underground]) == 0
+      2: place self.base where count(self.guerrilla) >= 3
+      3: place self.guerrilla where count(self.base) >= 1
+      4:
+        do: place 1 self.guerrilla in 1 other space
+        tiebreak: { a: "count(self.guerrilla) in [1, 2]" }
+    then: extort
+    onEmpty: pass
+    note: each priority has its own effect -> action node `parts` (1.5.0), one part per priority, with mode sequence (1.7.0).
+
+  march:
+    mode: sequence
+    moving: all self.guerrilla except 1 (underground if possible) where any base
+    from: $space.opinion == active_opposition or $space.pop == 0 or ($space.type == line and sabotaged)
+    priorities:
+      1: unless scoring.next.final, onto every line without sabotage until each has a self.guerrilla
+      2:
+        do: to up to 3 spaces with pop >= 1 and opinion >= neutral and control != self
+        tiebreak: { a: "guerrillas stay underground (movement does not activate them)" }
+      3: to 1 space with pop >= 1 adjacent to the space with the most self.guerrilla yet to move
+    then: extort
+    onEmpty: rally
+    gap:
+      - scoring.next.final (look-ahead at the next scoring card) is not a variable.
+      - '"yet to move" and "stay underground" need movement state the dry run does not track.'
+      - opinion has 5 levels here (active/passive support, neutral, passive/active opposition); the model has 3 (-1, 0, 1).
+
+  attack:
+    mode: sequence
+    priorities:
+      1: wherever count(self.guerrilla) >= 3
+      2:
+        do: in 1 space where canAmbush($space)
+        tiebreak: { a: "$space.type in [city, province]", b: "$space.type == line" }
+    target:                      # row 3 "For 1 & 2": applies to both rows; opponent table, scope: opponent
+      order: [cargo.shipment, rival.paramilitary, state, rival.criminal]
+      tiebreak: { a: most self.guerrilla in the space }
+    with: ambush
+    onEmpty: march
+    order: 'Row 2: row 3 target class first, then row 2 a/b, then "Within 1-4: a" (most self.guerrilla). The sheet does not state it; confirmed by the owner.'
+    reading: 'canAmbush($space) = the Ambush where-clause holds (count(self.guerrilla[underground]) >= 1) and the space has an enemy piece to remove. The sheet says only "where FARC would Ambush".'
+    gap:
+      - '"Shipments" are not a faction (cargo pieces); a target list that mixes pieces and factions does not fit the opponent table.'
+      - canAmbush($space) is not a variable (needs the linked Special Activity's where-clause as a test).
+
+
+  terror:
+    mode: sequence
+    where: count(self.guerrilla[underground]) >= 1
+    priorities:
+      1: on all lines without sabotage
+      2: at more kidnap targets, until kidnap spaces >= 3
+      3: in all other spaces with pop >= 1 and opinion != active_opposition
+    then: kidnap
+    onEmpty: attack
+
+special_activities:
+  extort:
+    mode: sequence
+    where: count(self.*) > count(all others) and count(self.guerrilla[underground]) >= 1
+    priorities:
+      1: wherever count(self.guerrilla[underground]) >= 2
+      2:
+        do: on 1 other line
+        tiebreak: { a: lowest econ }
+    skip: no Special Activity
+  ambush:
+    mode: first
+    max: 1
+    where: an attack space with count(self.guerrilla[underground]) >= 1
+    priorities:
+      1:
+        do: fewest total self.guerrilla
+        tiebreak: { a: targeted cargo.shipment, b: rival.paramilitary, c: state }
+    skip: no Special Activity
+  kidnap:
+    mode: sequence
+    max: 3
+    where: spaces selected for terror where count(self.guerrilla) > count(state.police)
+    reading: 'The sheet reads "In 3 spaces selected or Terror". Read as "selected for Terror" (the Terror spaces of this turn). Confirmed by the owner.'
+    priorities:
+      1: on lines (against state)
+      2: in cities (against state)
+      3: in a province with a rival.criminal base (against rival.criminal)
+    filter: skip a target with 0 resources and no cargo.shipment
+    skip: no Special Activity
+    gap: '"against <faction>" per priority row: each row picks its own target faction.'
+
+scoring:                        # bot.scoring (1.5.0)
+  phase: support (Agitate)
+  rule: agitate as much as able
+  order: [fewest terror markers, opinion >= support, highest pop]
+  note: remove terror markers only to shift opinion.
+
+event_instructions:              # eventPolicy.overrides; card names stay as ids, logic in role variables
+  airdropped_aks:
+    do: place pieces of the executing faction
+  general_offensive:
+    for_each: space where terror and attack are both legal
+    if: terror would shift opinion ($space.opinion changes)
+    then: terror
+    else: attack
+    who:
+      self: attack per self priorities
+      rival.paramilitary: attack per its priorities, if possible
+      rival.criminal: per its Bribe priorities
+  kill_zone:
+    if: self is Non-player
+    then: { actor: self, do: ambush, in: the space that removes the most state pieces, tiebreak: { a: most rival.paramilitary pieces removed } }
+    else:
+      actor: rival.paramilitary
+      do: ambush
+      if_actor_nonplayer: { in: the space that removes the most self pieces, tiebreak: { a: most state pieces removed, b: most rival.criminal pieces removed } }
+  mono_jojoy:
+    do: march per self priorities
+    ignore: whether self.guerrilla would activate
+    order: move self.guerrilla[active] first
+    then: flip self.guerrilla[active] -> underground, first where $space.opinion >= support, then on lines, if possible
+  raul_reyes:
+    do: place 1 self.base
+    priorities:
+      1: where count(self.guerrilla) >= 1 and $space.opinion >= support
+      2: where count(self.guerrilla) >= 1
+    mode: first
+  gap:
+    - Per-card logic fits eventPolicy.overrides only as plain text; the model has no structured per-card action.
+    - '"Flip Active Guerrillas" (Mono Jojoy): the sheet does not say to which state; read as to Underground.'
