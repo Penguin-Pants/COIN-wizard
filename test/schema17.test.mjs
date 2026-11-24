@@ -67,3 +67,48 @@ test("the bot aid and the Non-Player sheet say how a sequence table is read", ()
   const f = withTable();
   assert.match(toMarkdown(aidModel(f, f.bots[0])) ?? "", /The first step with a match wins\./);
 });
+
+// Per-step tie-breaks (1.7.0): a tie-break printed under one row applies to that row only.
+// A step's own tiebreak replaces the table's for that step's matches.
+const army = (order) => ({ letter: "a", text: `${order === "max" ? "Most" : "Fewest"} Army.`, key: cnt("crown.army"), order });
+const tbl = (g) => g.bots[0].priorityTables.at(-1);
+
+test("a step's own tie-breaks order that step's matches, in place of the table's", () => {
+  // Row 2 "most Army": Dublin (2) before Cork City (1). The table says "fewest Army", but row 2 overrides it.
+  const g = withTable("sequence");
+  tbl(g).tiebreak = [army("min")];
+  tbl(g).steps[1].tiebreak = [army("max")];
+  assert.deepEqual(chosen(g), ["belfast", "dublin", "cork-city"]);
+  delete tbl(g).steps[1].tiebreak;
+  assert.deepEqual(chosen(g), ["belfast", "cork-city", "dublin"], "without it, the table's fewest Army applies");
+});
+
+test("with one space chosen, the matching step's tie-breaks decide without a die", () => {
+  const g = withTable("first");
+  Object.assign(tbl(g), { select: "one" }); delete tbl(g).limit;
+  tbl(g).steps[0].filter = false;
+  assert.match(String(chosen(g)[0]), /die/, "3 Cities tie with no tie-break: a die is needed");
+  tbl(g).steps[1].tiebreak = [army("max")];
+  assert.deepEqual(chosen(g), ["dublin"]);
+});
+
+test("step tie-breaks are checked: schema, lettering and expressions", () => {
+  const g = withTable("sequence");
+  tbl(g).steps[1].tiebreak = [army("max")];
+  assert.deepEqual(validate(g).errors.filter((e) => e.path.includes("priorityTables")), []);
+  tbl(g).steps[1].tiebreak[0].letter = "b";
+  assert.ok(validate(g).errors.some((e) => e.code === "numbering"));
+  tbl(g).steps[1].tiebreak[0] = { ...army("max"), key: { var: "nope.x" } };
+  assert.ok(validate(g).errors.some((e) => e.code === "bad-var"));
+  tbl(g).steps[1].tiebreak[0] = { ...army("max"), order: "most" };
+  assert.ok(validate(g).errors.some((e) => e.code === "schema"));
+});
+
+test("the aid and the Non-Player sheet print a step's tie-breaks under that step", () => {
+  const g = withTable("sequence");
+  tbl(g).steps[1].tiebreak = [army("max")];
+  const md = (() => { try { return toMarkdown(aidModel(g, g.bots[0])); } catch { return ""; } })();
+  assert.match(md, /\| 2 \| Any City\. Ties in this step: a\. Most Army\. \(highest wins\) \|/);
+  const html = (() => { try { return Object.fromEntries(buildFiles(g, { toMermaid, toMarkdown, toPolicyYaml }))["kit/tan-war.crown.nonplayer.html"] ?? ""; } catch { return ""; } })();
+  assert.match(html, /<p class="pr">❷ Any City\.<\/p><div class="tb step">\s*<p>ⓐ Most Army\. \(highest wins\)<\/p><\/div>/);
+});

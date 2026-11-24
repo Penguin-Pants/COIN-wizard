@@ -2188,6 +2188,38 @@
                     },
                     "filter": {
                       "$ref": "#/$defs/expr"
+                    },
+                    "tiebreak": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "letter",
+                          "text",
+                          "key",
+                          "order"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "letter": {
+                            "type": "string",
+                            "pattern": "^[a-z]$"
+                          },
+                          "text": {
+                            "type": "string"
+                          },
+                          "key": {
+                            "$ref": "#/$defs/expr"
+                          },
+                          "order": {
+                            "enum": [
+                              "max",
+                              "min"
+                            ]
+                          }
+                        }
+                      },
+                      "description": "Tie-breaks for this step only (1.7.0), as printed under one row of a GMT sheet. They replace the table tie-breaks for this step's matches."
                     }
                   }
                 }

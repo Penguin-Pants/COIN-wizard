@@ -38,24 +38,26 @@ function rollDie(state) {
 function pick(state, table, items, env, nameOf, limitOf) {
   if (!items.length) return [];
   const steps = [...table.steps].sort((a, b) => a.n - b.n);
-  let pool = [];
-  for (const st of steps) { pool = items.filter((it) => !!evalExpr(st.filter, env(it))); if (pool.length) break; }
+  let pool = [], hit = null;
+  for (const st of steps) { pool = items.filter((it) => !!evalExpr(st.filter, env(it))); if (pool.length) { hit = st; break; } }
   if (!pool.length) return [];
   const keyOf = (tb, it) => evalExpr(tb.key, env(it));
   const byN = (x, y) => nameOf(x).localeCompare(nameOf(y));
-  const cmp = (x, y) => { for (const tb of table.tiebreak) { const d = keyOf(tb, x) - keyOf(tb, y); if (d !== 0) return tb.order === "max" ? -d : d; } return byN(x, y); };
+  // A step's own tie-breaks (1.7.0) replace the table's for that step's matches.
+  const tbsOf = (st) => st?.tiebreak ?? table.tiebreak;
+  const cmpFor = (st) => (x, y) => { for (const tb of tbsOf(st)) { const d = keyOf(tb, x) - keyOf(tb, y); if (d !== 0) return tb.order === "max" ? -d : d; } return byN(x, y); };
   // Mode "sequence" (schema 1.7.0, the GMT reading): every row in order, each row's matches in
   // tie-break order, until the limit. Mode "first" (default): only the first row with a match.
   if (table.select === "all" && table.mode === "sequence") {
     const out = [];
-    for (const st of steps) out.push(...items.filter((it) => !out.includes(it) && !!evalExpr(st.filter, env(it))).sort(cmp));
+    for (const st of steps) out.push(...items.filter((it) => !out.includes(it) && !!evalExpr(st.filter, env(it))).sort(cmpFor(st)));
     return out.slice(0, limitOf(out.length));
   }
   if (table.select === "all") {
-    const sorted = [...pool].sort(cmp);
+    const sorted = [...pool].sort(cmpFor(hit));
     return sorted.slice(0, limitOf(sorted.length));
   }
-  for (const tb of table.tiebreak) {
+  for (const tb of tbsOf(hit)) {
     if (pool.length === 1) break;
     const keys = pool.map((it) => keyOf(tb, it));
     const best = tb.order === "max" ? Math.max(...keys) : Math.min(...keys);

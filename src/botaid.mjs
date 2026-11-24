@@ -106,7 +106,7 @@ export function aidModel(game, bot) {
     tables: bot.priorityTables.map((t) => ({
       label: labels[t.id], select: t.scope === "opponent" ? "one enemy faction" : t.select === "all" ? `all matching spaces, up to ${t.limit}` : "one space",
       what: t.scope === "opponent" ? "Choose an enemy faction that is" : "Choose a space that is",
-      rows: t.steps.map((s) => [String(s.n), s.text]),
+      rows: t.steps.map((s) => [String(s.n), `${s.text}${s.tiebreak?.length ? ` Ties in this step: ${s.tiebreak.map((tb) => `${tb.letter}. ${tb.text} (${tb.order === "max" ? "highest" : "lowest"} wins)`).join("; ")}` : ""}`]),
       how: t.mode === "sequence" && t.select === "all" && t.scope !== "opponent" ? "Work down the steps in order. Take every match of each step, in tie-break order, until the limit." : "The first step with a match wins.",
       ties: t.tiebreak.map((tb) => [tb.letter, `${tb.text} (${tb.order === "max" ? "highest" : "lowest"} wins)`])
     })),

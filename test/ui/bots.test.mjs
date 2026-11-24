@@ -163,3 +163,21 @@ test("a designer sets a table to work in sequence, and a new table starts that w
   assert.equal(t.at(-1).mode, "sequence", "a new table starts in sequence mode");
   assert.equal(await page.locator("#stepissues li.error").count(), 0);
 }));
+
+// Schema 1.7.0: a tie-break for one step only, as printed under one row of a GMT sheet.
+test("a designer adds a tie-break to one step and removes it again", () => withApp(async ({ page, db }) => {
+  await botsTab(page);
+  await page.locator("details.act > summary", { hasText: "cw.t.crack" }).click(); await frames(page);
+  const add = page.locator('[data-a="bot-steptb-add"][data-p="bots/0/priorityTables/0/steps/0"]');
+  assert.equal(await add.count(), 1, "each step offers its own tie-break");
+  await add.click(); await frames(page);
+  assert.equal(await page.locator('select[data-b="bots/0/priorityTables/0/steps/0/tiebreak/0/order"]').count(), 1);
+  await page.waitForTimeout(1800);
+  let s = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].priorityTables[0].steps[0];
+  assert.equal(s.tiebreak.length, 1); assert.equal(s.tiebreak[0].letter, "a");
+  await page.click('[data-a="list-del"][data-list="tbreaks"][data-p="bots/0/priorityTables/0/steps/0/tiebreak"]'); await frames(page);
+  await page.waitForTimeout(1800);
+  s = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].priorityTables[0].steps[0];
+  assert.equal("tiebreak" in s, false, "removing the last one removes the field");
+  assert.equal(await page.locator("#stepissues li.error").count(), 0);
+}));
