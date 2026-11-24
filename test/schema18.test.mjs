@@ -225,6 +225,7 @@ test("in parts, a step's spaces are the spaces legal against its own target", ()
   let r = runBot(o.g, o.b, applyPatch(deriveState(o.g, "f3"), { resources: { f2: 9 }, dice: [1, 1, 1] }));
   assert.ok(r.path.includes("mf.strike"), `Strike runs: ${r.path.join(">")}`);
   assert.deepEqual(r.chosen, [o.ids[1]]);
+  assert.deepEqual(r.targets, { [o.ids[1]]: "f4" }, "parts report their step targets too");
   // Reversed: f2 always legal, f4 never. Row 2 must not act against f4.
   o = optionAction();
   o.a.steps[0].options[0].legal = true; o.a.steps[0].options[1].legal = false;

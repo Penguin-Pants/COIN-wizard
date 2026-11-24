@@ -160,7 +160,7 @@ function runParts(game, state, node, action, tables, actions, extra, result) {
     if (!node.parts.some(anyMatch)) return false;
     result.linked = runLinked(game, state, links, actions, tables, ctx, extra);
   }
-  const chosen = [];
+  const chosen = [], targets = {};
   for (const pt of node.parts) {
     const t = tables[pt.table], p = pool(pt);
     // The table ranks the pool; then new spaces stop at what is left to pay.
@@ -174,11 +174,13 @@ function runParts(game, state, node, action, tables, actions, extra, result) {
       picked.push(sp.id);
     }
     applyAction(game, state, { ...action, steps: pt.steps }, picked, extra, { pay: false, targetOf: ranked.targetOf });
-    for (const id of picked) if (!chosen.includes(id)) chosen.push(id);
+    for (const id of picked) { if (!chosen.includes(id)) chosen.push(id); const t = ranked.targetOf?.get(id); if (t) targets[id] = t; }
   }
   if (!before && !chosen.length) return false;
   result.path.push(node.id);
   result.chosen = chosen;
+  // Steps with their own target (schema 1.8.0), as for an action node without parts.
+  if (Object.keys(targets).length) result.targets = targets;
   if (extra.$target) result.target = extra.$target;
   if (links.length && !before) result.linked = runLinked(game, state, links, actions, tables, ctx, extra);
   return true;
