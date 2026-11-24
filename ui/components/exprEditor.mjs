@@ -10,7 +10,7 @@ import { render } from "../shell.mjs";
 import { btn } from "./fields.mjs";
 
 const CMP_LABEL = { eq: "is", ne: "is not", gt: "more than", gte: "at least", lt: "less than", lte: "at most" };
-const COND_KINDS = [["cmp", "Compare"], ["all", "All of"], ["any", "Any of"], ["anySpace", "Some space has"], ["truthy", "Is true"], ["always", "Always"], ["never", "Never"]];
+const COND_KINDS = [["cmp", "Compare"], ["all", "All of"], ["any", "Any of"], ["anySpace", "Some space has"], ["canPlace", "Can place"], ["canDo", "Can do"], ["truthy", "Is true"], ["always", "Always"], ["never", "Never"]];
 const VALUE_KINDS = [["lit", "Number or text"], ["var", "Variable"], ["count", "Pieces in a space"], ["fcount", "All pieces of a faction"], ["adj", "Pieces in adjacent spaces"], ["sum", "Sum"], ["diff", "Difference"], ["sumWhere", "Total over spaces where"], ["countWhere", "Number of spaces where"], ["attr", "Space attribute"]];
 
 const opts = (list, cur) => list.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(cur) ? "selected" : ""}>${esc(l)}</option>`).join("");
@@ -24,7 +24,7 @@ const sp = (ctx) => `data-xs="${ctx.space ? 1 : 0}" data-xf="${ctx.faction ? 1 :
 // ---------- variable picker: only names the validator accepts
 export function varOptions(ctx) {
   const g = S.game;
-  const names = ["eligible", "self.resources", ...g.tracks.map((t) => `track.${t.id}`), "card.id", "card.hasEffect", "card.raisesSelf", "card.lowersEnemy", "card.lasting",
+  const names = ["eligible", "self.resources", ...g.tracks.map((t) => `track.${t.id}`), "card.id", "card.hasEffect", "card.raisesSelf", "card.lowersEnemy", "card.lasting", "card.position", "turn.position",
     // Any faction's values, and the highest or lowest among the enemies, so 3 and 4 faction bots can compare.
     ...g.factions.flatMap((f) => ["resources", "eligible", "score", "margin"].map((k) => `${k}.${f.id}`)),
     ...["Margin", "Score", "Resources"].flatMap((k) => [`rivals.max${k}`, `rivals.min${k}`])];
@@ -56,6 +56,8 @@ function newCond(k, ctx) {
     case "all": case "any": return { k, items: [newCond("cmp", ctx)] };
     case "anySpace": return { k, cond: newCond("cmp", { ...ctx, space: true }) };
     case "truthy": return { k, v: { k: "var", name: "eligible" } };
+    case "canPlace": return { k, piece: pieces().find((p) => p.isBase)?.id ?? pieces()[0]?.id ?? "", at: ctx.space ? "$space" : "*" };
+    case "canDo": return { k, action: S.game.actions[0]?.id ?? "", at: ctx.space ? "$space" : "*" };
     case "always": return { k: "bool", value: true };
     case "never": return { k: "bool", value: false };
     default: throw new Error(`Unknown condition kind ${k}`);
@@ -115,6 +117,11 @@ function condHtml(m, mp, c, ctx) {
     case "all": case "any": body = `<div class="xg">${m.items.map((x, i) => `<div class="xrow">${condHtml(x, f(`items.${i}`), c, ctx)}${m.items.length > 1 ? btn("x-del", "Remove", { cls: "link", data: attrs(c, f(`items.${i}`)) }) : ""}</div>`).join("")}${btn("x-add", "Add condition", { cls: "link", data: attrs(c, f("items"), `data-xadd="cond" ${sp(ctx)}`) })}</div>`; break;
     case "anySpace": body = condHtml(m.cond, f("cond"), c, { ...ctx, space: true }); break;
     case "truthy": body = valueHtml(m.v, f("v"), c, ctx); break;
+    case "canPlace": case "canDo": {
+      const at = keepAt([...(ctx.space ? [["$space", "this space"]] : []), ["*", "some space"], ...S.game.board.spaces.map((s) => [s.id, s.name])], m.at);
+      const what = m.k === "canPlace" ? `<span>a</span><select aria-label="Piece" ${attrs(c, f("piece"))}>${opts(keepAt(pieces().map((p) => [p.id, p.name]), m.piece), m.piece)}</select>` : `<select aria-label="Action" ${attrs(c, f("action"))}>${opts(keepAt(S.game.actions.map((a) => [a.id, a.name]), m.action), m.action)}</select>`;
+      body = `${what}<span>in</span><select aria-label="Where" ${attrs(c, f("at"))}>${opts(at, m.at)}</select>`; break;
+    }
     case "bool": body = ""; break;
     default: body = rawBox(c, mp, m.expr, "cond");
   }

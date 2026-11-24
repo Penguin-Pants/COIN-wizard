@@ -1,5 +1,6 @@
 // Expression evaluator for the coin-game expression language.
 // ctx = { state, links, $space }
+import { legalityOf } from "./effects.mjs";
 
 const num = (x) => (typeof x === "boolean" ? (x ? 1 : 0) : x);
 
@@ -38,6 +39,7 @@ export function resolveVar(name, ctx) {
     return factionValue(fid, m[2], ctx);
   }
   if (name.startsWith("track.")) return state.tracks[name.slice(6)];
+  if (name === "turn.position") return state.turn?.position ?? 1;
   if (name.startsWith("card.")) return state.card[name.slice(5)];
   if (name.startsWith("var.")) return state.vars?.[name.slice(4)];
   if (name.startsWith("$space.")) {
@@ -102,6 +104,22 @@ export function evalExpr(e, ctx) {
       const fid = ev(a[0]), sid = ev(a[1]), st = ev(a[2]);
       return Object.entries(ctx.state.owner ?? {}).filter(([, f]) => f === fid).reduce((s, [pid]) => s + countPieces(ctx.state, pid, sid, st), 0);
     }
+    // A piece is Available and has room under its limit per space, in the space or in any space ("*") (schema 1.8.0).
+    case "canPlace": {
+      const pid = ev(a[0]), sid = ev(a[1]), st = ctx.state;
+      if ((st.pools?.[pid]?.available ?? 0) < 1) return false;
+      const room = (sp) => st.maxPer?.[pid] === undefined || countPieces(st, pid, sp.id, "*") < st.maxPer[pid];
+      return sid === "*" ? Object.values(st.spaces).some(room) : !!st.spaces[sid] && room(st.spaces[sid]);
+    }
+    // An action is legal in the space, or in any space ("*"), and its faction can pay for one space (schema 1.8.0).
+    case "canDo": {
+      const act = ctx.state.actions?.[ev(a[0])], sid = ev(a[1]), st = ctx.state;
+      if (!act) throw new Error(`Unknown action ${ev(a[0])}`);
+      if (act.cost.amount > 0 && !(st.resources[act.faction] >= act.cost.amount)) return false;
+      const legal = legalityOf(act, ctx.$target ? { $target: ctx.$target } : {});
+      const ok = (sp) => !!evalExpr(legal, { ...ctx, $space: sp });
+      return sid === "*" ? Object.values(st.spaces).some(ok) : !!st.spaces[sid] && ok(st.spaces[sid]);
+    }
     default: throw new Error(`Unknown op: ${e.op}`);
   }
 }
@@ -113,9 +131,11 @@ export function scanExpr(e, out = { vars: [], pieces: [], ops: [] }) {
   out.ops.push(e.op);
   if (["count", "adjCount"].includes(e.op) && typeof e.args[0] === "string") out.pieces.push(e.args[0]);
   if (e.op === "factionCount" && typeof e.args[0] === "string") (out.factions ??= []).push(e.args[0]);
+  if (e.op === "canPlace" && typeof e.args[0] === "string") out.pieces.push(e.args[0]);
+  if (e.op === "canDo" && typeof e.args[0] === "string") (out.actions ??= []).push(e.args[0]);
   for (const x of e.args) scanExpr(x, out);
   return out;
 }
 
 // Faction ids in resources.<id> and similar names are checked against the game by the validator.
-export const VAR_OK = /^(eligible|self\.resources|(resources|eligible|score|margin)\.[a-z0-9._-]+|rivals\.(max|min)(Resources|Score|Margin)|\$(faction|target)\.(id|name|type|resources|eligible|score|margin)|track\.[a-z0-9._-]+|card\.(id|hasEffect|raisesSelf|lowersEnemy|lasting)|var\.[a-z0-9_]+|\$space\.(id|name|type|pop|opinion))$/;
+export const VAR_OK = /^(eligible|self\.resources|(resources|eligible|score|margin)\.[a-z0-9._-]+|rivals\.(max|min)(Resources|Score|Margin)|\$(faction|target)\.(id|name|type|resources|eligible|score|margin)|track\.[a-z0-9._-]+|card\.(id|hasEffect|raisesSelf|lowersEnemy|lasting|position)|turn\.position|var\.[a-z0-9_]+|\$space\.(id|name|type|pop|opinion))$/;

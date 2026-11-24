@@ -12,6 +12,7 @@ const VARS = {
   "rivals.maxScore": "the highest enemy victory score", "rivals.minScore": "the lowest enemy victory score",
   "rivals.maxMargin": "the highest enemy victory margin", "rivals.minMargin": "the lowest enemy victory margin",
   "card.id": "the card", "card.hasEffect": "the card has an effect for this faction", "card.raisesSelf": "the card helps this faction", "card.lowersEnemy": "the card hurts the enemy", "card.lasting": "the card's lasting type",
+  "card.position": "this faction's place in the card's faction order (1 is first, 0 is not listed)", "turn.position": "this faction's place this turn (1st or 2nd Eligible)",
   "$space.id": "this space", "$space.name": "space name", "$space.type": "space type", "$space.pop": "Pop", "$space.opinion": "opinion"
 };
 const CMP = { eq: "is", ne: "is not", gt: "is more than", gte: "is at least", lt: "is less than", lte: "is at most" };
@@ -56,6 +57,8 @@ export function condText(m, g) {
     case "any": t = m.items.map((x) => condText(x, g)).join(" or "); break;
     case "cmp": t = `${valueText(m.a, g)} ${CMP[m.cmp]} ${valueText(m.b, g)}`; break;
     case "anySpace": t = `some space has ${condText(m.cond, g)}`; break;
+    case "canPlace": t = `a ${pieceName(g, m.piece)} can be placed ${m.at === "*" ? "in some space" : where(g, m.at)}`; break;
+    case "canDo": t = `${g.actions.find((x) => x.id === m.action)?.name ?? m.action} is possible ${m.at === "*" ? "in some space" : where(g, m.at)}`; break;
     default: t = "a formula holds";
   }
   return m.not ? `not (${t})` : t;

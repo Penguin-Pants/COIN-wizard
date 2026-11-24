@@ -19,7 +19,7 @@ const ID_OK = /^[a-z0-9][a-z0-9._-]*$/;
 const KINDS = [["condition", "Check (yes or no)"], ["event-check", "Event check"], ["action", "Action"], ["end", "End"]];
 const OUTCOMES = ["none", "event", "operation", "operationSpecial", "pass"];
 const CASE_HELP = { ineligible: "The bot is not Eligible.", "event-override": "A card with an Event exception is current.", "no-target": "The first action finds no legal space.", tie: "Two spaces tie after the tie-breaks.", "linked-sa": "The Operation runs with its linked Special Activity.", fallback: "An action finds no space and the bot falls back.", scoring: "Optional. A scoring round: the bot picks spaces in its scoring phases." };
-const isCond = (e) => typeof e === "boolean" || (isExpr(e) && ["and", "or", "not", "anySpace", "eq", "ne", "gt", "gte", "lt", "lte"].includes(e.op));
+const isCond = (e) => typeof e === "boolean" || (isExpr(e) && ["and", "or", "not", "anySpace", "canPlace", "canDo", "eq", "ne", "gt", "gte", "lt", "lte"].includes(e.op));
 
 const fname = (id) => S.game.factions.find((f) => f.id === id)?.name ?? id;
 const cur = () => { const n = S.game.bots.length; S.bot = Math.min(S.bot ?? 0, Math.max(0, n - 1)); return S.bot; };
@@ -75,8 +75,12 @@ function tableEditor(t, bi, ti) {
   const users = tableUsers(b, t.id);
   const ctx = t.scope === "opponent" ? { faction: true } : { space: true, target: users.length > 0 && users.every((n) => n.target) };
   // Tie-break rows for a list at path tp: the table's, or one step's own (1.7.0).
-  const tieRows = (list, tp) => (list ?? []).map((x, xi) => `<li class="step"><div class="shead"><b>${x.letter}.</b>${sel(`${tp}/${xi}/order`, x.order, [["max", "Highest"], ["min", "Lowest"]], { attrs: `aria-label="Tie-break ${x.letter} direction"` })}${inp(`${tp}/${xi}/text`, x.text, { attrs: `aria-label="Tie-break ${x.letter} description"` })}${removeButton("tbreaks", { i: xi, data: `data-p="${tp}"` })}</div>${valueEditor(`${tp}/${xi}/key`, x.key, ctx)}</li>`).join("");
-  const steps = t.steps.map((s, si) => `<li class="step"><div class="shead"><b>${s.n}.</b>${inp(`${p}/steps/${si}/text`, s.text, { attrs: `aria-label="Step ${s.n} description"` })}${t.steps.length > 1 ? removeButton("tsteps", { i: si, data: `data-p="${p}/steps"` }) : ""}</div>${condEditor(`${p}/steps/${si}/filter`, s.filter, ctx)}${t.scope === "opponent" ? "" : `<ol class="steps tbs">${tieRows(s.tiebreak, `${p}/steps/${si}/tiebreak`)}</ol>${btn("bot-steptb-add", "Add a tie-break to this step", { cls: "link", data: `data-p="${p}/steps/${si}"` })}`}</li>`).join("");
+  const tieRows = (list, tp, tctx = ctx) => (list ?? []).map((x, xi) => `<li class="step"><div class="shead"><b>${x.letter}.</b>${sel(`${tp}/${xi}/order`, x.order, [["max", "Highest"], ["min", "Lowest"]], { attrs: `aria-label="Tie-break ${x.letter} direction"` })}${inp(`${tp}/${xi}/text`, x.text, { attrs: `aria-label="Tie-break ${x.letter} description"` })}${removeButton("tbreaks", { i: xi, data: `data-p="${tp}"` })}</div>${valueEditor(`${tp}/${xi}/key`, x.key, tctx)}</li>`).join("");
+  // A step may name its own target faction (1.8.0): its filter and tie-breaks then read "the target".
+  const enemies = S.game.factions.filter((f) => f.id !== b.factionId);
+  const targetSel = (s, si) => (t.scope === "opponent" ? "" : `<label class="inline"><small>Target</small><select data-steptarget="${p}/steps/${si}" data-path="/${p}/steps/${si}/target" aria-label="Step ${s.n} target faction"><option value="">${ctx.target ? "the node's target" : "none"}</option>${enemies.map((f) => `<option value="${esc(f.id)}" ${s.target === f.id ? "selected" : ""}>${esc(f.name)}</option>`).join("")}</select></label>`);
+  const sctx = (s) => (s.target ? { ...ctx, target: true } : ctx);
+  const steps = t.steps.map((s, si) => `<li class="step"><div class="shead"><b>${s.n}.</b>${inp(`${p}/steps/${si}/text`, s.text, { attrs: `aria-label="Step ${s.n} description"` })}${targetSel(s, si)}${t.steps.length > 1 ? removeButton("tsteps", { i: si, data: `data-p="${p}/steps"` }) : ""}</div>${condEditor(`${p}/steps/${si}/filter`, s.filter, sctx(s))}${t.scope === "opponent" ? "" : `<ol class="steps tbs">${tieRows(s.tiebreak, `${p}/steps/${si}/tiebreak`, sctx(s))}</ol>${btn("bot-steptb-add", "Add a tie-break to this step", { cls: "link", data: `data-p="${p}/steps/${si}"` })}`}</li>`).join("");
   const ties = tieRows(t.tiebreak, `${p}/tiebreak`);
   return `<details class="act" data-k="tbl-${esc(t.id)}" ${S.dopen[`tbl-${t.id}`] ? "open" : ""}><summary><b>${esc(t.id)}</b> <small>${t.scope === "opponent" ? "picks one enemy faction" : `${t.select === "all" ? `all, up to ${t.limit ?? "?"}` : "one"} space`}</small></summary>
     <div class="grid4">${fld("Chooses", sel(`${p}/scope`, t.scope, [["space", "spaces"], ["opponent", "an enemy faction"]], { r: true }))}${t.scope === "opponent" ? "" : `${fld("How many", sel(`${p}/select`, t.select, [["one", "one"], ["all", "all that match"]], { r: true }))}${t.select === "all" ? fld("Up to", inp(`${p}/limit`, t.limit ?? 1, { t: "n", type: "number", attrs: 'min="1"' })) : ""}`}</div>
@@ -260,6 +264,8 @@ export function onBotChange(el) {
     if (d.dk.startsWith("card.id") && pt.card && pt.card.hasEffect === undefined) pt.card.hasEffect = true;
     done(); return true;
   }
+  // A step's own target (schema 1.8.0): an enemy faction, or none.
+  if (d.steptarget) { const st = getP(S.game, d.steptarget); if (el.value) st.target = el.value; else delete st.target; done(); return true; }
   if (d.addnode) { if (!el.value) return true; const b = S.game.bots[Number(d.addnode)]; S.botNode = addNode(b, el.value).id; done(); return true; }
   if (d.nkind) {
     const n = getP(S.game, d.nkind), keep = { id: n.id, kind: el.value, text: n.text };
