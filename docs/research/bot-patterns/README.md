@@ -52,5 +52,7 @@ Goal: derive generic, faction-agnostic bot logic from the Non-Player flowcharts 
 |---|---|---|
 | AA FARC | Event box, green circled "2" | What does the symbol mean in "2nd Eligible and no (2)"? |
 | AA FARC | Event footnote "*" | What does rule 8.1 change for 2-player games or a Non-player Government? |
-| AA FARC | Kidnap "selected or Terror" | Is it "selected for Terror" (the reading used)? |
-| AA FARC | Attack rows 2 and 3 | Which comes first: the row 2 space tie-break or the row 3 target order? |
+
+Answered by the owner:
+- AA FARC Kidnap: "selected or Terror" means "selected for Terror".
+- AA FARC Attack row 2: row 3 target class first, then row 2 a/b, then most self.guerrilla.

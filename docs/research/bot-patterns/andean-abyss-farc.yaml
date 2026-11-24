@@ -96,11 +96,12 @@ operations:
       tiebreak: { a: most self.guerrilla in the space }
     with: ambush
     onEmpty: march
+    order: 'Row 2: row 3 target class first, then row 2 a/b, then "Within 1-4: a" (most self.guerrilla). The sheet does not state it; confirmed by the owner.'
     reading: 'canAmbush($space) = the Ambush where-clause holds (count(self.guerrilla[underground]) >= 1) and the space has an enemy piece to remove. The sheet says only "where FARC would Ambush".'
     gap:
       - '"Shipments" are not a faction (cargo pieces); a target list that mixes pieces and factions does not fit the opponent table.'
       - canAmbush($space) is not a variable (needs the linked Special Activity's where-clause as a test).
-      - 'Row 2 order is not stated: the sheet does not say if the row 2 tie-break (a City/Dept, b LoC) comes before or after the row 3 target order. Proposed reading: row 3 picks the target class first, then row 2 a/b, then "Within 1-4: a" (most self.guerrilla).'
+
 
   terror:
     mode: sequence
@@ -135,7 +136,7 @@ special_activities:
     mode: sequence
     max: 3
     where: spaces selected for terror where count(self.guerrilla) > count(state.police)
-    reading: 'The sheet reads "In 3 spaces selected or Terror". Read as "selected for Terror" (the Terror spaces of this turn), because Kidnap is linked to Terror with "then". Not confirmed: check rule 4.3 / 8.7 wording.'
+    reading: 'The sheet reads "In 3 spaces selected or Terror". Read as "selected for Terror" (the Terror spaces of this turn). Confirmed by the owner.'
     priorities:
       1: on lines (against state)
       2: in cities (against state)
