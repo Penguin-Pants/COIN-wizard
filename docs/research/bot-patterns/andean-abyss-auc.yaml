@@ -1,0 +1,135 @@
+# Normalized bot logic: Non-Player AUC (Andean Abyss)
+# Source: source/andean-abyss-auc.md. Archetype: paramilitary (anti-insurgent militia).
+# Same method as andean-abyss-farc.yaml: role variables, the repo's bot model (docs/SCHEMA.md,
+# "Bot decision graph"). "gap:" marks logic the current model (1.10.0) cannot express.
+# "reading:" marks an interpretation the sheet does not state. Gap ids (G1 ...) are in README.md.
+
+archetype: paramilitary
+roles:
+  self: AUC
+  state: Government
+  rival.insurgent: FARC
+  rival.criminal: Cartels
+  piece.self.guerrilla: AUC Guerrilla   # states: underground, active
+  piece.self.base: AUC Base
+  piece.state.cube: Troops | Police
+  piece.state.police: Police
+  piece.rival.insurgent.base: FARC Base
+  cargo.shipment: Shipment
+  space.city: City
+  space.province: Department
+  space.line: LoC
+  phase.scoring: Propaganda (Support Phase)
+
+event:
+  play: shaded
+  when: card.hasEffect and (card.position == 1 or (turn.position == 2 and not card.icon["2"]))
+  footnote: same "*" as FARC (rule 8.1, 2-player or Non-player state).
+  gap:
+    - card.icon["2"] and the 8.1 footnote, as on the FARC sheet (open questions, README).
+
+decision:
+  - id: d1
+    if: avail(self.guerrilla) >= 6 or canPlace(self.base, "*")
+    yes: rally
+    no: d2
+    gap: ['G4 avail() has no expression (pool count)']
+  - id: d2
+    if: count of spaces with rival.insurgent.base where count(self.*) >= 1  >=  half of spaces with rival.insurgent.base
+    yes: d3
+    no: march
+    gap: ['G8 no count of spaces that meet a condition (countSpaces); anySpace exists']
+  - id: d3
+    if: anySpace(count(rival.insurgent.base) >= 1 and count(self.guerrilla[underground]) >= 1)
+    yes: terror
+    no: attack
+
+operations:
+  rally:
+    mode: sequence
+    max: 3
+    where: $space.type in [city, province] and $space.opinion > opposition
+    priorities:
+      1: flip self.guerrilla[active] -> underground where count(self.base) >= 1 and count(state.cube) >= 1 and count(self.guerrilla[underground]) == 0
+      2: place self.base where count(self.guerrilla) >= 3
+      3:
+        do: place self.guerrilla at (1) rival.insurgent.base (2) self.base (3) elsewhere
+        tiebreak: { a: "if avail(self.base) >= 1: count(self.guerrilla) in [1, 2]" }
+    then: extort
+    onEmpty: pass
+    note: priority 3 sub-rows (1)-(3) are steps of one part's table (mode first within the part).
+
+  march:
+    mode: sequence
+    max: 2
+    keep_back: 1 self.guerrilla in each space with self.base or any rival.insurgent piece
+    priorities:
+      1:
+        do: to 1 province or city with rival.insurgent and no self.guerrilla, with all adjacent self.guerrilla
+        tiebreak: { a: "count(rival.insurgent.base) >= 1", b: "guerrillas can stay underground (move activate does not hold)" }
+      2:
+        do: to 1 space closer to rival.insurgent, with the largest group of unmoved(self.guerrilla)
+        tiebreak: { a: closer to rival.insurgent.base }
+    then: extort
+    onEmpty: rally
+    gap:
+      - G1 keep_back ("leave at least 1 in each space with ...") has no field; a move count formula covers one space only.
+      - G9 "closer to FARC" needs a distance to the nearest space that meets a condition.
+
+  attack:
+    mode: sequence
+    max: 3
+    where: count(self.guerrilla[underground]) >= 1 or count(self.guerrilla) >= 3
+    target:                       # opponent table
+      order: [cargo.shipment, rival.insurgent, state]
+      tiebreak: { a: most self.guerrilla in the space }
+    with: ambush
+    onEmpty: march
+
+  terror:
+    mode: sequence
+    max: 3
+    where: count(self.guerrilla[underground]) >= 1
+    priorities:
+      1: 1 space with rival.insurgent.base and count(state.police) < count(self.guerrilla)
+      2: 1 city or province with rival.insurgent; if state is Non-player, opinion < support
+      3: other cities or provinces; if state is Non-player, opinion < support
+    then: assassinate
+    onEmpty: attack
+    gap: ['G5 "if Non-player Govt" needs a variable for whether a faction has a human player']
+
+special_activities:
+  extort:
+    where: count(self.*) > count(all others) and count(self.guerrilla[underground]) >= 1
+    priorities: { 1: wherever able }
+    skip: no Special Activity
+  ambush:
+    max: 1
+    where: an attack space with count(self.guerrilla[underground]) >= 1
+    priorities:
+      1:
+        do: fewest total self.guerrilla
+        tiebreak: { a: targeted cargo.shipment, b: rival.insurgent, c: state }
+    skip: no Special Activity
+  assassinate:
+    max: 3
+    where: terror spaces of this turn where count(self.guerrilla) > count(state.police)
+    remove_order: [guerrillas that hold cargo.shipment, rival.insurgent, state, rival.criminal (bases first, 8.1.2)]
+    skip: no Special Activity
+    gap: ['G10 removal order across factions and piece types inside one space has no field']
+
+scoring:
+  phase: support (Elite Backing)
+  rule: free rally where no state or rival.insurgent control; place base if able, else guerrillas per the rally table
+  gap: ['G7 $space.control is not a variable']
+
+event_instructions:
+  carabineros: replace state.police in an opposition space if possible, lines last
+  criminal_air_force: executing faction moves with its "To" March priority, from where it has the most guerrillas, with active guerrillas as far as possible
+  demobilization: move the most police then troops possible to 1 random city
+  deserters_and_defectors: in a random city or province with 2+ enemy guerrillas, replace them with executing guerrillas; target the faction with the most guerrillas there first (die if tied)
+  former_military: if self is Non-player, use its march and attack priorities
+  limpieza: executing faction terrors in a random province or city with an enemy, rival.insurgent not at opposition; remove state, then rival.insurgent, self, rival.criminal; self sets support, others opposition
+  gap:
+    - G6 "executing faction": the instruction applies to whichever faction executes the card, not only to self. An override belongs to one bot.
+    - G11 "random space" as the first selection, before any priority.

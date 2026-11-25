@@ -1,0 +1,116 @@
+# Normalized bot logic: Non-Player Taliban (A Distant Plain)
+# Source: source/a-distant-plain-taliban.md. Archetype: guerrilla.
+# Same method as andean-abyss-farc.yaml. "gap:" marks logic the current model (1.10.0) cannot express.
+# Gap ids (G1 ...) are in README.md. "1(2)": the sheet prints 2 underlined; reading below.
+
+archetype: guerrilla
+roles:
+  self: Taliban
+  state: Government
+  ally.state: Coalition          # counter-insurgent foreign force
+  rival.criminal: Warlords
+  piece.self.guerrilla: Taliban Guerrilla
+  piece.self.base: Taliban Base
+  space.foreign: Pakistan        # attr: country
+  space.capital: Kabul
+  space.line: LoC
+  attr.econ: Econ
+  phase.scoring: Propaganda
+
+reading: '"1(2)" (keep 1 Underground Guerrilla, 2 underlined): read as a variant value (likely a 2-handed or difficulty option). The sheet does not say. Open question.'
+
+event:
+  gate:
+    - if card is a capability (current or next) -> rule 8.1 Capability
+    - if card is a momentum event (current) -> rule 8.1 Momentum
+  play: shaded
+  when: card.hasEffect and the card (either side) could shift support down, opposition or self.resources, place or remove self.base, remove ally.state pieces, or shift Islamabad
+  ifNone: d1
+  gap:
+    - G2 "card could ..." needs card effect categories (tags) on each side, for both sides; raisesSelf / lowersEnemy are too coarse.
+    - G14 "next card" (look-ahead to the next card) is not a variable.
+
+decision:
+  - id: d1
+    if: terror would shift opinion 3+ steps (support and opposition combined)
+    yes: terror
+    no: d2
+    gap: ['G3 a predicted outcome of an action ("would shift", "would remove") is not a variable; canDo is legality only']
+  - id: d2
+    if: avail(self.guerrilla) >= 15 or rally would place self.base
+    yes: rally
+    no: d3
+    gap: ['G4 avail(), G3']
+  - id: d3
+    if: attack and/or ambush would remove 2+ ally.state pieces
+    yes: attack
+    no: march
+    gap: ['G3']
+
+operations:
+  terror:
+    keep_back: 1(2) self.guerrilla[underground] at each self.base
+    priorities: { 1: at support, 2: at neutral }
+    with: extort_main (when resources needed)
+    gap: ['G1 keep_back, G15 "when Res needed": a Special Activity used for its income during the Operation']
+  rally:
+    max: 6 (spaces it can pay for)
+    with: extort_lines
+    priorities:
+      1: at self.base with no self.guerrilla
+      2: { do: at 3+ self.guerrilla place self.base, tiebreak: { a: in space.foreign first } }
+      3: { do: where all self.guerrilla active at self.base and cubes (procedure *), tiebreak: { a: highest pop } }
+      4: in space.capital if no self.guerrilla[underground] there
+      5: { do: in up to 2 spaces at neutral with no ally.state and no self, tiebreak: { a: highest pop } }
+      6: { do: at all self.base (procedure *), tiebreak: { a: space.foreign last, b: highest pop } }
+      7: in space.foreign if free (procedure *)
+    procedure: place guerrillas until none available, then flip guerrillas underground
+    extra: buy Sharia for max shift (at 1 self.base regardless of control); extort everywhere possible when resources needed
+    gap: ['G12 procedure switches effect when the pool is empty, G15']
+  march:
+    budget: max 2/3 of resources (round down); all if resources < 9
+    keep_back: 1(2) self.guerrilla at each self.base and non-opposition space (underground first); lose no control
+    priorities:
+      1: get 1 underground guerrilla to each self.base without one; space.foreign only if none at its bases
+      2: get 3 guerrillas to 1 Afghan space with room for a base (underground if able), only if avail(self.base) >= 1
+      3: get 1 underground guerrilla into each of up to 3 spaces at (1) neutral, no self, no ally.state (2) support
+      4: { do: get up to 2 guerrillas per adjacent line to outnumber enemies, tiebreak: { a: highest econ, b: underground before active } }
+    within_1_to_3: { a: lowest cost route first, b: highest pop }
+    with: extort_lines
+    onEmpty: rally
+    gap: ['G16 budget cap, G1, G7 control, G9 route cost']
+  attack:
+    keep_back: 1(2) self.guerrilla[underground] at each self.base
+    priorities:
+      1: where attack (with ambush if needed) removes ally.state pieces
+      2: per the ambush priorities with ambush, unless 6+ self.guerrilla in the space
+      3: with groups of 4+ guerrillas
+    with: ambush
+    onEmpty: march
+
+special_activities:
+  extort_main:
+    keep_back: 1(2) self.guerrilla[underground] at each self.base in Afghanistan
+    priorities: { 1: everywhere without exposing the last self piece at non-opposition, 2: if still 0 resources, everywhere possible }
+    skip: no SA
+  extort_lines:
+    priorities: { 1: on lines with econ 3 or 4 }
+    ifNone: infiltrate
+  infiltrate:
+    where: 1 space with self.guerrilla[underground]
+    target: { order: [player faction, state, rival.criminal], tiebreak: { a: remove most, if state is player, b: remove a faction's last piece in the space, c: highest pop / econ } }
+    ifNone: extort_main
+    gap: ['G5']
+  ambush:
+    keep_back: 1(2) self.guerrilla[underground] at each self.base
+    remove_order: { ally.state: [base, troops], state: [base, police, troops], rival.criminal: [base, guerrillas] }
+    ifNone: extort_main
+    note: the if-none chains are linked lists (1.5.0), one per Operation node.
+    gap: ['G10']
+
+lasting:                         # eventPolicy overrides for lasting cards (1.5.0)
+  manpads_scare_shaded: roll 1d6, cancel on 1-4, until resources < 5
+  tribal_elders: shift to opposition
+  find_fix_unshaded: get/keep 2 underground guerrillas per self.base space in Afghanistan
+  accidental_guerrillas_shaded: place at (1) support (2) self.base (3) anywhere; a highest pop
+  aerostats_shaded: flip at (1) support (2) self.base (3) anywhere

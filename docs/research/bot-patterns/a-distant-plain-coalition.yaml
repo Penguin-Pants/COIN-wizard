@@ -1,0 +1,111 @@
+# Normalized bot logic: Non-Player Coalition (A Distant Plain)
+# Source: source/a-distant-plain-coalition.md. Archetype: state (foreign counter-insurgent).
+# Same method as andean-abyss-farc.yaml. "gap:" marks logic the current model (1.10.0) cannot express.
+# Gap ids (G1 ...) are in README.md.
+
+archetype: state
+roles:
+  self: Coalition
+  ally.state: Government
+  rival.insurgent: Taliban
+  rival.criminal: Warlords
+  piece.self.troops: Coalition Troops
+  piece.self.base: Coalition Base
+  piece.ally.cube: Govt Troops | Police
+  space.capital: Kabul
+  attr.ethnicity: Pashtun | non-Pashtun
+  track.patronage: Patronage
+  track.aid: Aid
+  phase.scoring: Propaganda
+
+event:
+  gate:
+    - if card is a capability (current or next) -> rule 8.1 Capability
+    - if card is a momentum event (current) -> rule 8.1 Momentum
+  play: unshaded
+  when: the side is effective and the card (either side) could shift support up or opposition down, place or remove rival.insurgent bases or self pieces, or shift Islamabad (only if rival.insurgent is a player)
+  ifNone: d1
+  gap: ['G2, G14, G5']
+
+decision:
+  - id: d1
+    if: anySpace(count(rival.insurgent.guerrilla[underground]) >= 1 and opinion >= support) or anySpace(underground player piece and count(self.base) >= 1)
+    yes: sweep
+    no: d2
+    gap: ['G5 player faction']
+  - id: d2
+    if: assault and/or air strike would remove player base(s) or any pieces at support
+    yes: assault
+    no: train
+    gap: ['G3']
+
+operations:
+  sweep:
+    keep_back: last self cube at self.base; cubes needed for sweep at support; last 3 cubes from non-Pashtun with support
+    rows_1_and_3: bring max ally cubes into spaces with < 2 ally cubes
+    priorities:
+      1: into/at highest pop and support and enemy, with the troops needed to activate most; use air lift if otherwise unable to activate all (1) per air lift priorities (2) with spare self pieces
+      2: everywhere in place
+      3: into/at 1 highest 1+ pop space with enemy, with max self cubes, to activate all enemies (1) at own base (2) where most bases
+    within: { a: activate (1) player (2) rival.insurgent (3) rival.criminal }
+    with: airstrike_useful?
+    onEmpty: assault
+    gap: ['G1, G5, G12 an SA inside the Operation (air lift), G3 "needed to activate most"']
+  assault:
+    extra: add ally.state assault in max 1 space
+    priorities:
+      1: to remove player or rival.insurgent (1) bases (2) pieces at support
+      2: if pieces removed above or in a loop, everywhere in place
+    within: { a: highest pop, b: air strike tie-breaks a to d }
+    helper: if helpful to remove bases or all pieces at support, use (1) ally assault (2) air strike (3) air lift
+    with: airstrike_useful?
+    onEmpty: train
+    gap: ['G12, G17 loop flag, G19 another faction''s action run by this bot (Govt Assault)']
+  train:
+    max: 3 (Kabul or where self pieces)
+    budget: max 2/3 of resources (round down); all if resources < 9
+    place: no ally pieces unless a row says so
+    priorities:
+      1: if state is a player and patronage > 10, reduce patronage in Kabul
+      2: if rival.insurgent is a player at 18+ VPs, max civic action at 1(2) most opposition spaces with COIN control and self
+      3: if avail(self.base) >= 1 or scoring.nextFinal, pause train to surge
+      4: { do: at 1(2) own bases with COIN control, civic action, tiebreak: { a: greatest shift, b: non-Pashtun, c: no rival.insurgent } }
+      5: if resources allow, during the selection above, at self.base and (< 2 ally cubes or no police), place max cubes (1) police (2) troops
+      6: { do: in 1(2) spaces with COIN control and self, civic action, tiebreak: { a: greatest shift } }
+    with: surge
+    onEmpty: sweep
+    gap: ['G16, G5, G7, G12 pause to surge, G18 greatest shift']
+
+special_activities:
+  airstrike_useful?:
+    if: air strike could remove bases, the last player piece at support or at any base
+    yes: air_strike
+    no: air_lift
+    gap: ['G3']
+  air_lift:
+    keep_back: last self troop at own base; last 2 ally where any self; last 3 cubes from non-Pashtun with support
+    priorities:
+      1: get up to 2 ally per space with self, rival.insurgent and no ally cubes, from (1) per sweep bullet (2) random
+      2: { do: relocate ally to enable self propaganda civic action, tiebreak: { a: no support, b: highest pop } }
+    ifNone: with train no SA; otherwise air strike     # loop badge "Loop: Pass"
+  air_strike:
+    max: 3 (Afghan provinces)
+    remove: [bases, guerrillas]
+    within: { a: at support, b: at own base, c: a faction's last guerrilla in the space, d: remove (1) player (2) rival.insurgent (3) rival.criminal }
+    ifNone: with train no SA; otherwise air lift       # printed as on air lift [sic]
+  surge:
+    where: among 3 spaces and available
+    priorities:
+      1: { do: if scoring.nextFinal, get max troops to available from Kabul or COIN control, not the last troop from own base, tiebreak: { a: last from support } }
+      2: get max available bases with 1+ troop to different highest 1+ pop spaces (Kabul or COIN control)
+      3: { do: move on-map bases (+1 troop per own base if none) to/from Kabul or COIN control to higher pop than origin, from lowest pop with no support, tiebreak: { a: most support } }
+      4: only if pieces moved above - (1) unless scoring.nextFinal, from/to available up to 1d6 troops so available troops ~ support count; (2) get/keep 1+ own troop per own base, tiebreak a no support b spread evenly; (3) if state is a player, add aid only if patronage < 6, else always
+    ifNone: air_lift
+    gap: ['G7, G13 spread evenly, G5, G20 "as close as possible to # of Support" targets a count']
+
+lasting:
+  tribal_elders: shift to support
+  prts_unshaded: civic action in 2 spaces
+  vso_unshaded: place police in 1 space with self troops (1) no ally cubes (2) highest pop
+  predators_unshaded: air strike also in Pakistan if removing a base
+  isr_unshaded: activate max

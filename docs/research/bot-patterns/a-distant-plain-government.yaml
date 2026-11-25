@@ -1,0 +1,120 @@
+# Normalized bot logic: Non-Player Government (A Distant Plain)
+# Source: source/a-distant-plain-government.md. Archetype: state.
+# Same method as andean-abyss-farc.yaml. "gap:" marks logic the current model (1.10.0) cannot express.
+# Gap ids (G1 ...) are in README.md.
+
+archetype: state
+roles:
+  self: Government
+  ally.state: Coalition
+  rival.insurgent: Taliban
+  rival.criminal: Warlords
+  piece.self.troops: Govt Troops
+  piece.self.police: Police
+  piece.self.base: Govt Base
+  space.capital: Kabul
+  space.line: LoC
+  attr.econ: Econ
+  attr.ethnicity: Pashtun | non-Pashtun
+  track.patronage: Patronage
+  track.aid: Aid
+  phase.scoring: Propaganda
+
+event:
+  gate:
+    - if card is a momentum event (current) -> rule 8.1 Momentum
+    - if card is a capability (current) -> rule 8.1 Capability
+  play: unshaded
+  when: the side will shift patronage, self resources, aid or COIN control up; place self pieces or give self free operations or SAs; or shift Islamabad (only if rival.insurgent is a player)
+  pass_if: self.resources < 3
+  ifNone: d1
+  gap: ['G2, G5, G7']
+
+decision:
+  - id: d1
+    if: assault would add 2+ COIN control or remove rival.insurgent base(s)
+    yes: assault
+    no: d2
+    gap: ['G3, G7']
+  - id: d2
+    if: anySpace(line and 2+ player pieces) or on the line with econ 3 or 4, rival.insurgent exceeds enemies
+    yes: patrol
+    no: d3
+    gap: ['G5']
+  - id: d3
+    if: avail(self.troops) >= 10 or train would place a base
+    yes: train
+    no: sweep
+    gap: ['G4, G3']
+
+operations:
+  assault:
+    max: 3
+    budget: 2/3 of resources (round down); all if resources < 9
+    priorities:
+      1: to establish COIN control
+      2: to remove (1) bases (2) most guerrillas
+    within: { a: last on lines with a player or rival.insurgent (only), b: assault (1) player (2) rival.insurgent (3) rival.criminal }
+    with: eradicate
+    onEmpty: patrol
+    gap: ['G16, G7, G5']
+  patrol:
+    moving: (1) police (2) troops, equally from where most of that type
+    keep_back: last police of a self base or non-Pashtun space; lose no control
+    priorities:
+      1: to control Kabul
+      2: get police then troops (1) to equal players on highest econ lines (2) if able 2 per econ 3 and 4 line (3) 1 per other line
+      3: assault on 1 line to remove most pieces of (1) player (2) rival.insurgent (3) rival.criminal
+    with: govern
+    onEmpty: train
+    gap: ['G1, G7, G13 "equally from where most", G20 "to equal Player"']
+  train:
+    where: COIN bases or Kabul
+    max: 3
+    budget: 2/3 of resources (round down); all if resources < 9
+    place: max cubes and up to 2 more troops than police (if available)
+    priorities:
+      1: in the highest 1+ pop province with 3+ self cubes, no COIN base but room, place a base
+      2: if no base placed, in 1 highest 2+ pop space with COIN control, no ally base and no terror - train (placing 0 if no base), then civic action (if no support), then govern for patronage
+      3: if no SA or base placed yet, losing no control nor the last troop - train max troops, then transport 5 troops to highest 2+ pop, then train there placing a base
+      4: { do: train placing cubes at Kabul and/or COIN bases, tiebreak: { a: least self cubes, b: highest pop } }
+      5: if no civic action or base placed, remove most opposition at COIN control (place 0 if no base)
+    with: aid_low?
+    gap: ['G12 "AND then" sequences of Operation and SA in one space, G16, G7, G21 rows that read what earlier rows did ("if no base placed")']
+  sweep:
+    max: 2
+    keep_back: last troop from line or self base; lose no control
+    priorities:
+      1: { do: get up to 4 troops (more if needed) to add COIN control to highest 1+ pop spaces with no COIN base, sweep evenly from random sources, tiebreak: { a: lowest cost (1 resource per used line with an enemy) } }
+      2: { do: sweep in place where activating most pieces, tiebreak: { a: player, b: rival.insurgent, c: rival.criminal } }
+    with: transport
+    onEmpty: train          # badge "Loop: Pass"
+    gap: ['G1, G7, G9 route cost, G11, G13, G17']
+
+special_activities:
+  aid_low?:
+    if: track.aid <= 2 or rival.criminal is a player
+    yes: eradicate
+    no: govern
+    gap: ['G5']
+  eradicate:
+    max: 2
+    where: self cubes, COIN control and rival.criminal base(s)
+    priorities: { 1: at opposition, 2: anywhere if aid == 0, 3: at non-Pashtun, 4: random }
+    rows_3_and_4: if rival.insurgent is a player, only if the self Tribal Elders card is in play
+    ifNone: after assault, transport; otherwise govern; if loop, transport
+    gap: ['G5, G11, G17, G22 "card in play" (a lasting card''s state) is not a variable']
+  govern:
+    max: 2
+    priorities:
+      1: for patronage in up to 2 highest pop spaces with support, COIN control and no ally base
+      2: place +1 pop markers in highest 1+ pop spaces with support and COIN control and base(s) of (1) self (2) ally.state
+    ifNone: eradicate; if loop, transport
+  transport:
+    from: 1 space to 1 space
+    keep_back: last troop from line or self base; lose no COIN control
+    rule: per sweep row 1 (paying 1 resource per entered space with any guerrilla), with self troops from where most in excess of control
+    skip: no SA
+
+lasting:
+  tribal_elders: shift to support until ally.state margin equals self margin, then to neutral only

@@ -1,6 +1,6 @@
 # Plan: COIN Wizard
 
-Date: 2026-11-25. `main`: 96f183b. Schema: `coin-game/1.10.0` (frozen).
+Date: 2026-11-25. `main`: c7521d9. Schema: `coin-game/1.10.0` (frozen).
 This file lists the work still open. Finished work and its evidence are in `docs/ACCEPTANCE.md`.
 
 ## Status
@@ -9,8 +9,8 @@ This file lists the work still open. Finished work and its evidence are in `docs
 |---|---|---|
 | Phases 0 to 12 (wizard, kit, print) | Done | `docs/ACCEPTANCE.md`, "Results" |
 | Bot model gaps, items 13 to 21 (schemas 1.5.0 to 1.10.0) | Done | `docs/ACCEPTANCE.md`, rows 13 to 21 |
-| GMT sheet research | 1 of 7 sheets done (FARC pilot) | `docs/research/bot-patterns/README.md`, "Status" |
-| Live artifact | Build 5fb69d0, schema 1.7.0. Versions 1.8.0 to 1.10.0 are not published | Artifact `8d21134e-1d1c-4dce-a1b5-57b010d5c92c` |
+| GMT sheet research | 7 of 7 sheets done; gaps compared; next version proposed | `docs/research/bot-patterns/README.md`, `docs/proposals/bot-model-gaps-2.md` |
+| Live artifact | Build c7521d9, schema 1.10.0 (published 2026-11-25) | Artifact `8d21134e-1d1c-4dce-a1b5-57b010d5c92c` |
 
 ## Open work
 
@@ -20,15 +20,15 @@ Owner: **Owner** (a person must act or decide) or **Claude** (code or docs, afte
 
 | # | Item | Owner | Start when |
 |---|---|---|---|
-| A1 | Publish 1.10.0: `npm run build`, then publish `dist/index.html` to the artifact | Claude | The owner says "publish" |
+| A1 | Publish the next schema version after it merges: `npm run build`, then publish `dist/index.html` to the artifact | Claude | The owner says "publish" |
 
 ### B. GMT sheet research
 
 | # | Item | Owner | Start when |
 |---|---|---|---|
-| B1 | Transcribe and normalize the 6 other sheets: AUC, Cartels (Andean Abyss); Taliban, Warlords, Coalition, Government (A Distant Plain). Same method as the FARC pilot | Claude | The owner says "go" |
-| B2 | Compare the 7 sheets. List the gaps that repeat. Propose the next schema version | Claude | After B1 |
-| B3 | Answer the rulebook questions: Rule 8.1 footnote (gap 1); the green circled "2"; Mono Jojoy "flip to Underground" (gap 12) | Owner | Any time. Needs the rulebook |
+| B1 | Decide parts A to I of `docs/proposals/bot-model-gaps-2.md` (next schema version, 1.11.0) | Owner | Now |
+| B2 | Answer the rulebook questions in `docs/research/bot-patterns/README.md`, "Open questions": Rule 8.1 footnote; the green circled "2"; Mono Jojoy "flip to Underground"; "1(2)"; 3 possible misprints on the A Distant Plain sheets | Owner | Any time. Needs the rulebooks |
+| B3 | Implement the approved parts of B1 as schema 1.11.0 | Claude | After B1 |
 
 ### C. Bot model gaps still open
 
@@ -39,7 +39,7 @@ Owner: **Owner** (a person must act or decide) or **Claude** (code or docs, afte
 | C3 | Cost by space type ("1 Resource per City/Dept, LoCs 0") | Owner decides, then Claude | `docs/SHEETS.md`, "Player faction sheets: the 4 photos not checked before" |
 | C4 | The card effect editor does not offer `$target` as a value (schema 1.10.0 allows it) | Claude | PR 33 |
 
-Do C1 to C3 after B2, so one schema version covers the gaps that repeat.
+C1 needs gap G3 (a predicted outcome) from the proposal. C2 and C3 are not in it. Decide them with B1.
 
 ### D. Human checklist
 
