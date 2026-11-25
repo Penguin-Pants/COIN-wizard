@@ -6,6 +6,9 @@ import { linkedOf } from "./dryrun.mjs";
 const esc = (s) => String(s).replace(/"/g, "'").replace(/[<>]/g, "");
 const mid = (id) => id.replace(/[^a-z0-9]/gi, "_");
 
+// "Base (Valley Militia)": a piece target names its owner (schema 1.9.0).
+const pieceLabel = (g, pid) => { const f = g.factions.find((x) => x.pieces.some((p) => p.id === pid)); return f ? `${f.pieces.find((p) => p.id === pid).name} (${f.name})` : pid; };
+
 export function tableLabels(bot) {
   return Object.fromEntries(bot.priorityTables.map((t, i) => [t.id, `${bot.code}-${i + 1}`]));
 }
@@ -106,7 +109,7 @@ export function aidModel(game, bot) {
     tables: bot.priorityTables.map((t) => ({
       label: labels[t.id], select: t.scope === "opponent" ? "one enemy faction" : t.select === "all" ? `all matching spaces, up to ${t.limit}` : "one space",
       what: t.scope === "opponent" ? "Choose an enemy faction that is" : "Choose a space that is",
-      rows: t.steps.map((s) => [String(s.n), `${s.text}${s.target ? ` Target: ${game.factions.find((f) => f.id === s.target)?.name ?? s.target}.` : ""}${s.tiebreak?.length ? ` Ties in this step: ${s.tiebreak.map((tb) => `${tb.letter}. ${tb.text} (${tb.order === "max" ? "highest" : "lowest"} wins)`).join("; ")}` : ""}`]),
+      rows: t.steps.map((s) => [String(s.n), `${s.text}${s.target ? ` Target: ${game.factions.find((f) => f.id === s.target)?.name ?? s.target}.` : ""}${s.piece ? ` Target: ${pieceLabel(game, s.piece)}.` : ""}${s.tiebreak?.length ? ` Ties in this step: ${s.tiebreak.map((tb) => `${tb.letter}. ${tb.text} (${tb.order === "max" ? "highest" : "lowest"} wins)`).join("; ")}` : ""}`]),
       how: t.mode === "sequence" && t.select === "all" && t.scope !== "opponent" ? "Work down the steps in order. Take every match of each step, in tie-break order, until the limit." : "The first step with a match wins.",
       ties: t.tiebreak.map((tb) => [tb.letter, `${tb.text} (${tb.order === "max" ? "highest" : "lowest"} wins)`])
     })),

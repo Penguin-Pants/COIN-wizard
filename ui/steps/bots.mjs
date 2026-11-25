@@ -79,7 +79,9 @@ function tableEditor(t, bi, ti) {
   const tieRows = (list, tp, tctx = ctx) => (list ?? []).map((x, xi) => `<li class="step"><div class="shead"><b>${x.letter}.</b>${sel(`${tp}/${xi}/order`, x.order, [["max", "Highest"], ["min", "Lowest"]], { attrs: `aria-label="Tie-break ${x.letter} direction"` })}${inp(`${tp}/${xi}/text`, x.text, { attrs: `aria-label="Tie-break ${x.letter} description"` })}${removeButton("tbreaks", { i: xi, data: `data-p="${tp}"` })}</div>${valueEditor(`${tp}/${xi}/key`, x.key, tctx)}</li>`).join("");
   // A step may name its own target faction (1.8.0): its filter and tie-breaks then read "the target".
   const enemies = S.game.factions.filter((f) => f.id !== b.factionId);
-  const targetSel = (s, si) => (t.scope === "opponent" ? "" : `<label class="inline"><small>Target</small><select data-steptarget="${p}/steps/${si}" data-path="/${p}/steps/${si}/target" aria-label="Step ${s.n} target faction"><option value="">${ctx.target ? "the node's target" : "none"}</option>${enemies.map((f) => `<option value="${esc(f.id)}" ${s.target === f.id ? "selected" : ""}>${esc(f.name)}</option>`).join("")}</select></label>`);
+  // An opponent step may name an enemy piece (1.9.0): the step's target is that piece and its owner.
+  const pieceSel = (s, si) => `<label class="inline"><small>Piece</small><select data-steppiece="${p}/steps/${si}" data-path="/${p}/steps/${si}/piece" aria-label="Step ${s.n} target piece"><option value="">any piece</option>${enemies.flatMap((f) => f.pieces.map((pc) => `<option value="${esc(pc.id)}" ${s.piece === pc.id ? "selected" : ""}>${esc(pc.name)} (${esc(f.name)})</option>`)).join("")}</select></label>`;
+  const targetSel = (s, si) => (t.scope === "opponent" ? pieceSel(s, si) : `<label class="inline"><small>Target</small><select data-steptarget="${p}/steps/${si}" data-path="/${p}/steps/${si}/target" aria-label="Step ${s.n} target faction"><option value="">${ctx.target ? "the node's target" : "none"}</option>${enemies.map((f) => `<option value="${esc(f.id)}" ${s.target === f.id ? "selected" : ""}>${esc(f.name)}</option>`).join("")}</select></label>`);
   const sctx = (s) => (s.target ? { ...ctx, target: true } : ctx);
   const steps = t.steps.map((s, si) => `<li class="step"><div class="shead"><b>${s.n}.</b>${inp(`${p}/steps/${si}/text`, s.text, { attrs: `aria-label="Step ${s.n} description"` })}${targetSel(s, si)}${t.steps.length > 1 ? removeButton("tsteps", { i: si, data: `data-p="${p}/steps"` }) : ""}</div>${condEditor(`${p}/steps/${si}/filter`, s.filter, sctx(s))}${t.scope === "opponent" ? "" : `<ol class="steps tbs">${tieRows(s.tiebreak, `${p}/steps/${si}/tiebreak`, sctx(s))}</ol>${btn("bot-steptb-add", "Add a tie-break to this step", { cls: "link", data: `data-p="${p}/steps/${si}"` })}`}</li>`).join("");
   // Table tie-breaks read "the target" when every step that uses them has its own target (as the validator checks).
@@ -271,6 +273,7 @@ export function onBotChange(el) {
     done(); return true;
   }
   // A step's own target (schema 1.8.0): an enemy faction, or none.
+  if (d.steppiece) { const st = getP(S.game, d.steppiece); if (el.value) st.piece = el.value; else delete st.piece; done(); return true; }
   if (d.steptarget) { const st = getP(S.game, d.steptarget); if (el.value) st.target = el.value; else delete st.target; done(); return true; }
   if (d.addnode) { if (!el.value) return true; const b = S.game.bots[Number(d.addnode)]; S.botNode = addNode(b, el.value).id; done(); return true; }
   if (d.nkind) {

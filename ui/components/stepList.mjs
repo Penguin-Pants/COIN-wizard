@@ -57,7 +57,7 @@ function field(st, p, k, kind, ctx) {
     }
     case "cond": return condEditor(`${p}/${k}`, v, k === "filter" ? { ...ctx, space: true } : ctx);
     case "steps": return `<ol class="steps">${stepList(v, `${p}/${k}`, ctx)}</ol>${addButton("steps", "Add effect", { cls: "link", data: `data-p="${esc(p)}/${k}"` })}`;
-    case "options": return `<div class="opts">${v.map((o, i) => `<div class="opt"><label class="mini"><span>Option ${i + 1}</span><input data-sf="${esc(p)}/options/${i}/label" data-sk="text" data-path="/${esc(p)}/options/${i}/label" value="${esc(o.label)}"></label>${v.length > 1 ? removeButton("options", { i, label: "Remove option", data: `data-p="${esc(p)}/options"` }) : ""}<ol class="steps">${stepList(o.steps, `${p}/options/${i}/steps`, ctx)}</ol>${addButton("steps", "Add effect", { cls: "link", data: `data-p="${esc(p)}/options/${i}/steps"` })}</div>`).join("")}${addButton("options", "Add option", { cls: "link", data: `data-p="${esc(p)}/options"` })}</div>`;
+    case "options": return `<div class="opts">${v.map((o, i) => `<div class="opt"><label class="mini"><span>Option ${i + 1}</span><input data-sf="${esc(p)}/options/${i}/label" data-sk="text" data-path="/${esc(p)}/options/${i}/label" value="${esc(o.label)}"></label>${o.faction ? optPiece(o, `${p}/options/${i}`) : ""}${v.length > 1 ? removeButton("options", { i, label: "Remove option", data: `data-p="${esc(p)}/options"` }) : ""}<ol class="steps">${stepList(o.steps, `${p}/options/${i}/steps`, ctx)}</ol>${addButton("steps", "Add effect", { cls: "link", data: `data-p="${esc(p)}/options/${i}/steps"` })}</div>`).join("")}${addButton("options", "Add option", { cls: "link", data: `data-p="${esc(p)}/options"` })}</div>`;
     default: return `<input ${ctl(p, k, "text")} value="${esc(v)}">`;
   }
 }
@@ -102,11 +102,14 @@ function optDefault(st, k) {
     default: return undefined;
   }
 }
+// An option against an enemy may be for one of its piece types (1.9.0); "any piece" removes the field.
+const optPiece = (o, op) => { const f = S.game.factions.find((x) => x.id === o.faction); return f ? `<label class="mini"><span>Piece</span><select data-optpiece="${esc(op)}" data-path="/${esc(op)}/piece" aria-label="Option piece"><option value="">any piece</option>${f.pieces.map((pc) => `<option value="${esc(pc.id)}" ${o.piece === pc.id ? "selected" : ""}>${esc(pc.name)}</option>`).join("")}</select></label>` : ""; };
 const parse = (kind, v) => (kind === "int" || kind === "spaces" ? (v === "" ? 0 : Number(v)) : kind === "scalar" ? parseLoose(v) : v);
 
 // Returns true when the change belonged to a step form.
 export function onStepChange(el) {
   const d = el.dataset ?? {};
+  if (d.optpiece) { const o = getP(S.game, d.optpiece); if (el.value) o.piece = el.value; else delete o.piece; touch(); render(); return true; }
   if (d.sf) {
     setP(S.game, d.sf, parse(d.sk, el.value));
     if (d.sk === "piece") { // states belong to a piece: keep only states the new piece has

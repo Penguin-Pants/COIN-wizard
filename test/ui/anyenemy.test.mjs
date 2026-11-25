@@ -31,3 +31,30 @@ test("a 3-faction game adds an enemy template against every enemy, with no Again
     assert.deepEqual(app.errors, []);
   } finally { await app.close(); }
 });
+
+// Schema 1.9.0 gap 9: an option against an enemy may be for one of its piece types.
+test("an enemy option can be set to one piece type of that enemy", async () => {
+  const app = await openApp(browser, { example: false });
+  try {
+    const { page, db } = app;
+    await page.selectOption("#fcount", "3"); await frames(page);
+    await page.click('[data-a="fcount-apply"]'); await frames(page);
+    await goStep(page, 1);
+    const fid = await page.$eval('[data-a="addtpl"]', (e) => e.dataset.f);
+    const sel = `#tpl-${fid}-operation`;
+    const opts = await page.$$eval(`${sel} option:not([disabled])`, (e) => e.map((o) => o.value));
+    await page.selectOption(sel, ["suppress", "sweep", "strike"].find((t) => opts.includes(t)));
+    await page.click(`[data-a="addtpl"][data-f="${fid}"][data-kind="operation"]`); await frames(page);
+    // The new action is a closed panel: open it.
+    await page.locator("details[data-k^=\"act-\"]", { has: page.locator("select[data-optpiece]") }).first().locator(":scope > summary").click(); await frames(page);
+    const ps = page.locator("select[data-optpiece]:visible").first();
+    assert.ok(await page.locator("select[data-optpiece]").count() >= 2, "each enemy option offers a piece");
+    const pid = await ps.locator("option").nth(1).getAttribute("value");
+    await ps.selectOption(pid); await frames(page);
+    await page.waitForTimeout(1800);
+    const g = JSON.parse((await db())["data/users/u1/draft"].json);
+    const opt = g.actions.flatMap((a) => a.steps).flatMap((s) => s.options ?? []).find((o) => o.piece);
+    assert.equal(opt?.piece, pid);
+    assert.deepEqual(app.errors, []);
+  } finally { await app.close(); }
+});

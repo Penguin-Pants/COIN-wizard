@@ -148,7 +148,7 @@ export function validate(game) {
       if (st.else) checkSteps(st.else, `${p}/else`, inner);
       if (st.options) {
         st.options.forEach((o, j) => checkSteps(o.steps, `${p}/options/${j}`, { ...scope, nested: true }));
-        // An option's faction is an enemy of the acting faction, and each enemy has at most one option.
+        // An option's faction is an enemy of the acting faction, and each enemy has at most one option (one more per piece, 1.9.0).
         const seenF = new Set();
         st.options.forEach((o, j) => {
           if (o.legal !== undefined) {
@@ -156,12 +156,19 @@ export function validate(game) {
             if (o.faction === undefined) err("option-legal", `${p}/options/${j}/legal`, "An option's legal spaces need the faction it acts against");
             else if (scope.nested || scope.owner === undefined) err("option-legal", `${p}/options/${j}/legal`, "Legal spaces work only on a choice at the top level of an action's effects");
           }
+          // An option's piece (1.9.0) needs a faction and belongs to it. Each faction and piece pair has one option.
+          if (o.piece !== undefined) {
+            const owner = pieces.find((x) => x.id === o.piece)?.owner;
+            if (o.faction === undefined) err("option-piece", `${p}/options/${j}`, "An option's piece needs the faction it acts against");
+            else if (!owner) err("missing-ref", `${p}/options/${j}/piece`, `Unknown piece ${o.piece}`);
+            else if (owner !== o.faction) err("option-piece", `${p}/options/${j}/piece`, `Piece ${o.piece} does not belong to ${o.faction}`);
+          }
           if (o.faction === undefined) return;
-          const op = `${p}/options/${j}/faction`;
+          const op = `${p}/options/${j}/faction`, key = `${o.faction}|${o.piece ?? ""}`;
           if (!factionIds.has(o.faction)) err("missing-ref", op, `Unknown faction ${o.faction}`);
           else if (o.faction === scope.owner) err("option-faction", op, `An option cannot act against its own faction ${o.faction}`);
-          else if (seenF.has(o.faction)) err("option-faction", op, `Faction ${o.faction} has more than one option in this choice`);
-          seenF.add(o.faction);
+          else if (seenF.has(key)) err("option-faction", op, `Faction ${o.faction}${o.piece ? ` with piece ${o.piece}` : ""} has more than one option in this choice`);
+          seenF.add(key);
         });
       }
     });
@@ -354,6 +361,14 @@ function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionByI
     const scope = t.scope === "opponent" ? { faction: true } : { target: users.length > 0 && users.every((n) => n.target !== undefined) };
     // A step's own target (1.8.0): an enemy faction, in a space table. Its filter and tie-breaks read $target.
     const stepScope = (s) => (s.target ? { ...scope, target: true } : scope);
+    // A step's piece (1.9.0): an enemy piece type, in an opponent table.
+    t.steps.forEach((s, j) => {
+      if (s.piece === undefined) return;
+      const owner = game.factions.find((f) => f.pieces.some((x) => x.id === s.piece))?.id;
+      if (t.scope !== "opponent") err("step-target", `${tp}/steps/${j}`, `Table ${t.id} picks spaces. A step piece works only in an opponent table`);
+      else if (!owner) err("missing-ref", `${tp}/steps/${j}`, `Unknown piece ${s.piece}`);
+      else if (owner === bot.factionId) err("step-target", `${tp}/steps/${j}`, `Step ${s.n} of table ${t.id} targets the bot's own piece ${s.piece}. A target is an enemy`);
+    });
     t.steps.forEach((s, j) => {
       if (s.target === undefined) return;
       if (t.scope === "opponent") err("step-target", `${tp}/steps/${j}`, `Table ${t.id} picks an enemy. A step target works only in a space table`);

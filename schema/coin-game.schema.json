@@ -1783,6 +1783,10 @@
                       "$ref": "#/$defs/id",
                       "description": "The enemy faction this option acts against (1.6.0). A bot whose action node picked an enemy ($target) takes the option for that faction."
                     },
+                    "piece": {
+                      "$ref": "#/$defs/id",
+                      "description": "1.9.0, needs faction: a piece type of that faction. A bot whose opponent table picked that piece takes this option and no other."
+                    },
                     "legal": {
                       "$ref": "#/$defs/expr",
                       "description": "Spaces where this option can be used (1.6.0, needs faction). When the action is used against that faction, a space must meet both the action's targets and this."
@@ -2229,6 +2233,10 @@
                         }
                       },
                       "description": "Tie-breaks for this step only (1.7.0), as printed under one row of a GMT sheet. They replace the table tie-breaks for this step's matches."
+                    },
+                    "piece": {
+                      "$ref": "#/$defs/id",
+                      "description": "Opponent tables only (1.9.0): a piece type of an enemy. The step considers only that piece's owner faction; the action then runs only a choice option made for that piece."
                     },
                     "target": {
                       "$ref": "#/$defs/id",
