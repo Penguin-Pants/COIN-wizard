@@ -203,3 +203,15 @@ test("a designer sets a step's target and uses Can place in its filter", () => w
   assert.equal("target" in s, false, "none removes the field");
   assert.equal(await page.locator("#stepissues li.error").count(), 0);
 }));
+
+// Schemas 1.8.0 and 1.9.0: a dry run may set the turn position and whether the next scoring card is final.
+test("a dry run sets 2nd Eligible and a final next scoring card", () => withApp(async ({ page, db }) => {
+  await botsTab(page);
+  await page.locator("details.act > summary", { hasText: "no-target" }).click(); await frames(page);
+  await page.locator('details.act[open] select[data-dk="turn.position"]').selectOption("2"); await frames(page);
+  await page.locator('details.act[open] input[data-dk="scoring.nextFinal"]').check(); await frames(page);
+  await page.waitForTimeout(1800);
+  const pt = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].dryRuns.find((d) => d.case === "no-target").patch;
+  assert.deepEqual(pt.turn, { position: 2 });
+  assert.deepEqual(pt.scoring, { nextFinal: true });
+}));

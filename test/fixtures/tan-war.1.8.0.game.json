@@ -1,0 +1,3982 @@
+{
+  "meta": {
+    "schemaVersion": "coin-game/1.8.0",
+    "gameId": "tan-war",
+    "title": "Tan War",
+    "revision": 1,
+    "status": "draft",
+    "factionCount": 2,
+    "supplies": [
+      "One six-sided die",
+      "Pencil and paper, or markers for tracks",
+      "About 80 small tokens or the printed counter sheet"
+    ],
+    "credits": [
+      {
+        "what": "Historical overview (paraphrased, no text copied)",
+        "source": "https://en.wikipedia.org/wiki/Irish_War_of_Independence",
+        "license": "CC BY-SA 4.0 (source page)"
+      }
+    ],
+    "progress": {}
+  },
+  "brief": {
+    "conflict": "Irish War of Independence, 1919 to 1921: a guerrilla war between the Irish Republican Army and British forces.",
+    "wikipedia": {
+      "url": "https://en.wikipedia.org/wiki/Irish_War_of_Independence",
+      "title": "Irish War of Independence",
+      "method": "discovered",
+      "candidates": [
+        "https://en.wikipedia.org/wiki/Irish_War_for_Independence",
+        "https://en.wikipedia.org/wiki/Irish_revolutionary_period"
+      ]
+    },
+    "overview": {
+      "period": "21 January 1919 to a truce on 11 July 1921.",
+      "actors": [
+        "Irish Republican Army and the Dail government",
+        "British Army",
+        "Royal Irish Constabulary with Black and Tans and Auxiliaries",
+        "Ulster Special Constabulary"
+      ],
+      "places": [
+        "Dublin",
+        "Cork and Munster",
+        "Belfast",
+        "Tipperary",
+        "Limerick and Kerry",
+        "Mayo and Roscommon"
+      ],
+      "turningPoints": [
+        "Soloheadbeg ambush, January 1919",
+        "Black and Tans arrive, March 1920",
+        "Bloody Sunday, 21 November 1920",
+        "Martial law in Munster, December 1920",
+        "Truce, July 1921"
+      ]
+    },
+    "sources": [
+      {
+        "id": "s1",
+        "url": "https://en.wikipedia.org/wiki/Irish_War_of_Independence",
+        "title": "Irish War of Independence (Wikipedia)",
+        "status": "read",
+        "readScope": "Characters 0 to 100000 of 189438. The rest was not read."
+      },
+      {
+        "id": "s2",
+        "url": "https://en.wikipedia.org/wiki/Timeline_of_the_Irish_War_of_Independence",
+        "title": "Timeline of the Irish War of Independence (Wikipedia)",
+        "status": "pending"
+      }
+    ],
+    "claims": [
+      {
+        "id": "h1",
+        "kind": "historical",
+        "text": "The war began with the Soloheadbeg ambush on 21 January 1919 and ended with a truce on 11 July 1921.",
+        "sourceIds": [
+          "s1"
+        ]
+      },
+      {
+        "id": "h2",
+        "kind": "historical",
+        "text": "The first Black and Tans arrived in March 1920 and the Auxiliaries in July 1920.",
+        "sourceIds": [
+          "s1"
+        ]
+      },
+      {
+        "id": "h3",
+        "kind": "historical",
+        "text": "Bloody Sunday took place in Dublin on 21 November 1920.",
+        "sourceIds": [
+          "s1"
+        ],
+        "conflict": "The article gives 14 British dead in one place and 16 in another."
+      },
+      {
+        "id": "h4",
+        "kind": "historical",
+        "text": "Martial law began in much of Munster on 10 December 1920.",
+        "sourceIds": [
+          "s1"
+        ]
+      },
+      {
+        "id": "h5",
+        "kind": "historical",
+        "text": "A truce took effect in July 1921.",
+        "sourceIds": [
+          "s1"
+        ]
+      },
+      {
+        "id": "d1",
+        "kind": "design",
+        "text": "The eight spaces and their Pop values are proposed design values, not historical measurements."
+      },
+      {
+        "id": "d2",
+        "kind": "design",
+        "text": "Opinion levels (Support, Neutral, Opposition) and the Repression track are design abstractions."
+      },
+      {
+        "id": "d3",
+        "kind": "design",
+        "text": "Event card effects are original design, loosely themed on the period."
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "crown",
+      "name": "Crown",
+      "type": "state",
+      "color": "#2b6cc4",
+      "symbol": "C",
+      "role": "Holds towns and roads. Pays to place forces. Wins by turning opinion toward the Crown.",
+      "pieces": [
+        {
+          "id": "crown.army",
+          "name": "Army",
+          "states": [
+            "normal"
+          ],
+          "defaultState": "normal",
+          "supply": 12,
+          "isBase": false
+        },
+        {
+          "id": "crown.police",
+          "name": "Police",
+          "states": [
+            "normal"
+          ],
+          "defaultState": "normal",
+          "supply": 12,
+          "isBase": false
+        },
+        {
+          "id": "crown.barracks",
+          "name": "Barracks",
+          "states": [
+            "normal"
+          ],
+          "defaultState": "normal",
+          "supply": 4,
+          "isBase": true,
+          "maxPerSpace": 1
+        }
+      ],
+      "operations": [
+        "crown.garrison",
+        "crown.sweep",
+        "crown.crackdown"
+      ],
+      "specialActivities": [
+        "crown.martial-law"
+      ],
+      "resourceTrack": "res.crown",
+      "preset": "state"
+    },
+    {
+      "id": "ira",
+      "name": "Republic",
+      "type": "guerrilla",
+      "color": "#b8520a",
+      "symbol": "R",
+      "role": "Hides among the people. Pays little. Wins by turning opinion toward the Republic and holding Headquarters.",
+      "pieces": [
+        {
+          "id": "ira.volunteer",
+          "name": "Volunteer",
+          "states": [
+            "underground",
+            "active"
+          ],
+          "defaultState": "underground",
+          "supply": 16,
+          "isBase": false
+        },
+        {
+          "id": "ira.hq",
+          "name": "Headquarters",
+          "states": [
+            "normal"
+          ],
+          "defaultState": "normal",
+          "supply": 5,
+          "isBase": true,
+          "maxPerSpace": 1
+        }
+      ],
+      "operations": [
+        "ira.rally",
+        "ira.march",
+        "ira.attack"
+      ],
+      "specialActivities": [
+        "ira.boycott"
+      ],
+      "resourceTrack": "res.ira",
+      "preset": "guerrilla"
+    }
+  ],
+  "board": {
+    "spaces": [
+      {
+        "id": "dublin",
+        "name": "Dublin",
+        "type": "city",
+        "attrs": {
+          "pop": 3
+        }
+      },
+      {
+        "id": "belfast",
+        "name": "Belfast",
+        "type": "city",
+        "attrs": {
+          "pop": 2
+        }
+      },
+      {
+        "id": "cork-city",
+        "name": "Cork City",
+        "type": "city",
+        "attrs": {
+          "pop": 2
+        }
+      },
+      {
+        "id": "cork-county",
+        "name": "County Cork",
+        "type": "province",
+        "attrs": {
+          "pop": 2
+        }
+      },
+      {
+        "id": "tipperary",
+        "name": "Tipperary",
+        "type": "province",
+        "attrs": {
+          "pop": 1
+        }
+      },
+      {
+        "id": "kerry",
+        "name": "Kerry",
+        "type": "province",
+        "attrs": {
+          "pop": 1
+        }
+      },
+      {
+        "id": "limerick",
+        "name": "Limerick",
+        "type": "province",
+        "attrs": {
+          "pop": 1
+        }
+      },
+      {
+        "id": "west",
+        "name": "West (Mayo and Roscommon)",
+        "type": "province",
+        "attrs": {
+          "pop": 1
+        }
+      }
+    ],
+    "links": [
+      {
+        "id": "l1",
+        "from": "dublin",
+        "to": "belfast",
+        "note": "Sea and rail"
+      },
+      {
+        "id": "l2",
+        "from": "dublin",
+        "to": "tipperary"
+      },
+      {
+        "id": "l3",
+        "from": "dublin",
+        "to": "west"
+      },
+      {
+        "id": "l4",
+        "from": "tipperary",
+        "to": "limerick"
+      },
+      {
+        "id": "l5",
+        "from": "tipperary",
+        "to": "cork-county"
+      },
+      {
+        "id": "l6",
+        "from": "limerick",
+        "to": "kerry"
+      },
+      {
+        "id": "l7",
+        "from": "limerick",
+        "to": "west"
+      },
+      {
+        "id": "l8",
+        "from": "kerry",
+        "to": "cork-county"
+      },
+      {
+        "id": "l9",
+        "from": "cork-county",
+        "to": "cork-city"
+      }
+    ],
+    "presentation": {
+      "style": "schematic",
+      "positions": {
+        "dublin": {
+          "x": 520,
+          "y": 150
+        },
+        "belfast": {
+          "x": 520,
+          "y": 40
+        },
+        "cork-city": {
+          "x": 330,
+          "y": 420
+        },
+        "cork-county": {
+          "x": 250,
+          "y": 330
+        },
+        "tipperary": {
+          "x": 360,
+          "y": 230
+        },
+        "kerry": {
+          "x": 120,
+          "y": 360
+        },
+        "limerick": {
+          "x": 220,
+          "y": 240
+        },
+        "west": {
+          "x": 200,
+          "y": 120
+        }
+      },
+      "background": null
+    }
+  },
+  "tracks": [
+    {
+      "id": "res.crown",
+      "name": "Crown Resources",
+      "min": 0,
+      "max": 30,
+      "start": 8,
+      "owner": "crown"
+    },
+    {
+      "id": "res.ira",
+      "name": "Republic Resources",
+      "min": 0,
+      "max": 30,
+      "start": 3,
+      "owner": "ira"
+    },
+    {
+      "id": "repression",
+      "name": "Repression",
+      "min": 0,
+      "max": 5,
+      "start": 1
+    }
+  ],
+  "setup": {
+    "placements": [
+      {
+        "space": "dublin",
+        "piece": "crown.army",
+        "state": "normal",
+        "count": 2
+      },
+      {
+        "space": "dublin",
+        "piece": "crown.police",
+        "state": "normal",
+        "count": 1
+      },
+      {
+        "space": "dublin",
+        "piece": "crown.barracks",
+        "state": "normal",
+        "count": 1
+      },
+      {
+        "space": "dublin",
+        "piece": "ira.volunteer",
+        "state": "underground",
+        "count": 1
+      },
+      {
+        "space": "belfast",
+        "piece": "crown.army",
+        "state": "normal",
+        "count": 1
+      },
+      {
+        "space": "belfast",
+        "piece": "crown.police",
+        "state": "normal",
+        "count": 2
+      },
+      {
+        "space": "cork-city",
+        "piece": "crown.army",
+        "state": "normal",
+        "count": 1
+      },
+      {
+        "space": "cork-city",
+        "piece": "crown.police",
+        "state": "normal",
+        "count": 1
+      },
+      {
+        "space": "cork-city",
+        "piece": "crown.barracks",
+        "state": "normal",
+        "count": 1
+      },
+      {
+        "space": "cork-city",
+        "piece": "ira.volunteer",
+        "state": "underground",
+        "count": 1
+      },
+      {
+        "space": "cork-county",
+        "piece": "crown.police",
+        "state": "normal",
+        "count": 1
+      },
+      {
+        "space": "cork-county",
+        "piece": "ira.volunteer",
+        "state": "underground",
+        "count": 3
+      },
+      {
+        "space": "cork-county",
+        "piece": "ira.hq",
+        "state": "normal",
+        "count": 1
+      },
+      {
+        "space": "tipperary",
+        "piece": "crown.police",
+        "state": "normal",
+        "count": 1
+      },
+      {
+        "space": "tipperary",
+        "piece": "ira.volunteer",
+        "state": "underground",
+        "count": 2
+      },
+      {
+        "space": "tipperary",
+        "piece": "ira.hq",
+        "state": "normal",
+        "count": 1
+      },
+      {
+        "space": "kerry",
+        "piece": "crown.police",
+        "state": "normal",
+        "count": 1
+      },
+      {
+        "space": "kerry",
+        "piece": "ira.volunteer",
+        "state": "underground",
+        "count": 1
+      },
+      {
+        "space": "limerick",
+        "piece": "crown.army",
+        "state": "normal",
+        "count": 1
+      },
+      {
+        "space": "limerick",
+        "piece": "crown.police",
+        "state": "normal",
+        "count": 1
+      },
+      {
+        "space": "west",
+        "piece": "crown.police",
+        "state": "normal",
+        "count": 1
+      },
+      {
+        "space": "west",
+        "piece": "ira.volunteer",
+        "state": "underground",
+        "count": 1
+      }
+    ],
+    "spaceAttributes": {
+      "dublin": {
+        "opinion": 1,
+        "curfew": false
+      },
+      "belfast": {
+        "opinion": 1,
+        "curfew": false
+      },
+      "cork-city": {
+        "opinion": 0,
+        "curfew": false
+      },
+      "cork-county": {
+        "opinion": -1,
+        "curfew": false
+      },
+      "tipperary": {
+        "opinion": -1,
+        "curfew": false
+      },
+      "kerry": {
+        "opinion": 0,
+        "curfew": false
+      },
+      "limerick": {
+        "opinion": 0,
+        "curfew": false
+      },
+      "west": {
+        "opinion": 0,
+        "curfew": false
+      }
+    },
+    "pools": {
+      "crown.army": {
+        "available": 5,
+        "outOfPlay": 2
+      },
+      "crown.police": {
+        "available": 3,
+        "outOfPlay": 0
+      },
+      "crown.barracks": {
+        "available": 2,
+        "outOfPlay": 0
+      },
+      "ira.volunteer": {
+        "available": 5,
+        "outOfPlay": 2
+      },
+      "ira.hq": {
+        "available": 3,
+        "outOfPlay": 0
+      }
+    },
+    "tracks": {
+      "res.crown": 8,
+      "res.ira": 3,
+      "repression": 1
+    },
+    "eligibility": {
+      "crown": true,
+      "ira": true
+    }
+  },
+  "rules": {
+    "sequence": {
+      "choices": [
+        "event",
+        "operationSpecial",
+        "operation",
+        "limitedOperation",
+        "pass"
+      ],
+      "firstActor": "The leftmost Eligible faction on the card's symbol row acts first. If only one faction is Eligible, it acts alone and may choose Event, Operation plus Special Activity, Operation only or Pass.",
+      "secondActorOptions": {
+        "event": [
+          "operationSpecial",
+          "operation",
+          "pass"
+        ],
+        "operationSpecial": [
+          "limitedOperation",
+          "pass"
+        ],
+        "operation": [
+          "limitedOperation",
+          "event",
+          "pass"
+        ],
+        "pass": [
+          "event",
+          "operationSpecial",
+          "operation",
+          "pass"
+        ]
+      },
+      "eligibilityAfter": {
+        "staysEligible": [
+          "limitedOperation",
+          "pass"
+        ],
+        "bothIneligibleResult": "If both factions would be Ineligible, both stay Eligible."
+      },
+      "passGain": {
+        "crown": 2,
+        "ira": 1
+      }
+    },
+    "scoring": {
+      "name": "Truce Talks",
+      "phases": [
+        {
+          "id": "victory",
+          "name": "Victory check",
+          "text": "Compute each faction's victory score. If one or more factions exceed their threshold, the game ends. On the final Truce Talks card the game ends whatever the scores. The highest margin wins.",
+          "steps": []
+        },
+        {
+          "id": "income",
+          "name": "Income",
+          "text": "Crown gains 2 Resources plus 1 per Barracks on the map. Republic gains 1 Resource plus 1 per HQ on the map.",
+          "steps": [
+            {
+              "op": "gain",
+              "track": "res.crown",
+              "amount": {
+                "op": "add",
+                "args": [
+                  2,
+                  {
+                    "op": "count",
+                    "args": [
+                      "crown.barracks",
+                      "*",
+                      "*"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "op": "gain",
+              "track": "res.ira",
+              "amount": {
+                "op": "add",
+                "args": [
+                  1,
+                  {
+                    "op": "count",
+                    "args": [
+                      "ira.hq",
+                      "*",
+                      "*"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "calm",
+          "name": "Calm",
+          "text": "Lower Repression by 1.",
+          "steps": [
+            {
+              "op": "track",
+              "id": "repression",
+              "delta": -1
+            }
+          ]
+        },
+        {
+          "id": "reset",
+          "name": "Reset",
+          "text": "Flip all Active Volunteers to Underground. Make both factions Eligible.",
+          "steps": [
+            {
+              "op": "flip",
+              "piece": "ira.volunteer",
+              "from": "active",
+              "to": "underground",
+              "count": "all"
+            }
+          ]
+        }
+      ]
+    },
+    "text": {
+      "overview": "Tan War is a two-faction game of insurgency. Crown holds towns and pays for every action. Republic hides among the people and strikes when odds are good. Both factions fight over opinion in eight spaces.",
+      "components": "Eight spaces on the board. Crown pieces: 12 Army, 12 Police, 4 Barracks. Republic pieces: 16 Volunteers, 5 HQs. Tracks: Crown Resources, Republic Resources, Repression. One die. 10 cards: 8 Event cards and 2 Truce Talks cards.",
+      "setup": "Follow the setup sheet. Place pieces and set opinion in each space. Set the three tracks. Prepare the deck as the deck section says.",
+      "sequence": "Reveal the top card. Factions act in the order shown on the card, as the sequence table says. Each faction that acts chooses from the options the table allows. Operations cost Resources. A Special Activity may follow an Operation.",
+      "operations": "Each Operation costs the faction's Resources per chosen space. A Limited Operation uses 1 space and no Special Activity. See the faction aids for each action.",
+      "events": "An Event card has two sides. The acting faction picks either side. Event text overrides these rules, except that piece limits always hold.",
+      "scoring": "A Truce Talks card runs four phases in order: victory check, income, calm, reset.",
+      "victory": "Crown wins with 9 or more Support Pop. Republic wins with 10 or more Opposition Pop plus HQs. Check at each Truce Talks card. After the final card, the highest margin wins. Ties go to Republic.",
+      "solo": "Use the bot aid for each faction you do not play. Follow the flowchart in order. Roll the die only when the aid says to."
+    }
+  },
+  "actions": [
+    {
+      "id": "crown.garrison",
+      "faction": "crown",
+      "kind": "operation",
+      "name": "Garrison",
+      "plain": "In each chosen city or Barracks space, place up to 2 Army and 1 Police from Available.",
+      "dependsOn": [
+        "crown.army",
+        "crown.police",
+        "crown.barracks",
+        "res.crown"
+      ],
+      "cost": {
+        "track": "res.crown",
+        "amount": 2,
+        "per": "space"
+      },
+      "limitedAllowed": true,
+      "targets": {
+        "op": "or",
+        "args": [
+          {
+            "op": "eq",
+            "args": [
+              {
+                "var": "$space.type"
+              },
+              "city"
+            ]
+          },
+          {
+            "op": "gte",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "crown.barracks",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              },
+              1
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "op": "place",
+          "piece": "crown.army",
+          "count": 2,
+          "from": "available",
+          "to": "$space"
+        },
+        {
+          "op": "place",
+          "piece": "crown.police",
+          "count": 1,
+          "from": "available",
+          "to": "$space"
+        }
+      ],
+      "purpose": "Add Crown forces in cities and Barracks.",
+      "ruleRef": "5.1.1"
+    },
+    {
+      "id": "crown.sweep",
+      "faction": "crown",
+      "kind": "operation",
+      "name": "Sweep",
+      "plain": "In each chosen space with an Underground Volunteer, move up to 3 Army in from adjacent spaces. Then flip one Underground Volunteer to Active for each Army and Police there.",
+      "dependsOn": [
+        "crown.army",
+        "crown.police",
+        "ira.volunteer",
+        "board.links"
+      ],
+      "cost": {
+        "track": "res.crown",
+        "amount": 1,
+        "per": "space"
+      },
+      "limitedAllowed": true,
+      "targets": {
+        "op": "gte",
+        "args": [
+          {
+            "op": "count",
+            "args": [
+              "ira.volunteer",
+              {
+                "var": "$space.id"
+              },
+              "underground"
+            ]
+          },
+          1
+        ]
+      },
+      "steps": [
+        {
+          "op": "move",
+          "piece": "crown.army",
+          "count": 3,
+          "from": "adjacent",
+          "to": "$space"
+        },
+        {
+          "op": "flip",
+          "piece": "ira.volunteer",
+          "from": "underground",
+          "to": "active",
+          "count": {
+            "op": "add",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "crown.army",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              },
+              {
+                "op": "count",
+                "args": [
+                  "crown.police",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "purpose": "Find hidden Volunteers.",
+      "ruleRef": "5.1.2"
+    },
+    {
+      "id": "crown.crackdown",
+      "faction": "crown",
+      "kind": "operation",
+      "name": "Crackdown",
+      "plain": "In each chosen space with Crown cubes, remove Active Volunteers up to the number of Army and Police there. Then remove an HQ if no Volunteers remain.",
+      "dependsOn": [
+        "crown.army",
+        "crown.police",
+        "ira.volunteer",
+        "ira.hq"
+      ],
+      "cost": {
+        "track": "res.crown",
+        "amount": 1,
+        "per": "space"
+      },
+      "limitedAllowed": true,
+      "targets": {
+        "op": "and",
+        "args": [
+          {
+            "op": "gte",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "ira.volunteer",
+                  {
+                    "var": "$space.id"
+                  },
+                  "active"
+                ]
+              },
+              1
+            ]
+          },
+          {
+            "op": "gte",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "count",
+                    "args": [
+                      "crown.army",
+                      {
+                        "var": "$space.id"
+                      },
+                      "*"
+                    ]
+                  },
+                  {
+                    "op": "count",
+                    "args": [
+                      "crown.police",
+                      {
+                        "var": "$space.id"
+                      },
+                      "*"
+                    ]
+                  }
+                ]
+              },
+              1
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "op": "remove",
+          "piece": "ira.volunteer",
+          "state": "active",
+          "count": {
+            "op": "add",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "crown.army",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              },
+              {
+                "op": "count",
+                "args": [
+                  "crown.police",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              }
+            ]
+          },
+          "to": "available"
+        },
+        {
+          "op": "if",
+          "test": {
+            "op": "eq",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "ira.volunteer",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              },
+              0
+            ]
+          },
+          "then": [
+            {
+              "op": "remove",
+              "piece": "ira.hq",
+              "count": 1,
+              "to": "available"
+            }
+          ]
+        }
+      ],
+      "purpose": "Remove exposed Volunteers.",
+      "ruleRef": "5.1.3"
+    },
+    {
+      "id": "crown.martial-law",
+      "faction": "crown",
+      "kind": "specialActivity",
+      "name": "Martial Law",
+      "plain": "In one space with 2 or more Army and opinion below Support, shift opinion one step toward the Crown. Then raise Repression by 1 and place a Curfew marker there. The marker records Crown rule; it has no other effect.",
+      "dependsOn": [
+        "crown.army",
+        "repression",
+        "board.opinion"
+      ],
+      "cost": {
+        "track": "res.crown",
+        "amount": 2,
+        "per": "use"
+      },
+      "timing": "after",
+      "targets": {
+        "op": "and",
+        "args": [
+          {
+            "op": "gte",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "crown.army",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              },
+              2
+            ]
+          },
+          {
+            "op": "lt",
+            "args": [
+              {
+                "var": "$space.opinion"
+              },
+              1
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "op": "shift",
+          "attr": "opinion",
+          "toward": "support",
+          "amount": 1
+        },
+        {
+          "op": "track",
+          "id": "repression",
+          "delta": 1
+        },
+        {
+          "op": "markerSet",
+          "marker": "curfew",
+          "value": true,
+          "space": "$space"
+        }
+      ],
+      "purpose": "Push opinion toward the Crown.",
+      "ruleRef": "5.1.4",
+      "accompanies": "any",
+      "maxSpaces": 1
+    },
+    {
+      "id": "ira.rally",
+      "faction": "ira",
+      "kind": "operation",
+      "name": "Rally",
+      "plain": "In each chosen space with a Volunteer or HQ, choose: place Volunteers (2 with an HQ, otherwise 1) or replace 2 Volunteers with an HQ if none is there. If Repression is 3 or more, place 1 extra Volunteer.",
+      "dependsOn": [
+        "ira.volunteer",
+        "ira.hq",
+        "repression"
+      ],
+      "cost": {
+        "track": "res.ira",
+        "amount": 1,
+        "per": "space"
+      },
+      "limitedAllowed": true,
+      "targets": {
+        "op": "or",
+        "args": [
+          {
+            "op": "gte",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "ira.hq",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              },
+              1
+            ]
+          },
+          {
+            "op": "gte",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "ira.volunteer",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              },
+              1
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "op": "choose",
+          "options": [
+            {
+              "label": "Recruit",
+              "steps": [
+                {
+                  "op": "if",
+                  "test": {
+                    "op": "gte",
+                    "args": [
+                      {
+                        "op": "count",
+                        "args": [
+                          "ira.hq",
+                          {
+                            "var": "$space.id"
+                          },
+                          "*"
+                        ]
+                      },
+                      1
+                    ]
+                  },
+                  "then": [
+                    {
+                      "op": "place",
+                      "piece": "ira.volunteer",
+                      "count": 2,
+                      "from": "available",
+                      "to": "$space",
+                      "state": "underground"
+                    }
+                  ],
+                  "else": [
+                    {
+                      "op": "place",
+                      "piece": "ira.volunteer",
+                      "count": 1,
+                      "from": "available",
+                      "to": "$space",
+                      "state": "underground"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "label": "Build HQ",
+              "steps": [
+                {
+                  "op": "remove",
+                  "piece": "ira.volunteer",
+                  "count": 2,
+                  "to": "available"
+                },
+                {
+                  "op": "place",
+                  "piece": "ira.hq",
+                  "count": 1,
+                  "from": "available",
+                  "to": "$space"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "op": "if",
+          "test": {
+            "op": "gte",
+            "args": [
+              {
+                "var": "track.repression"
+              },
+              3
+            ]
+          },
+          "then": [
+            {
+              "op": "place",
+              "piece": "ira.volunteer",
+              "count": 1,
+              "from": "available",
+              "to": "$space",
+              "state": "underground"
+            }
+          ]
+        }
+      ],
+      "purpose": "Add Volunteers or build an HQ.",
+      "ruleRef": "5.2.1"
+    },
+    {
+      "id": "ira.march",
+      "faction": "ira",
+      "kind": "operation",
+      "name": "March",
+      "plain": "Into each chosen space, move any number of Volunteers from adjacent spaces. Moved Volunteers become Active if Army or Police are in the destination.",
+      "dependsOn": [
+        "ira.volunteer",
+        "board.links"
+      ],
+      "cost": {
+        "track": "res.ira",
+        "amount": 1,
+        "per": "space"
+      },
+      "limitedAllowed": true,
+      "targets": {
+        "op": "gte",
+        "args": [
+          {
+            "op": "adjCount",
+            "args": [
+              "ira.volunteer",
+              {
+                "var": "$space.id"
+              },
+              "*"
+            ]
+          },
+          1
+        ]
+      },
+      "steps": [
+        {
+          "op": "move",
+          "piece": "ira.volunteer",
+          "count": "any",
+          "from": "adjacent",
+          "to": "$space"
+        },
+        {
+          "op": "if",
+          "test": {
+            "op": "gte",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "count",
+                    "args": [
+                      "crown.army",
+                      {
+                        "var": "$space.id"
+                      },
+                      "*"
+                    ]
+                  },
+                  {
+                    "op": "count",
+                    "args": [
+                      "crown.police",
+                      {
+                        "var": "$space.id"
+                      },
+                      "*"
+                    ]
+                  }
+                ]
+              },
+              1
+            ]
+          },
+          "then": [
+            {
+              "op": "flip",
+              "piece": "ira.volunteer",
+              "from": "underground",
+              "to": "active",
+              "count": "moved"
+            }
+          ]
+        }
+      ],
+      "purpose": "Move Volunteers.",
+      "ruleRef": "5.2.2"
+    },
+    {
+      "id": "ira.attack",
+      "faction": "ira",
+      "kind": "operation",
+      "name": "Attack",
+      "plain": "In one chosen space with Volunteers and Crown cubes, roll one die. On a roll at or below the number of Volunteers there, remove 1 Crown cube (Army first). Then flip all Underground Volunteers there to Active.",
+      "dependsOn": [
+        "ira.volunteer",
+        "crown.army",
+        "crown.police",
+        "die.d6"
+      ],
+      "cost": {
+        "track": "res.ira",
+        "amount": 0,
+        "per": "space"
+      },
+      "limitedAllowed": true,
+      "targets": {
+        "op": "and",
+        "args": [
+          {
+            "op": "gte",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "ira.volunteer",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              },
+              1
+            ]
+          },
+          {
+            "op": "gte",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "count",
+                    "args": [
+                      "crown.army",
+                      {
+                        "var": "$space.id"
+                      },
+                      "*"
+                    ]
+                  },
+                  {
+                    "op": "count",
+                    "args": [
+                      "crown.police",
+                      {
+                        "var": "$space.id"
+                      },
+                      "*"
+                    ]
+                  }
+                ]
+              },
+              1
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "op": "roll",
+          "die": "d6",
+          "store": "r"
+        },
+        {
+          "op": "if",
+          "test": {
+            "op": "lte",
+            "args": [
+              {
+                "var": "var.r"
+              },
+              {
+                "op": "count",
+                "args": [
+                  "ira.volunteer",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              }
+            ]
+          },
+          "then": [
+            {
+              "op": "remove",
+              "piece": "crown.army",
+              "count": 1,
+              "to": "available",
+              "fallbackPiece": "crown.police"
+            }
+          ]
+        },
+        {
+          "op": "flip",
+          "piece": "ira.volunteer",
+          "from": "underground",
+          "to": "active",
+          "count": "all"
+        }
+      ],
+      "purpose": "Remove Crown cubes.",
+      "ruleRef": "5.2.3"
+    },
+    {
+      "id": "ira.boycott",
+      "faction": "ira",
+      "kind": "specialActivity",
+      "name": "Boycott",
+      "plain": "In one space with 2 or more Underground Volunteers and opinion above Opposition, shift opinion one step toward the Republic.",
+      "dependsOn": [
+        "ira.volunteer",
+        "board.opinion"
+      ],
+      "cost": {
+        "track": "res.ira",
+        "amount": 1,
+        "per": "use"
+      },
+      "timing": "after",
+      "targets": {
+        "op": "and",
+        "args": [
+          {
+            "op": "gte",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "ira.volunteer",
+                  {
+                    "var": "$space.id"
+                  },
+                  "underground"
+                ]
+              },
+              2
+            ]
+          },
+          {
+            "op": "gt",
+            "args": [
+              {
+                "var": "$space.opinion"
+              },
+              -1
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "op": "shift",
+          "attr": "opinion",
+          "toward": "opposition",
+          "amount": 1
+        }
+      ],
+      "purpose": "Push opinion toward the Republic.",
+      "ruleRef": "5.2.4",
+      "accompanies": "any",
+      "maxSpaces": 1
+    }
+  ],
+  "deck": {
+    "cards": [
+      {
+        "id": "e01",
+        "type": "event",
+        "title": "Flying Column",
+        "flavor": "Small mobile units strike and vanish.",
+        "claimIds": [
+          "d3"
+        ],
+        "order": [
+          "crown",
+          "ira"
+        ],
+        "sides": [
+          {
+            "id": "unshaded",
+            "label": "Intelligence",
+            "text": "Crown: in one space with a Crown cube, remove all Active Volunteers.",
+            "steps": [
+              {
+                "op": "remove",
+                "piece": "ira.volunteer",
+                "state": "active",
+                "count": "all",
+                "to": "available",
+                "space": "choose",
+                "filter": {
+                  "op": "gte",
+                  "args": [
+                    {
+                      "op": "add",
+                      "args": [
+                        {
+                          "op": "count",
+                          "args": [
+                            "crown.army",
+                            {
+                              "var": "$space.id"
+                            },
+                            "*"
+                          ]
+                        },
+                        {
+                          "op": "count",
+                          "args": [
+                            "crown.police",
+                            {
+                              "var": "$space.id"
+                            },
+                            "*"
+                          ]
+                        }
+                      ]
+                    },
+                    1
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "shaded",
+            "label": "Ambush",
+            "text": "Republic: place 2 Underground Volunteers in a space with an HQ.",
+            "steps": [
+              {
+                "op": "place",
+                "piece": "ira.volunteer",
+                "count": 2,
+                "from": "available",
+                "to": "choose",
+                "state": "underground",
+                "filter": {
+                  "op": "gte",
+                  "args": [
+                    {
+                      "op": "count",
+                      "args": [
+                        "ira.hq",
+                        {
+                          "var": "$space.id"
+                        },
+                        "*"
+                      ]
+                    },
+                    1
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "e02",
+        "type": "event",
+        "title": "Reprisals",
+        "flavor": "Harsh response turns neighbors away.",
+        "claimIds": [
+          "h2"
+        ],
+        "order": [
+          "ira",
+          "crown"
+        ],
+        "sides": [
+          {
+            "id": "unshaded",
+            "label": "Reinforced Posts",
+            "text": "Crown: place 2 Police from Available in each of 2 cities.",
+            "steps": [
+              {
+                "op": "place",
+                "piece": "crown.police",
+                "count": 2,
+                "from": "available",
+                "to": "choose",
+                "filter": {
+                  "op": "eq",
+                  "args": [
+                    {
+                      "var": "$space.type"
+                    },
+                    "city"
+                  ]
+                },
+                "spaces": 2
+              }
+            ]
+          },
+          {
+            "id": "shaded",
+            "label": "Backlash",
+            "text": "Republic: shift opinion one step toward the Republic in up to 2 spaces with 2 or more Police.",
+            "steps": [
+              {
+                "op": "shift",
+                "attr": "opinion",
+                "toward": "opposition",
+                "amount": 1,
+                "space": "choose",
+                "filter": {
+                  "op": "gte",
+                  "args": [
+                    {
+                      "op": "count",
+                      "args": [
+                        "crown.police",
+                        {
+                          "var": "$space.id"
+                        },
+                        "*"
+                      ]
+                    },
+                    2
+                  ]
+                },
+                "spaces": 2
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "e03",
+        "type": "event",
+        "title": "Restoration of Order",
+        "flavor": "Emergency law replaces juries with courts-martial.",
+        "claimIds": [
+          "d3"
+        ],
+        "order": [
+          "crown",
+          "ira"
+        ],
+        "sides": [
+          {
+            "id": "unshaded",
+            "label": "Emergency Powers",
+            "text": "Crown: gain 4 Resources.",
+            "steps": [
+              {
+                "op": "gain",
+                "track": "res.crown",
+                "amount": 4
+              }
+            ]
+          },
+          {
+            "id": "shaded",
+            "label": "Quiet Funds",
+            "text": "Republic: gain 2 Resources.",
+            "steps": [
+              {
+                "op": "gain",
+                "track": "res.ira",
+                "amount": 2
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "e04",
+        "type": "event",
+        "title": "Bloody Sunday",
+        "flavor": "A morning of killings in the capital.",
+        "claimIds": [
+          "h3"
+        ],
+        "order": [
+          "ira",
+          "crown"
+        ],
+        "sides": [
+          {
+            "id": "unshaded",
+            "label": "Dublin Sweep",
+            "text": "Crown: remove up to 2 Volunteers from Dublin.",
+            "steps": [
+              {
+                "op": "remove",
+                "piece": "ira.volunteer",
+                "count": 2,
+                "to": "available",
+                "space": "dublin"
+              }
+            ]
+          },
+          {
+            "id": "shaded",
+            "label": "Public Outrage",
+            "text": "Republic: shift Dublin opinion one step toward the Republic. Repression rises by 2.",
+            "steps": [
+              {
+                "op": "shift",
+                "attr": "opinion",
+                "toward": "opposition",
+                "amount": 1,
+                "space": "dublin"
+              },
+              {
+                "op": "track",
+                "id": "repression",
+                "delta": 2
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "e05",
+        "type": "event",
+        "title": "Republican Courts",
+        "flavor": "A parallel justice system draws local trust.",
+        "claimIds": [
+          "d3"
+        ],
+        "order": [
+          "crown",
+          "ira"
+        ],
+        "sides": [
+          {
+            "id": "unshaded",
+            "label": "Shut the Courts",
+            "text": "Crown: remove 1 HQ from a space with no Underground Volunteers.",
+            "steps": [
+              {
+                "op": "remove",
+                "piece": "ira.hq",
+                "count": 1,
+                "to": "available",
+                "space": "choose",
+                "filter": {
+                  "op": "eq",
+                  "args": [
+                    {
+                      "op": "count",
+                      "args": [
+                        "ira.volunteer",
+                        {
+                          "var": "$space.id"
+                        },
+                        "underground"
+                      ]
+                    },
+                    0
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "shaded",
+            "label": "Courts Sit",
+            "text": "Republic: shift opinion one step toward the Republic in a space with an HQ.",
+            "steps": [
+              {
+                "op": "shift",
+                "attr": "opinion",
+                "toward": "opposition",
+                "amount": 1,
+                "space": "choose",
+                "filter": {
+                  "op": "gte",
+                  "args": [
+                    {
+                      "op": "count",
+                      "args": [
+                        "ira.hq",
+                        {
+                          "var": "$space.id"
+                        },
+                        "*"
+                      ]
+                    },
+                    1
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "e06",
+        "type": "event",
+        "title": "Arms from America",
+        "flavor": "Money and rifles cross the sea.",
+        "claimIds": [
+          "d3"
+        ],
+        "order": [
+          "ira",
+          "crown"
+        ],
+        "sides": [
+          {
+            "id": "unshaded",
+            "label": "Customs Seizure",
+            "text": "Crown: Republic loses 2 Resources.",
+            "steps": [
+              {
+                "op": "gain",
+                "track": "res.ira",
+                "amount": -2
+              }
+            ]
+          },
+          {
+            "id": "shaded",
+            "label": "Shipment Lands",
+            "text": "Republic: gain 3 Resources. Move 2 Volunteers from Out of Play to Available.",
+            "steps": [
+              {
+                "op": "gain",
+                "track": "res.ira",
+                "amount": 3
+              },
+              {
+                "op": "move",
+                "piece": "ira.volunteer",
+                "count": 2,
+                "from": "outOfPlay",
+                "to": "available"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "e07",
+        "type": "event",
+        "title": "Martial Law Decree",
+        "flavor": "Districts pass under military rule.",
+        "claimIds": [
+          "h4"
+        ],
+        "order": [
+          "crown",
+          "ira"
+        ],
+        "sides": [
+          {
+            "id": "unshaded",
+            "label": "Troops Arrive",
+            "text": "Crown: move 2 Army from Out of Play to Available. Then place 2 Army in a city.",
+            "steps": [
+              {
+                "op": "move",
+                "piece": "crown.army",
+                "count": 2,
+                "from": "outOfPlay",
+                "to": "available"
+              },
+              {
+                "op": "place",
+                "piece": "crown.army",
+                "count": 2,
+                "from": "available",
+                "to": "choose",
+                "filter": {
+                  "op": "eq",
+                  "args": [
+                    {
+                      "var": "$space.type"
+                    },
+                    "city"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "shaded",
+            "label": "Resentment",
+            "text": "Republic: lower Repression by 2 and gain 1 Resource.",
+            "steps": [
+              {
+                "op": "track",
+                "id": "repression",
+                "delta": -2
+              },
+              {
+                "op": "gain",
+                "track": "res.ira",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "e08",
+        "type": "event",
+        "title": "Truce Feelers",
+        "flavor": "Talks begin to look possible.",
+        "claimIds": [
+          "h5"
+        ],
+        "order": [
+          "ira",
+          "crown"
+        ],
+        "sides": [
+          {
+            "id": "unshaded",
+            "label": "Calm Returns",
+            "text": "Crown: shift one space with Crown cubes one step toward the Crown.",
+            "steps": [
+              {
+                "op": "shift",
+                "attr": "opinion",
+                "toward": "support",
+                "amount": 1,
+                "space": "choose",
+                "filter": {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "gte",
+                      "args": [
+                        {
+                          "op": "add",
+                          "args": [
+                            {
+                              "op": "count",
+                              "args": [
+                                "crown.army",
+                                {
+                                  "var": "$space.id"
+                                },
+                                "*"
+                              ]
+                            },
+                            {
+                              "op": "count",
+                              "args": [
+                                "crown.police",
+                                {
+                                  "var": "$space.id"
+                                },
+                                "*"
+                              ]
+                            }
+                          ]
+                        },
+                        1
+                      ]
+                    },
+                    {
+                      "op": "lt",
+                      "args": [
+                        {
+                          "var": "$space.opinion"
+                        },
+                        1
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "shaded",
+            "label": "Hope Spreads",
+            "text": "Republic: shift one space with Underground Volunteers one step toward the Republic.",
+            "steps": [
+              {
+                "op": "shift",
+                "attr": "opinion",
+                "toward": "opposition",
+                "amount": 1,
+                "space": "choose",
+                "filter": {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "gte",
+                      "args": [
+                        {
+                          "op": "count",
+                          "args": [
+                            "ira.volunteer",
+                            {
+                              "var": "$space.id"
+                            },
+                            "underground"
+                          ]
+                        },
+                        1
+                      ]
+                    },
+                    {
+                      "op": "gt",
+                      "args": [
+                        {
+                          "var": "$space.opinion"
+                        },
+                        -1
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "s1",
+        "type": "scoring",
+        "title": "Truce Talks",
+        "flavor": "Both sides count what they hold.",
+        "claimIds": [
+          "h5"
+        ],
+        "order": [
+          "crown",
+          "ira"
+        ]
+      },
+      {
+        "id": "s2",
+        "type": "scoring",
+        "title": "Truce Talks (Final)",
+        "flavor": "The last count before a settlement.",
+        "claimIds": [
+          "h5"
+        ],
+        "order": [
+          "crown",
+          "ira"
+        ],
+        "final": true
+      }
+    ],
+    "preparation": {
+      "piles": [
+        {
+          "id": "p1",
+          "events": [
+            "e01",
+            "e02",
+            "e03",
+            "e04"
+          ],
+          "scoring": "s1",
+          "scoringPlacement": {
+            "fromPosition": 3,
+            "toPosition": 5
+          }
+        },
+        {
+          "id": "p2",
+          "events": [
+            "e05",
+            "e06",
+            "e07",
+            "e08"
+          ],
+          "scoring": "s2",
+          "scoringPlacement": {
+            "fromPosition": 5,
+            "toPosition": 5
+          }
+        }
+      ],
+      "text": "Make two piles. Pile 1: shuffle the first four Event cards (E01 to E04) and put Truce Talks (S1) into the bottom three positions. Pile 2: shuffle E05 to E08 and put the final Truce Talks (S2) at the bottom. Put Pile 1 on top of Pile 2."
+    }
+  },
+  "victory": {
+    "perFaction": [
+      {
+        "factionId": "crown",
+        "plain": "Support Pop: total Pop of spaces at Support.",
+        "formula": {
+          "op": "sumSpaces",
+          "args": [
+            {
+              "op": "mul",
+              "args": [
+                {
+                  "op": "eq",
+                  "args": [
+                    {
+                      "var": "$space.opinion"
+                    },
+                    1
+                  ]
+                },
+                {
+                  "var": "$space.pop"
+                }
+              ]
+            }
+          ]
+        },
+        "threshold": 9
+      },
+      {
+        "factionId": "ira",
+        "plain": "Opposition Pop plus HQs on the map.",
+        "formula": {
+          "op": "add",
+          "args": [
+            {
+              "op": "sumSpaces",
+              "args": [
+                {
+                  "op": "mul",
+                  "args": [
+                    {
+                      "op": "eq",
+                      "args": [
+                        {
+                          "var": "$space.opinion"
+                        },
+                        -1
+                      ]
+                    },
+                    {
+                      "var": "$space.pop"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "op": "count",
+              "args": [
+                "ira.hq",
+                "*",
+                "*"
+              ]
+            }
+          ]
+        },
+        "threshold": 10
+      }
+    ],
+    "checkAt": "Each Truce Talks card, in the victory check phase.",
+    "finalScoring": "After the final Truce Talks card, the faction with the highest margin (score minus threshold) wins.",
+    "tieBreaks": [
+      "Republic wins a tie in margin.",
+      "A bot faction wins ties before a human faction."
+    ]
+  },
+  "bots": [
+    {
+      "id": "bot.crown",
+      "factionId": "crown",
+      "code": "CW",
+      "objective": "Win by raising Crown Support Pop to 9: Pop of spaces at Support. Remove Active Volunteers first, then place forces in valuable neutral cities, then sweep. Keep Resources for Garrison and Martial Law.",
+      "measures": [
+        {
+          "id": "support-pop",
+          "name": "Support Pop",
+          "plain": "Total Pop of spaces at Support.",
+          "expr": {
+            "op": "sumSpaces",
+            "args": [
+              {
+                "op": "mul",
+                "args": [
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "var": "$space.opinion"
+                      },
+                      1
+                    ]
+                  },
+                  {
+                    "var": "$space.pop"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "exposed",
+          "name": "Exposed",
+          "plain": "A space is exposed if it holds an Active Volunteer and at least 1 Crown cube.",
+          "expr": {
+            "op": "and",
+            "args": [
+              {
+                "op": "gte",
+                "args": [
+                  {
+                    "op": "count",
+                    "args": [
+                      "ira.volunteer",
+                      {
+                        "var": "$space.id"
+                      },
+                      "active"
+                    ]
+                  },
+                  1
+                ]
+              },
+              {
+                "op": "gte",
+                "args": [
+                  {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "count",
+                        "args": [
+                          "crown.army",
+                          {
+                            "var": "$space.id"
+                          },
+                          "*"
+                        ]
+                      },
+                      {
+                        "op": "count",
+                        "args": [
+                          "crown.police",
+                          {
+                            "var": "$space.id"
+                          },
+                          "*"
+                        ]
+                      }
+                    ]
+                  },
+                  1
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "valuable",
+          "name": "Valuable",
+          "plain": "A space is valuable if its Pop is 2 or more and opinion is below Support.",
+          "expr": {
+            "op": "and",
+            "args": [
+              {
+                "op": "gte",
+                "args": [
+                  {
+                    "var": "$space.pop"
+                  },
+                  2
+                ]
+              },
+              {
+                "op": "lt",
+                "args": [
+                  {
+                    "var": "$space.opinion"
+                  },
+                  1
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "eventPolicy": {
+        "plain": "Play the unshaded side if the Event has an effect and it raises Crown Support Pop or lowers Republic score. Otherwise do not play it.",
+        "playIf": {
+          "op": "and",
+          "args": [
+            {
+              "var": "card.hasEffect"
+            },
+            {
+              "op": "gte",
+              "args": [
+                {
+                  "op": "add",
+                  "args": [
+                    {
+                      "var": "card.raisesSelf"
+                    },
+                    {
+                      "var": "card.lowersEnemy"
+                    }
+                  ]
+                },
+                1
+              ]
+            }
+          ]
+        },
+        "side": "unshaded",
+        "overrides": [
+          {
+            "cardId": "e01",
+            "directive": "conditional",
+            "when": {
+              "op": "anySpace",
+              "args": [
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "gte",
+                      "args": [
+                        {
+                          "op": "count",
+                          "args": [
+                            "ira.volunteer",
+                            {
+                              "var": "$space.id"
+                            },
+                            "active"
+                          ]
+                        },
+                        1
+                      ]
+                    },
+                    {
+                      "op": "gte",
+                      "args": [
+                        {
+                          "op": "add",
+                          "args": [
+                            {
+                              "op": "count",
+                              "args": [
+                                "crown.army",
+                                {
+                                  "var": "$space.id"
+                                },
+                                "*"
+                              ]
+                            },
+                            {
+                              "op": "count",
+                              "args": [
+                                "crown.police",
+                                {
+                                  "var": "$space.id"
+                                },
+                                "*"
+                              ]
+                            }
+                          ]
+                        },
+                        1
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "side": "unshaded",
+            "plain": "Play Flying Column only if a space holds an Active Volunteer and a Crown cube."
+          },
+          {
+            "cardId": "e07",
+            "directive": "force",
+            "side": "unshaded",
+            "plain": "Always play Martial Law Decree when it has an effect, even with Event value 0."
+          }
+        ]
+      },
+      "start": "cw.start",
+      "nodes": [
+        {
+          "id": "cw.start",
+          "kind": "condition",
+          "text": "Is Crown Eligible?",
+          "test": {
+            "var": "eligible"
+          },
+          "yes": "cw.event",
+          "no": "cw.end-none"
+        },
+        {
+          "id": "cw.end-none",
+          "kind": "end",
+          "text": "Ineligible: take no action and gain no Pass benefit.",
+          "outcome": "none"
+        },
+        {
+          "id": "cw.event",
+          "kind": "event-check",
+          "text": "Event: apply the Event rules below. Play the unshaded side if allowed.",
+          "yes": "cw.end-event",
+          "no": "cw.low"
+        },
+        {
+          "id": "cw.end-event",
+          "kind": "end",
+          "text": "Execute the unshaded Event.",
+          "outcome": "event"
+        },
+        {
+          "id": "cw.low",
+          "kind": "condition",
+          "text": "Crown Resources below 1?",
+          "test": {
+            "op": "lt",
+            "args": [
+              {
+                "var": "self.resources"
+              },
+              1
+            ]
+          },
+          "yes": "cw.pass",
+          "no": "cw.crack"
+        },
+        {
+          "id": "cw.crack",
+          "kind": "action",
+          "text": "Crackdown in up to 2 spaces (priority table CW-1).",
+          "action": "crown.crackdown",
+          "table": "cw.t.crack",
+          "then": "cw.end-op",
+          "onEmpty": "cw.garrison",
+          "linked": {
+            "action": "crown.martial-law",
+            "timing": "after",
+            "trigger": {
+              "op": "gte",
+              "args": [
+                {
+                  "var": "self.resources"
+                },
+                3
+              ]
+            },
+            "table": "cw.t.law",
+            "skipText": "Skip Martial Law if Resources are below 3 or no space qualifies."
+          }
+        },
+        {
+          "id": "cw.garrison",
+          "kind": "action",
+          "text": "Garrison in 1 space (priority table CW-2).",
+          "action": "crown.garrison",
+          "table": "cw.t.garrison",
+          "then": "cw.end-op",
+          "onEmpty": "cw.sweep",
+          "linked": {
+            "action": "crown.martial-law",
+            "timing": "after",
+            "trigger": {
+              "op": "gte",
+              "args": [
+                {
+                  "var": "self.resources"
+                },
+                3
+              ]
+            },
+            "table": "cw.t.law",
+            "skipText": "Skip Martial Law if Resources are below 3 or no space qualifies."
+          }
+        },
+        {
+          "id": "cw.sweep",
+          "kind": "action",
+          "text": "Sweep in 1 space (priority table CW-3).",
+          "action": "crown.sweep",
+          "table": "cw.t.sweep",
+          "then": "cw.end-op",
+          "onEmpty": "cw.pass"
+        },
+        {
+          "id": "cw.end-op",
+          "kind": "end",
+          "text": "Operation done. If Martial Law ran, count it as Operation plus Special Activity.",
+          "outcome": "operation"
+        },
+        {
+          "id": "cw.pass",
+          "kind": "end",
+          "text": "Pass. Gain the Pass Resources.",
+          "outcome": "pass"
+        }
+      ],
+      "priorityTables": [
+        {
+          "id": "cw.t.crack",
+          "scope": "space",
+          "select": "all",
+          "limit": 2,
+          "steps": [
+            {
+              "n": 1,
+              "text": "Spaces where Crown cubes outnumber Active Volunteers.",
+              "filter": {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "gte",
+                    "args": [
+                      {
+                        "op": "count",
+                        "args": [
+                          "ira.volunteer",
+                          {
+                            "var": "$space.id"
+                          },
+                          "active"
+                        ]
+                      },
+                      1
+                    ]
+                  },
+                  {
+                    "op": "gt",
+                    "args": [
+                      {
+                        "op": "add",
+                        "args": [
+                          {
+                            "op": "count",
+                            "args": [
+                              "crown.army",
+                              {
+                                "var": "$space.id"
+                              },
+                              "*"
+                            ]
+                          },
+                          {
+                            "op": "count",
+                            "args": [
+                              "crown.police",
+                              {
+                                "var": "$space.id"
+                              },
+                              "*"
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "op": "count",
+                        "args": [
+                          "ira.volunteer",
+                          {
+                            "var": "$space.id"
+                          },
+                          "active"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "n": 2,
+              "text": "Any space with an Active Volunteer and a Crown cube.",
+              "filter": {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "gte",
+                    "args": [
+                      {
+                        "op": "count",
+                        "args": [
+                          "ira.volunteer",
+                          {
+                            "var": "$space.id"
+                          },
+                          "active"
+                        ]
+                      },
+                      1
+                    ]
+                  },
+                  {
+                    "op": "gte",
+                    "args": [
+                      {
+                        "op": "add",
+                        "args": [
+                          {
+                            "op": "count",
+                            "args": [
+                              "crown.army",
+                              {
+                                "var": "$space.id"
+                              },
+                              "*"
+                            ]
+                          },
+                          {
+                            "op": "count",
+                            "args": [
+                              "crown.police",
+                              {
+                                "var": "$space.id"
+                              },
+                              "*"
+                            ]
+                          }
+                        ]
+                      },
+                      1
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Highest Pop.",
+              "key": {
+                "var": "$space.pop"
+              },
+              "order": "max"
+            },
+            {
+              "letter": "b",
+              "text": "Most Active Volunteers.",
+              "key": {
+                "op": "count",
+                "args": [
+                  "ira.volunteer",
+                  {
+                    "var": "$space.id"
+                  },
+                  "active"
+                ]
+              },
+              "order": "max"
+            }
+          ]
+        },
+        {
+          "id": "cw.t.garrison",
+          "scope": "space",
+          "select": "one",
+          "steps": [
+            {
+              "n": 1,
+              "text": "Valuable space.",
+              "filter": {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "gte",
+                    "args": [
+                      {
+                        "var": "$space.pop"
+                      },
+                      2
+                    ]
+                  },
+                  {
+                    "op": "lt",
+                    "args": [
+                      {
+                        "var": "$space.opinion"
+                      },
+                      1
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "n": 2,
+              "text": "Any legal space with opinion below Support.",
+              "filter": {
+                "op": "lt",
+                "args": [
+                  {
+                    "var": "$space.opinion"
+                  },
+                  1
+                ]
+              }
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Highest Pop.",
+              "key": {
+                "var": "$space.pop"
+              },
+              "order": "max"
+            },
+            {
+              "letter": "b",
+              "text": "Fewest Crown cubes.",
+              "key": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "count",
+                    "args": [
+                      "crown.army",
+                      {
+                        "var": "$space.id"
+                      },
+                      "*"
+                    ]
+                  },
+                  {
+                    "op": "count",
+                    "args": [
+                      "crown.police",
+                      {
+                        "var": "$space.id"
+                      },
+                      "*"
+                    ]
+                  }
+                ]
+              },
+              "order": "min"
+            }
+          ]
+        },
+        {
+          "id": "cw.t.sweep",
+          "scope": "space",
+          "select": "one",
+          "steps": [
+            {
+              "n": 1,
+              "text": "Space with 2 or more Underground Volunteers and opinion at or below Neutral.",
+              "filter": {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "gte",
+                    "args": [
+                      {
+                        "op": "count",
+                        "args": [
+                          "ira.volunteer",
+                          {
+                            "var": "$space.id"
+                          },
+                          "underground"
+                        ]
+                      },
+                      2
+                    ]
+                  },
+                  {
+                    "op": "lte",
+                    "args": [
+                      {
+                        "var": "$space.opinion"
+                      },
+                      0
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "n": 2,
+              "text": "Any space with an Underground Volunteer.",
+              "filter": {
+                "op": "gte",
+                "args": [
+                  {
+                    "op": "count",
+                    "args": [
+                      "ira.volunteer",
+                      {
+                        "var": "$space.id"
+                      },
+                      "underground"
+                    ]
+                  },
+                  1
+                ]
+              }
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Most Underground Volunteers.",
+              "key": {
+                "op": "count",
+                "args": [
+                  "ira.volunteer",
+                  {
+                    "var": "$space.id"
+                  },
+                  "underground"
+                ]
+              },
+              "order": "max"
+            },
+            {
+              "letter": "b",
+              "text": "Highest Pop.",
+              "key": {
+                "var": "$space.pop"
+              },
+              "order": "max"
+            }
+          ]
+        },
+        {
+          "id": "cw.t.law",
+          "scope": "space",
+          "select": "one",
+          "steps": [
+            {
+              "n": 1,
+              "text": "Valuable space at Neutral with 2 or more Army.",
+              "filter": {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "gte",
+                    "args": [
+                      {
+                        "var": "$space.pop"
+                      },
+                      2
+                    ]
+                  },
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "var": "$space.opinion"
+                      },
+                      0
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "n": 2,
+              "text": "Any space with 2 or more Army and opinion below Support.",
+              "filter": {
+                "op": "lt",
+                "args": [
+                  {
+                    "var": "$space.opinion"
+                  },
+                  1
+                ]
+              }
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Highest Pop.",
+              "key": {
+                "var": "$space.pop"
+              },
+              "order": "max"
+            }
+          ]
+        }
+      ],
+      "randomization": {
+        "die": "d6",
+        "eligibleSet": "All spaces still tied after the lettered tie-breaks, listed in alphabetical order of space name.",
+        "procedure": "Roll one die. With N tied spaces, divide the die faces into N equal groups in list order (for 2 spaces: 1 to 3 picks the first, 4 to 6 picks the second). Use the group the roll falls in."
+      },
+      "maxSteps": 12,
+      "dryRuns": [
+        {
+          "id": "cw.d1",
+          "case": "ineligible",
+          "patch": {
+            "eligible": {
+              "crown": false
+            }
+          },
+          "expect": {
+            "outcome": "none",
+            "path": [
+              "cw.start",
+              "cw.end-none"
+            ]
+          }
+        },
+        {
+          "id": "cw.d2",
+          "case": "event-override",
+          "patch": {
+            "card": {
+              "id": "e07",
+              "hasEffect": true,
+              "raisesSelf": false,
+              "lowersEnemy": false
+            }
+          },
+          "expect": {
+            "outcome": "event",
+            "side": "unshaded",
+            "path": [
+              "cw.start",
+              "cw.event",
+              "cw.end-event"
+            ]
+          }
+        },
+        {
+          "id": "cw.d3",
+          "case": "no-target",
+          "patch": {},
+          "expect": {
+            "outcome": "operationSpecial",
+            "path": [
+              "cw.start",
+              "cw.event",
+              "cw.low",
+              "cw.crack:empty",
+              "cw.garrison",
+              "cw.end-op"
+            ],
+            "chosen": [
+              "cork-city"
+            ],
+            "linked": "crown.martial-law:cork-city"
+          }
+        },
+        {
+          "id": "cw.d4",
+          "case": "tie",
+          "patch": {
+            "dice": [
+              2
+            ],
+            "spaces": {
+              "belfast": {
+                "opinion": 0,
+                "pieces": {
+                  "crown.police": {
+                    "normal": 1
+                  }
+                }
+              }
+            }
+          },
+          "expect": {
+            "outcome": "operationSpecial",
+            "path": [
+              "cw.start",
+              "cw.event",
+              "cw.low",
+              "cw.crack:empty",
+              "cw.garrison",
+              "cw.end-op"
+            ],
+            "chosen": [
+              "belfast"
+            ],
+            "linked": "crown.martial-law:belfast"
+          }
+        },
+        {
+          "id": "cw.d5",
+          "case": "linked-sa",
+          "patch": {
+            "spaces": {
+              "tipperary": {
+                "pieces": {
+                  "ira.volunteer": {
+                    "underground": 1,
+                    "active": 1
+                  }
+                }
+              },
+              "cork-city": {
+                "pieces": {
+                  "crown.army": {
+                    "normal": 2
+                  }
+                }
+              }
+            }
+          },
+          "expect": {
+            "outcome": "operationSpecial",
+            "path": [
+              "cw.start",
+              "cw.event",
+              "cw.low",
+              "cw.crack",
+              "cw.end-op"
+            ],
+            "chosen": [
+              "tipperary"
+            ],
+            "linked": "crown.martial-law:cork-city"
+          }
+        },
+        {
+          "id": "cw.d6",
+          "case": "fallback",
+          "patch": {
+            "resources": {
+              "crown": 1
+            },
+            "clearPieces": [
+              "ira.volunteer",
+              "ira.hq"
+            ]
+          },
+          "expect": {
+            "outcome": "pass",
+            "path": [
+              "cw.start",
+              "cw.event",
+              "cw.low",
+              "cw.crack:empty",
+              "cw.garrison:empty",
+              "cw.sweep:empty",
+              "cw.pass"
+            ]
+          }
+        },
+        {
+          "id": "cw.d7",
+          "case": "linked-sa",
+          "patch": {
+            "spaces": {
+              "limerick": {
+                "pieces": {
+                  "crown.army": {
+                    "normal": 2
+                  }
+                }
+              }
+            }
+          },
+          "expect": {
+            "outcome": "operationSpecial",
+            "path": [
+              "cw.start",
+              "cw.event",
+              "cw.low",
+              "cw.crack:empty",
+              "cw.garrison",
+              "cw.end-op"
+            ],
+            "chosen": [
+              "cork-city"
+            ],
+            "linked": "crown.martial-law:cork-city"
+          }
+        }
+      ]
+    },
+    {
+      "id": "bot.ira",
+      "factionId": "ira",
+      "code": "IB",
+      "objective": "Win by reaching 10 Republic score: Pop of spaces at Opposition plus HQs on the map. Keep a base of Volunteers, attack exposed Crown cubes, and march into valuable spaces the Crown does not hold. Boycott turns neutral spaces.",
+      "measures": [
+        {
+          "id": "republic-score",
+          "name": "Republic score",
+          "plain": "Opposition Pop plus HQs on the map.",
+          "expr": {
+            "op": "add",
+            "args": [
+              {
+                "op": "sumSpaces",
+                "args": [
+                  {
+                    "op": "mul",
+                    "args": [
+                      {
+                        "op": "eq",
+                        "args": [
+                          {
+                            "var": "$space.opinion"
+                          },
+                          -1
+                        ]
+                      },
+                      {
+                        "var": "$space.pop"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "count",
+                "args": [
+                  "ira.hq",
+                  "*",
+                  "*"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "valuable",
+          "name": "Valuable",
+          "plain": "A space is valuable if its Pop is 2 or more and it is not at Opposition.",
+          "expr": {
+            "op": "and",
+            "args": [
+              {
+                "op": "gte",
+                "args": [
+                  {
+                    "var": "$space.pop"
+                  },
+                  2
+                ]
+              },
+              {
+                "op": "gt",
+                "args": [
+                  {
+                    "var": "$space.opinion"
+                  },
+                  -1
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "threatened",
+          "name": "Threatened",
+          "plain": "A space is threatened if Crown cubes outnumber Volunteers there.",
+          "expr": {
+            "op": "gt",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "count",
+                    "args": [
+                      "crown.army",
+                      {
+                        "var": "$space.id"
+                      },
+                      "*"
+                    ]
+                  },
+                  {
+                    "op": "count",
+                    "args": [
+                      "crown.police",
+                      {
+                        "var": "$space.id"
+                      },
+                      "*"
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "count",
+                "args": [
+                  "ira.volunteer",
+                  {
+                    "var": "$space.id"
+                  },
+                  "*"
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "eventPolicy": {
+        "plain": "Play the shaded side if the Event has an effect and it raises Republic score or lowers Crown Support Pop. Otherwise do not play it.",
+        "playIf": {
+          "op": "and",
+          "args": [
+            {
+              "var": "card.hasEffect"
+            },
+            {
+              "op": "gte",
+              "args": [
+                {
+                  "op": "add",
+                  "args": [
+                    {
+                      "var": "card.raisesSelf"
+                    },
+                    {
+                      "var": "card.lowersEnemy"
+                    }
+                  ]
+                },
+                1
+              ]
+            }
+          ]
+        },
+        "side": "shaded",
+        "overrides": [
+          {
+            "cardId": "e06",
+            "directive": "conditional",
+            "when": {
+              "op": "lte",
+              "args": [
+                {
+                  "var": "self.resources"
+                },
+                3
+              ]
+            },
+            "side": "shaded",
+            "plain": "Play Arms from America (shaded) whenever Resources are 3 or fewer, even with Event value 0."
+          },
+          {
+            "cardId": "e04",
+            "directive": "ignore",
+            "plain": "Never play Bloody Sunday. Use the normal Operation steps."
+          }
+        ]
+      },
+      "start": "ib.start",
+      "nodes": [
+        {
+          "id": "ib.start",
+          "kind": "condition",
+          "text": "Is Republic Eligible?",
+          "test": {
+            "var": "eligible"
+          },
+          "yes": "ib.event",
+          "no": "ib.end-none"
+        },
+        {
+          "id": "ib.end-none",
+          "kind": "end",
+          "text": "Ineligible: take no action and gain no Pass benefit.",
+          "outcome": "none"
+        },
+        {
+          "id": "ib.event",
+          "kind": "event-check",
+          "text": "Event: apply the Event rules below. Play the shaded side if allowed.",
+          "yes": "ib.end-event",
+          "no": "ib.low"
+        },
+        {
+          "id": "ib.end-event",
+          "kind": "end",
+          "text": "Execute the shaded Event.",
+          "outcome": "event"
+        },
+        {
+          "id": "ib.low",
+          "kind": "condition",
+          "text": "Republic Resources below 1?",
+          "test": {
+            "op": "lt",
+            "args": [
+              {
+                "var": "self.resources"
+              },
+              1
+            ]
+          },
+          "yes": "ib.pass",
+          "no": "ib.rally-check"
+        },
+        {
+          "id": "ib.rally-check",
+          "kind": "condition",
+          "text": "Fewer than 7 Volunteers on the map?",
+          "test": {
+            "op": "lt",
+            "args": [
+              {
+                "op": "count",
+                "args": [
+                  "ira.volunteer",
+                  "*",
+                  "*"
+                ]
+              },
+              7
+            ]
+          },
+          "yes": "ib.rally",
+          "no": "ib.attack"
+        },
+        {
+          "id": "ib.rally",
+          "kind": "action",
+          "text": "Rally in 1 space (priority table IB-1).",
+          "action": "ira.rally",
+          "table": "ib.t.rally",
+          "then": "ib.end-op",
+          "onEmpty": "ib.attack",
+          "linked": {
+            "action": "ira.boycott",
+            "timing": "after",
+            "trigger": {
+              "op": "gte",
+              "args": [
+                {
+                  "var": "self.resources"
+                },
+                2
+              ]
+            },
+            "table": "ib.t.boycott",
+            "skipText": "Skip Boycott if Resources are below 2 or no space qualifies."
+          }
+        },
+        {
+          "id": "ib.attack",
+          "kind": "action",
+          "text": "Attack in 1 space (priority table IB-2).",
+          "action": "ira.attack",
+          "table": "ib.t.attack",
+          "then": "ib.end-op",
+          "onEmpty": "ib.march",
+          "linked": {
+            "action": "ira.boycott",
+            "timing": "after",
+            "trigger": {
+              "op": "gte",
+              "args": [
+                {
+                  "var": "self.resources"
+                },
+                2
+              ]
+            },
+            "table": "ib.t.boycott",
+            "skipText": "Skip Boycott if Resources are below 2 or no space qualifies."
+          }
+        },
+        {
+          "id": "ib.march",
+          "kind": "action",
+          "text": "March into 1 space (priority table IB-3).",
+          "action": "ira.march",
+          "table": "ib.t.march",
+          "then": "ib.end-op",
+          "onEmpty": "ib.pass",
+          "linked": {
+            "action": "ira.boycott",
+            "timing": "after",
+            "trigger": {
+              "op": "gte",
+              "args": [
+                {
+                  "var": "self.resources"
+                },
+                2
+              ]
+            },
+            "table": "ib.t.boycott",
+            "skipText": "Skip Boycott if Resources are below 2 or no space qualifies."
+          }
+        },
+        {
+          "id": "ib.end-op",
+          "kind": "end",
+          "text": "Operation done. If Boycott ran, count it as Operation plus Special Activity.",
+          "outcome": "operation"
+        },
+        {
+          "id": "ib.pass",
+          "kind": "end",
+          "text": "Pass. Gain the Pass Resources.",
+          "outcome": "pass"
+        }
+      ],
+      "priorityTables": [
+        {
+          "id": "ib.t.rally",
+          "scope": "space",
+          "select": "one",
+          "steps": [
+            {
+              "n": 1,
+              "text": "Space at Opposition with 2 or more Volunteers and no HQ (build an HQ).",
+              "filter": {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "var": "$space.opinion"
+                      },
+                      -1
+                    ]
+                  },
+                  {
+                    "op": "gte",
+                    "args": [
+                      {
+                        "op": "count",
+                        "args": [
+                          "ira.volunteer",
+                          {
+                            "var": "$space.id"
+                          },
+                          "*"
+                        ]
+                      },
+                      2
+                    ]
+                  },
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "op": "count",
+                        "args": [
+                          "ira.hq",
+                          {
+                            "var": "$space.id"
+                          },
+                          "*"
+                        ]
+                      },
+                      0
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "n": 2,
+              "text": "Space with an HQ.",
+              "filter": {
+                "op": "gte",
+                "args": [
+                  {
+                    "op": "count",
+                    "args": [
+                      "ira.hq",
+                      {
+                        "var": "$space.id"
+                      },
+                      "*"
+                    ]
+                  },
+                  1
+                ]
+              }
+            },
+            {
+              "n": 3,
+              "text": "Any legal space.",
+              "filter": true
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Highest Pop.",
+              "key": {
+                "var": "$space.pop"
+              },
+              "order": "max"
+            },
+            {
+              "letter": "b",
+              "text": "Fewest Crown cubes.",
+              "key": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "count",
+                    "args": [
+                      "crown.army",
+                      {
+                        "var": "$space.id"
+                      },
+                      "*"
+                    ]
+                  },
+                  {
+                    "op": "count",
+                    "args": [
+                      "crown.police",
+                      {
+                        "var": "$space.id"
+                      },
+                      "*"
+                    ]
+                  }
+                ]
+              },
+              "order": "min"
+            }
+          ]
+        },
+        {
+          "id": "ib.t.attack",
+          "scope": "space",
+          "select": "one",
+          "steps": [
+            {
+              "n": 1,
+              "text": "Space where Volunteers outnumber Crown cubes.",
+              "filter": {
+                "op": "gt",
+                "args": [
+                  {
+                    "op": "count",
+                    "args": [
+                      "ira.volunteer",
+                      {
+                        "var": "$space.id"
+                      },
+                      "*"
+                    ]
+                  },
+                  {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "count",
+                        "args": [
+                          "crown.army",
+                          {
+                            "var": "$space.id"
+                          },
+                          "*"
+                        ]
+                      },
+                      {
+                        "op": "count",
+                        "args": [
+                          "crown.police",
+                          {
+                            "var": "$space.id"
+                          },
+                          "*"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "n": 2,
+              "text": "Any legal space.",
+              "filter": true
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Most Crown cubes.",
+              "key": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "count",
+                    "args": [
+                      "crown.army",
+                      {
+                        "var": "$space.id"
+                      },
+                      "*"
+                    ]
+                  },
+                  {
+                    "op": "count",
+                    "args": [
+                      "crown.police",
+                      {
+                        "var": "$space.id"
+                      },
+                      "*"
+                    ]
+                  }
+                ]
+              },
+              "order": "max"
+            },
+            {
+              "letter": "b",
+              "text": "Highest Pop.",
+              "key": {
+                "var": "$space.pop"
+              },
+              "order": "max"
+            }
+          ]
+        },
+        {
+          "id": "ib.t.march",
+          "scope": "space",
+          "select": "one",
+          "steps": [
+            {
+              "n": 1,
+              "text": "Valuable space with no Volunteers.",
+              "filter": {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "gte",
+                    "args": [
+                      {
+                        "var": "$space.pop"
+                      },
+                      2
+                    ]
+                  },
+                  {
+                    "op": "gt",
+                    "args": [
+                      {
+                        "var": "$space.opinion"
+                      },
+                      -1
+                    ]
+                  },
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "op": "count",
+                        "args": [
+                          "ira.volunteer",
+                          {
+                            "var": "$space.id"
+                          },
+                          "*"
+                        ]
+                      },
+                      0
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "n": 2,
+              "text": "Any legal space.",
+              "filter": true
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Highest Pop.",
+              "key": {
+                "var": "$space.pop"
+              },
+              "order": "max"
+            },
+            {
+              "letter": "b",
+              "text": "Fewest Crown cubes.",
+              "key": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "count",
+                    "args": [
+                      "crown.army",
+                      {
+                        "var": "$space.id"
+                      },
+                      "*"
+                    ]
+                  },
+                  {
+                    "op": "count",
+                    "args": [
+                      "crown.police",
+                      {
+                        "var": "$space.id"
+                      },
+                      "*"
+                    ]
+                  }
+                ]
+              },
+              "order": "min"
+            }
+          ]
+        },
+        {
+          "id": "ib.t.boycott",
+          "scope": "space",
+          "select": "one",
+          "steps": [
+            {
+              "n": 1,
+              "text": "Valuable space at Neutral with 2 or more Underground Volunteers.",
+              "filter": {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "gte",
+                    "args": [
+                      {
+                        "var": "$space.pop"
+                      },
+                      2
+                    ]
+                  },
+                  {
+                    "op": "eq",
+                    "args": [
+                      {
+                        "var": "$space.opinion"
+                      },
+                      0
+                    ]
+                  },
+                  {
+                    "op": "gte",
+                    "args": [
+                      {
+                        "op": "count",
+                        "args": [
+                          "ira.volunteer",
+                          {
+                            "var": "$space.id"
+                          },
+                          "underground"
+                        ]
+                      },
+                      2
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "n": 2,
+              "text": "Any legal space.",
+              "filter": true
+            }
+          ],
+          "tiebreak": [
+            {
+              "letter": "a",
+              "text": "Highest Pop.",
+              "key": {
+                "var": "$space.pop"
+              },
+              "order": "max"
+            }
+          ]
+        }
+      ],
+      "randomization": {
+        "die": "d6",
+        "eligibleSet": "All spaces still tied after the lettered tie-breaks, listed in alphabetical order of space name.",
+        "procedure": "Roll one die. With N tied spaces, divide the die faces into N equal groups in list order (for 2 spaces: 1 to 3 picks the first, 4 to 6 picks the second). Use the group the roll falls in."
+      },
+      "maxSteps": 12,
+      "dryRuns": [
+        {
+          "id": "ib.d1",
+          "case": "ineligible",
+          "patch": {
+            "eligible": {
+              "ira": false
+            }
+          },
+          "expect": {
+            "outcome": "none",
+            "path": [
+              "ib.start",
+              "ib.end-none"
+            ]
+          }
+        },
+        {
+          "id": "ib.d2",
+          "case": "event-override",
+          "patch": {
+            "card": {
+              "id": "e06",
+              "hasEffect": true,
+              "raisesSelf": false,
+              "lowersEnemy": false
+            }
+          },
+          "expect": {
+            "outcome": "event",
+            "side": "shaded",
+            "path": [
+              "ib.start",
+              "ib.event",
+              "ib.end-event"
+            ]
+          }
+        },
+        {
+          "id": "ib.d3",
+          "case": "no-target",
+          "patch": {
+            "clearPieces": [
+              "crown.army",
+              "crown.police"
+            ]
+          },
+          "expect": {
+            "outcome": "operation",
+            "path": [
+              "ib.start",
+              "ib.event",
+              "ib.low",
+              "ib.rally-check",
+              "ib.attack:empty",
+              "ib.march",
+              "ib.end-op"
+            ],
+            "chosen": [
+              "belfast"
+            ],
+            "linked": "skipped"
+          }
+        },
+        {
+          "id": "ib.d4",
+          "case": "tie",
+          "patch": {
+            "dice": [
+              5
+            ],
+            "clearPieces": [
+              "crown.army",
+              "crown.police"
+            ],
+            "spaces": {
+              "cork-city": {
+                "pieces": {
+                  "ira.volunteer": {}
+                }
+              }
+            }
+          },
+          "expect": {
+            "outcome": "operationSpecial",
+            "path": [
+              "ib.start",
+              "ib.event",
+              "ib.low",
+              "ib.rally-check",
+              "ib.attack:empty",
+              "ib.march",
+              "ib.end-op"
+            ],
+            "chosen": [
+              "cork-city"
+            ],
+            "linked": "ira.boycott:cork-city"
+          }
+        },
+        {
+          "id": "ib.d5",
+          "case": "linked-sa",
+          "patch": {
+            "spaces": {
+              "kerry": {
+                "pieces": {
+                  "ira.volunteer": {
+                    "underground": 2
+                  }
+                }
+              }
+            },
+            "dice": [
+              3
+            ]
+          },
+          "expect": {
+            "outcome": "operationSpecial",
+            "path": [
+              "ib.start",
+              "ib.event",
+              "ib.low",
+              "ib.rally-check",
+              "ib.attack",
+              "ib.end-op"
+            ],
+            "chosen": [
+              "cork-county"
+            ],
+            "linked": "ira.boycott:kerry"
+          }
+        },
+        {
+          "id": "ib.d6",
+          "case": "fallback",
+          "patch": {
+            "resources": {
+              "ira": 1
+            },
+            "clearPieces": [
+              "ira.volunteer",
+              "ira.hq"
+            ]
+          },
+          "expect": {
+            "outcome": "pass",
+            "path": [
+              "ib.start",
+              "ib.event",
+              "ib.low",
+              "ib.rally-check",
+              "ib.rally:empty",
+              "ib.attack:empty",
+              "ib.march:empty",
+              "ib.pass"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

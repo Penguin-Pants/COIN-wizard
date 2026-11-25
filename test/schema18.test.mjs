@@ -24,12 +24,11 @@ const S = { var: "$space.id" };
 const ev = (g, self, e, patch, sid) => { const st = applyPatch(deriveState(g, self), patch); return evalExpr(e, { state: st, links: g.board.links, ...(sid ? { $space: st.spaces[sid] } : {}) }); };
 const codes = (g) => validate(g).errors.map((e) => e.code);
 
-test("the latest version is 1.8.0, and a frozen 1.7.0 file migrates with only its version changed", () => {
-  assert.equal(LATEST, "coin-game/1.8.0");
+test("a frozen 1.7.0 file migrates to the latest version with only its version changed", () => {
   const old = read("./fixtures/tan-war.1.7.0.game.json");
   assert.equal(old.meta.schemaVersion, "coin-game/1.7.0");
   const m = migrate(old);
-  assert.equal(m.meta.schemaVersion, "coin-game/1.8.0");
+  assert.equal(m.meta.schemaVersion, LATEST);
   assert.deepEqual(validate(m).errors, []);
   m.meta.schemaVersion = old.meta.schemaVersion; assert.deepEqual(m, old);
 });

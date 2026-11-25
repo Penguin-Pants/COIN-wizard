@@ -119,6 +119,9 @@ function patchForm(b, bi, d, di) {
   const tr = g.tracks.filter((t) => !g.factions.some((f) => f.resourceTrack === t.id)).map((t) => fld(esc(t.name), `<input type="number" placeholder="as in setup" ${ctl(`tracks.${t.id}`, "num")} value="${pt.tracks?.[t.id] ?? ""}">`)).join("");
   const card = fld("Current card", `<select ${ctl("card.id", "text", "", 'data-r="1"')}><option value="">default</option>${g.deck.cards.filter((c) => c.type === "event").map((c) => `<option value="${c.id}" ${pt.card?.id === c.id ? "selected" : ""}>${esc(c.title)}</option>`).join("")}</select>`)
     + (pt.card ? ["hasEffect", "raisesSelf", "lowersEnemy"].map((x) => `<label class="chk"><input type="checkbox" ${ctl(`card.${x}`, "bool")} ${pt.card[x] ? "checked" : ""}> ${{ hasEffect: "has an effect", raisesSelf: "helps this faction", lowersEnemy: "hurts the enemy" }[x]}</label>`).join("") : "");
+  // turn.position (1.8.0) and scoring.nextFinal (1.9.0).
+  const turn = fld("This faction acts", `<select ${ctl("turn.position", "num")}>${[["", "1st Eligible (default)"], ["2", "2nd Eligible"]].map(([v, l]) => `<option value="${v}" ${String(pt.turn?.position ?? "") === v ? "selected" : ""}>${l}</option>`).join("")}</select>`)
+    + `<label class="chk"><input type="checkbox" ${ctl("scoring.nextFinal", "bool")} ${pt.scoring?.nextFinal ? "checked" : ""}> the next scoring card is the final one</label>`;
   const dice = fld("Die rolls, in order", `<input placeholder="for example 3, 5" ${ctl("dice", "dice")} value="${esc((pt.dice ?? []).join(", "))}">`);
   const pcs = g.factions.flatMap((f) => f.pieces);
   const clear = `<details><summary>Remove pieces from the whole map (${(pt.clearPieces ?? []).length})</summary>${pcs.map((x) => `<label class="chk"><input type="checkbox" ${ctl("clearPieces", "list", "", `value="${x.id}"`)} ${(pt.clearPieces ?? []).includes(x.id) ? "checked" : ""}> ${esc(x.name)}</label>`).join(" ")}</details>`;
@@ -128,7 +131,7 @@ function patchForm(b, bi, d, di) {
     return `<div class="opt"><div class="row"><b>${esc(name)}</b><label class="mini"><span>Opinion</span><input type="number" min="-2" max="2" placeholder="as in setup" ${ctl(`spaces.${sid}.opinion`, "num")} value="${sp.opinion ?? ""}"></label><select ${ctl(`spaces.${sid}.pieces`, "addpiece", "", 'aria-label="Set a piece count"')}><option value="">Set a piece count...</option>${pcs.map((x) => `<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select>${btn("dry-delspace", "Remove", { cls: "link", data: `data-dry="${k}" data-s="${esc(sid)}"` })}</div>${lines}</div>`;
   }).join("");
   const add = `<select ${ctl("spaces", "addspace")} aria-label="Change a space"><option value="">Change a space...</option>${g.board.spaces.filter((s) => !pt.spaces?.[s.id]).map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join("")}</select>`;
-  return `<div class="grid4">${elig}${res}${tr}</div><div class="row">${card}</div>${dice}${clear}<h4>Board changes</h4>${spaces}${add}`;
+  return `<div class="grid4">${elig}${res}${tr}</div><div class="row">${card}</div><div class="row">${turn}</div>${dice}${clear}<h4>Board changes</h4>${spaces}${add}`;
 }
 
 function dryRuns(b, bi) {

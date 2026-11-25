@@ -12,7 +12,7 @@ const VARS = {
   "rivals.maxScore": "the highest enemy victory score", "rivals.minScore": "the lowest enemy victory score",
   "rivals.maxMargin": "the highest enemy victory margin", "rivals.minMargin": "the lowest enemy victory margin",
   "card.id": "the card", "card.hasEffect": "the card has an effect for this faction", "card.raisesSelf": "the card helps this faction", "card.lowersEnemy": "the card hurts the enemy", "card.lasting": "the card's lasting type",
-  "card.position": "this faction's place in the card's faction order (1 is first, 0 is not listed)", "turn.position": "this faction's place this turn (1st or 2nd Eligible)",
+  "card.position": "this faction's place in the card's faction order (1 is first, 0 is not listed)", "turn.position": "this faction's place this turn (1st or 2nd Eligible)", "scoring.nextFinal": "the next scoring card is the final one",
   "$space.id": "this space", "$space.name": "space name", "$space.type": "space type", "$space.pop": "Pop", "$space.opinion": "opinion"
 };
 const CMP = { eq: "is", ne: "is not", gt: "is more than", gte: "is at least", lt: "is less than", lte: "is at most" };

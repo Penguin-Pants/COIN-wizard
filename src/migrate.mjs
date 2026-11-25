@@ -1,6 +1,6 @@
 // Lifts older coin-game documents to the latest schema version.
 // Each entry lifts one version. Never edit an old entry: add a new one.
-export const LATEST = "coin-game/1.8.0";
+export const LATEST = "coin-game/1.9.0";
 
 const STEPS = ["brief", "factions", "board", "rules", "review"];
 
@@ -60,6 +60,10 @@ const MIGRATIONS = {
   // New variables (card.position, turn.position), ops (canPlace, canDo) and an optional step target. Nothing to rewrite.
   "coin-game/1.7.0": (g) => {
     g.meta.schemaVersion = "coin-game/1.8.0";
+  },
+  // Bot model gaps 6 to 9 from the GMT sheet research (scoring.nextFinal and later parts). Nothing to rewrite.
+  "coin-game/1.8.0": (g) => {
+    g.meta.schemaVersion = "coin-game/1.9.0";
   }
 };
 
