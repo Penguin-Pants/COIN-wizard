@@ -28,7 +28,7 @@ export const KINDS = {
   steps: { type: "array", items: { $ref: "#/$defs/step" } },
   options: {
     type: "array", minItems: 1,
-    items: { type: "object", required: ["label", "steps"], additionalProperties: false, properties: { label: { type: "string" }, faction: { $ref: "#/$defs/id", description: "The enemy faction this option acts against (1.6.0). A bot whose action node picked an enemy ($target) takes the option for that faction." }, legal: { $ref: "#/$defs/expr", description: "Spaces where this option can be used (1.6.0, needs faction). When the action is used against that faction, a space must meet both the action's targets and this." }, steps: { type: "array", minItems: 1, items: { $ref: "#/$defs/step" } } } }
+    items: { type: "object", required: ["label", "steps"], additionalProperties: false, properties: { label: { type: "string" }, faction: { $ref: "#/$defs/id", description: "The enemy faction this option acts against (1.6.0). A bot whose action node picked an enemy ($target) takes the option for that faction." }, piece: { $ref: "#/$defs/id", description: "1.9.0, needs faction: a piece type of that faction. A bot whose opponent table picked that piece takes this option and no other." }, legal: { $ref: "#/$defs/expr", description: "Spaces where this option can be used (1.6.0, needs faction). When the action is used against that faction, a space must meet both the action's targets and this." }, steps: { type: "array", minItems: 1, items: { $ref: "#/$defs/step" } } } }
   }
 };
 

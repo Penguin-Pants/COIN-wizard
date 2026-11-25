@@ -48,7 +48,7 @@ function rollDie(state) {
 // target faction of the step that picked it (schema 1.8.0, steps with a target only).
 function pick(state, table, items, env, nameOf, limitOf, itemsOf = () => items) {
   const steps = [...table.steps].sort((a, b) => a.n - b.n);
-  const tag = (list, stOf) => { const out = [...list]; out.targetOf = new Map(); for (const it of out) { const t = stOf(it)?.target; if (t) out.targetOf.set(it.id, t); } return out; };
+  const tag = (list, stOf) => { const out = [...list]; out.targetOf = new Map(); out.stepOf = new Map(); for (const it of out) { const st = stOf(it); if (st) out.stepOf.set(it.id, st); if (st?.target) out.targetOf.set(it.id, st.target); } return out; };
   const match = (st) => itemsOf(st).filter((it) => !!evalExpr(st.filter, env(it, st)));
   let pool = [], hit = null;
   for (const st of steps) { pool = match(st); if (pool.length) { hit = st; break; } }
@@ -86,14 +86,14 @@ function pick(state, table, items, env, nameOf, limitOf, itemsOf = () => items) 
 // action is legal against it.
 // poolFor(step): optional; the caller's own pool for a step with a target (action-node parts).
 export function selectByTable(game, state, table, legal, action, extra = {}, poolFor) {
-  const env = (sp, st) => ({ state, links: game.board.links, $space: sp, ...extra, ...(st?.target ? { $target: st.target } : {}) });
+  const env = (sp, st) => ({ state, links: game.board.links, $space: sp, ...extra, ...(st?.target ? { $target: st.target, $targetPiece: undefined } : {}) });
   // The step's pool starts from every space: a space illegal against the node's target (or the
   // first enemy option) may be legal against the step's own target. Affordability still applies.
   const itemsOf = (st) => {
     if (st.target && poolFor) return poolFor(st);
     if (!st.target || !action.steps) return legal;
     if (!affordable(state, action, game)) return [];
-    const lg = legalityOf(action, { ...extra, $target: st.target });
+    const lg = legalityOf(action, { ...extra, $target: st.target, $targetPiece: undefined });
     return Object.values(state.spaces).filter((sp) => !!evalExpr(lg, env(sp, st)));
   };
   const limitOf = (n) => {
@@ -104,12 +104,20 @@ export function selectByTable(game, state, table, legal, action, extra = {}, poo
   return pick(state, table, legal, env, (sp) => sp.name, limitOf, itemsOf);
 }
 
-// Picks one enemy faction by an opponent table. Returns its id or null.
-export function selectOpponent(game, state, table) {
+// Picks one enemy faction by an opponent table: { faction, piece } or null. A step with a piece (schema
+// 1.9.0) considers only that piece's owner and reports the piece.
+export function selectOpponentPick(game, state, table) {
   const enemies = game.factions.filter((f) => f.id !== state.self);
   const env = (f) => ({ state, links: game.board.links, $faction: f.id });
-  return pick(state, { ...table, select: "one" }, enemies, env, (f) => f.name, () => 1)[0]?.id ?? null;
+  const ownerOf = (pid) => game.factions.find((f) => f.pieces.some((p) => p.id === pid))?.id;
+  const itemsOf = (st) => (st.piece ? enemies.filter((f) => f.id === ownerOf(st.piece)) : enemies);
+  const got = pick(state, { ...table, select: "one" }, enemies, env, (f) => f.name, () => 1, itemsOf);
+  if (!got[0]) return null;
+  const piece = got.stepOf.get(got[0].id)?.piece;
+  return { faction: got[0].id, ...(piece ? { piece } : {}) };
 }
+// Picks one enemy faction by an opponent table. Returns its id or null.
+export const selectOpponent = (game, state, table) => selectOpponentPick(game, state, table)?.faction ?? null;
 
 function eventDecision(bot, state, game) {
   const ctx = { state, links: game.board.links };
@@ -152,7 +160,7 @@ function runParts(game, state, node, action, tables, actions, extra, result) {
     return Math.floor(have / amount);
   };
   const pool = (pt, ex = extra) => { const n = canNew(); return legalNow(pt, ex).filter((sp) => n > 0 || paid.has(sp.id)); };
-  const exOf = (st) => (st.target ? { ...extra, $target: st.target } : extra);
+  const exOf = (st) => (st.target ? { ...extra, $target: st.target, $targetPiece: undefined } : extra);
   // The precheck reads each step as the selection does: with its own target and its own legal spaces.
   const anyMatch = (pt) => tables[pt.table].steps.some((st) => { const ex = exOf(st); return pool(pt, ex).some((sp) => !!evalExpr(st.filter, { ...ctx, $space: sp, ...ex })); });
   const before = links[0]?.timing === "before";
@@ -182,6 +190,7 @@ function runParts(game, state, node, action, tables, actions, extra, result) {
   // Steps with their own target (schema 1.8.0), as for an action node without parts.
   if (Object.keys(targets).length) result.targets = targets; else delete result.targets;
   if (extra.$target) result.target = extra.$target;
+  if (extra.$targetPiece) result.targetPiece = extra.$targetPiece; else delete result.targetPiece;
   if (links.length && !before) result.linked = runLinked(game, state, links, actions, tables, ctx, extra);
   return true;
 }
@@ -211,9 +220,11 @@ export function runBot(game, bot, startState) {
     } else if (node.kind === "action") {
       const action = actions[node.action];
       // An action with a target picks the enemy first. No enemy qualifies: the same as no space.
-      const target = node.target ? selectOpponent(game, state, tables[node.target]) : null;
+      const picked = node.target ? selectOpponentPick(game, state, tables[node.target]) : null;
+      const target = picked?.faction ?? null;
       if (node.target && !target) { result.path.push(`${node.id}:empty`); cur = node.onEmpty; continue; }
-      const extra = target ? { $target: target } : {};
+      // A piece target (schema 1.9.0): the action runs only the option made for that piece.
+      const extra = target ? { $target: target, ...(picked.piece ? { $targetPiece: picked.piece } : {}) } : {};
       if (node.parts) {
         if (!runParts(game, state, node, action, tables, actions, extra, result)) { result.path.push(`${node.id}:empty`); cur = node.onEmpty; continue; }
         cur = node.then;
@@ -225,6 +236,7 @@ export function runBot(game, bot, startState) {
       result.path.push(node.id);
       result.chosen = chosen.map((s) => s.id);
       if (target) result.target = target;
+      if (extra.$targetPiece) result.targetPiece = extra.$targetPiece; else delete result.targetPiece;
       // Steps with their own target (schema 1.8.0): each chosen space with the faction it acts against.
       // A later node replaces the earlier node's spaces, so its targets go too.
       if (chosen.targetOf?.size) result.targets = Object.fromEntries(chosen.targetOf); else delete result.targets;
@@ -245,7 +257,7 @@ export function runBot(game, bot, startState) {
         // recheck reads a view without the Operation's own reserved cost.
         const view = withoutCost(game, state, action, result.chosen);
         // Each space is checked against its own step target (schema 1.8.0), else the node's.
-        const legalNow = (id) => { const ex = targetOf?.get(id) ? { ...extra, $target: targetOf.get(id) } : extra; return !!evalExpr(legalityOf(action, ex), { state: view, links: game.board.links, $space: view.spaces[id], ...ex }); };
+        const legalNow = (id) => { const ex = targetOf?.get(id) ? { ...extra, $target: targetOf.get(id), $targetPiece: undefined } : extra; return !!evalExpr(legalityOf(action, ex), { state: view, links: game.board.links, $space: view.spaces[id], ...ex }); };
         const kept = result.chosen.filter(legalNow);
         refundCost(game, state, action, result.chosen, kept);
         result.chosen = kept;

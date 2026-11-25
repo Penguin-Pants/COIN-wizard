@@ -41,7 +41,7 @@ Goal: derive generic, faction-agnostic bot logic from the Non-Player flowcharts 
 | opinion with 5 levels | active/passive support and opposition | Yes (1.9.0: `board.opinionLevels` 5) |
 | `marker.sabotage`, `marker.terror` | markers on spaces | Yes (markerSet) |
 | `attr.econ` | value of a line | Yes (space attrs) |
-| cargo pieces (Shipments) as targets | target list mixing pieces and factions | No |
+| cargo pieces (Shipments) as targets | target list mixing pieces and factions | Yes (1.9.0: step `piece`; every piece has an owner faction) |
 | tie-breaks per row | a tie-break that applies to one numbered row only | Yes (1.7.0: step `tiebreak`) |
 | `mode: sequence` | numbered rows applied in order, each as far as possible | Yes (1.7.0: table `mode`); `parts` (1.5.0) covers rows with different effects |
 | target per row | each row acts against its own faction (Kidnap) | Yes (1.8.0: step `target`) |

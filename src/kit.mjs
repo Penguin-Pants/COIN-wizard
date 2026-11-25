@@ -251,7 +251,7 @@ export function nonPlayerSheetHtml(g, bot) {
   const seq = (t) => (t.mode === "sequence" && t.select === "all" && t.scope !== "opponent" && t.steps.length > 1 ? `<p class="pr">Work down ${NUM(t.steps[0].n)} to ${NUM(t.steps.at(-1).n)} in order, each as far as possible.</p>` : "");
   // Tie-breaks: a step's own (1.7.0) print under that step; the table's print after the steps.
   const tbs = (list, cls) => (list?.length ? `<div class="${cls}">${list.map((x) => `<p>${LET(x.letter)} ${h(x.text)} (${x.order === "max" ? "highest" : "lowest"} wins)</p>`).join("")}</div>` : "");
-  const prio = (t) => `${seq(t)}${t.steps.map((s) => `<p class="pr">${NUM(s.n)} ${h(s.text)}${s.target ? ` <i>Target: ${h(g.factions.find((f) => f.id === s.target)?.name ?? s.target)}.</i>` : ""}</p>${tbs(s.tiebreak, "tb step")}`).join("")}${tbs(t.tiebreak, "tb")}${byName(t)}`;
+  const prio = (t) => `${seq(t)}${t.steps.map((s) => `<p class="pr">${NUM(s.n)} ${h(s.text)}${s.target ? ` <i>Target: ${h(g.factions.find((f) => f.id === s.target)?.name ?? s.target)}.</i>` : ""}${s.piece ? ` <i>Target: ${h((() => { const f = g.factions.find((x) => x.pieces.some((p) => p.id === s.piece)); return f ? `${f.pieces.find((p) => p.id === s.piece).name} (${f.name})` : s.piece; })())}.</i>` : ""}</p>${tbs(s.tiebreak, "tb step")}`).join("")}${tbs(t.tiebreak, "tb")}${byName(t)}`;
   const title = (name, t, a) => `<div class="bt"><h3>${h(name)} <small>(${labels[t.id]})</small></h3>${max(t, a)}</div>`;
 
   const evNodes = order.filter((n) => n.kind === "event-check");

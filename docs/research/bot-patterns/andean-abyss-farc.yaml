@@ -94,9 +94,7 @@ operations:
     onEmpty: march
     order: 'Row 2: row 3 target class first, then row 2 a/b, then "Within 1-4: a" (most self.guerrilla). The sheet does not state it; confirmed by the owner.'
     reading: 'canDo(ambush, $space) (1.8.0) = the Ambush where-clause holds (count(self.guerrilla[underground]) >= 1) and the space has an enemy piece to remove. The sheet says only "where FARC would Ambush".'
-    gap:
-      - '"Shipments" are not a faction (cargo pieces); a target list that mixes pieces and factions does not fit the opponent table.'
-
+    note: 'Target row 1 (Shipments) is a step with piece cargo.shipment (1.9.0); its owner faction is the target, and only the option for that piece runs.'
 
   terror:
     mode: sequence

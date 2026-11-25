@@ -215,3 +215,23 @@ test("a dry run sets 2nd Eligible and a final next scoring card", () => withApp(
   assert.deepEqual(pt.turn, { position: 2 });
   assert.deepEqual(pt.scoring, { nextFinal: true });
 }));
+
+// Schema 1.9.0 gap 9: an opponent table step may name an enemy piece; the step's target is that piece.
+test("a designer sets an opponent step to a piece target and clears it", () => withApp(async ({ page, db }) => {
+  await botsTab(page);
+  await page.click('[data-a="bot-addtable"]'); await frames(page);
+  // The Crown bot has an opponent table only if one is made: make the new table pick an enemy.
+  const scopeSel = page.locator('select[data-b$="/scope"]').last();
+  await page.locator("details.act > summary").last().click(); await frames(page);
+  await scopeSel.selectOption("opponent"); await frames(page);
+  const ps = page.locator("select[data-steppiece]").last();
+  assert.equal(await ps.count(), 1, "an opponent step offers a piece");
+  await ps.selectOption("ira.hq"); await frames(page);
+  await page.waitForTimeout(1800);
+  let t = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].priorityTables.at(-1);
+  assert.equal(t.steps[0].piece, "ira.hq");
+  await page.locator("select[data-steppiece]").last().selectOption(""); await frames(page);
+  await page.waitForTimeout(1800);
+  t = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].priorityTables.at(-1);
+  assert.equal("piece" in t.steps[0], false);
+}));

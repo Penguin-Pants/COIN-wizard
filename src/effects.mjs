@@ -261,7 +261,15 @@ export function payCost(game, state, action, spaceIds) {
 }
 
 // The option of a choice that runs: the one for the action's target, else the first option.
-const runOption = (s, ctx) => (ctx.$target && s.options.find((o) => o.faction === ctx.$target)) || s.options[0];
+// A piece target (schema 1.9.0, $targetPiece) takes only the option made for that piece; with none, nothing
+// runs and no space is legal. A faction target takes that faction's option without a piece, else any of its options.
+// The piece rule applies only to a choice between enemies (an option names a faction); any other choice
+// takes its first option, as before.
+const NONE = { steps: [], legal: false };
+const runOption = (s, ctx) => {
+  if (ctx.$targetPiece && s.options.some((o) => o.faction)) return s.options.find((o) => o.faction === ctx.$target && o.piece === ctx.$targetPiece) ?? NONE;
+  return (ctx.$target && (s.options.find((o) => o.faction === ctx.$target && !o.piece) ?? s.options.find((o) => o.faction === ctx.$target))) || s.options[0];
+};
 
 // The legal-space condition when a bot runs the action: the action's targets and the legal spaces of
 // the option each top-level choice will run (schema 1.6.0). A player before choosing sees the action's
@@ -278,6 +286,6 @@ export function applyAction(game, state, action, spaceIds, extra = {}, { pay = t
   if (pay) payCost(game, state, action, spaceIds);
   for (const id of spaceIds) {
     const t = targetOf?.get(id);
-    runSteps(game, action.steps, { state, links: game.board.links, $space: state.spaces[id], ...extra, ...(t ? { $target: t } : {}) });
+    runSteps(game, action.steps, { state, links: game.board.links, $space: state.spaces[id], ...extra, ...(t ? { $target: t, $targetPiece: undefined } : {}) });
   }
 }
