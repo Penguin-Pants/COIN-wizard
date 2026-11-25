@@ -240,3 +240,16 @@ test("a later action without a piece target clears the reported piece", () => {
   assert.equal(r.target, "f1");
   assert.equal(r.targetPiece, undefined);
 });
+
+// Codex review on #31: a piece target works only with enemy choices at the top level of the action.
+test("piece options and piece targets need enemy choices at the top level", () => {
+  let { g, a } = pieceTarget();
+  // A piece option inside an "if" is refused.
+  a.steps = [{ op: "if", test: true, then: [a.steps[0]] }];
+  assert.ok(validate(g).errors.some((e) => e.code === "option-piece" && e.path.includes("/then/0/options/")));
+  // A node that can pick a piece target may not use an action whose enemy choice is nested.
+  ({ g, a } = pieceTarget());
+  a.steps[0].options.splice(1, 1); // no piece option left
+  a.steps = [{ op: "if", test: true, then: [a.steps[0]] }];
+  assert.ok(validate(g).errors.some((e) => e.code === "option-piece" && /nodes/.test(e.path)), validate(g).errors.map((e) => `${e.code} ${e.path}`).join("; "));
+});
