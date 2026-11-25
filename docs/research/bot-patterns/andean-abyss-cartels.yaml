@@ -25,7 +25,8 @@ event:
 
 decision:
   - id: d1
-    if: avail(self.*) >= 10 or canPlace(self.base, "*")
+    if: avail(self.*) >= 10 or anySpace(canPlace(self.base, $space.id) and $space.type in [city, province] and count(self.guerrilla) >= 2 and count(cargo.shipment) == 0)
+    reading: '"Rally can place Base" = a Rally space where row 2 places one; canPlace alone checks only the pool and the limit per space.'
     yes: rally
     no: d2
     gap: ['G4 avail() has no expression']

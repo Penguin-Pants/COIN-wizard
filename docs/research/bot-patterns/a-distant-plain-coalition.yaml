@@ -41,7 +41,7 @@ decision:
 
 operations:
   sweep:
-    keep_back: last self cube at self.base; cubes needed for sweep at support; last 3 cubes from non-Pashtun with support
+    keep_back: each faction's last cube at a self.base (self and ally cubes); cubes needed for sweep at support; last 3 cubes from non-Pashtun with support
     rows_1_and_3: bring max ally cubes into spaces with < 2 ally cubes
     priorities:
       1: into/at highest pop and support and enemy, with the troops needed to activate most; use air lift if otherwise unable to activate all (1) per air lift priorities (2) with spare self pieces
@@ -85,7 +85,7 @@ special_activities:
   air_lift:
     keep_back: last self troop at own base; last 2 ally where any self; last 3 cubes from non-Pashtun with support
     priorities:
-      1: get up to 2 ally per space with self, rival.insurgent and no ally cubes, from (1) per sweep bullet (2) random
+      1: get up to 2 ally per space with self, rival.insurgent and no ally cubes, from (1) per priority 2 below (relocate to enable civic action) (2) random
       2: { do: relocate ally to enable self propaganda civic action, tiebreak: { a: no support, b: highest pop } }
     ifNone: with train no SA; otherwise air strike     # loop badge "Loop: Pass"
   air_strike:

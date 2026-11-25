@@ -20,7 +20,7 @@ Model today: `coin-game/1.10.0`.
 
 ## Covered without a schema change
 
-- **Random as a row (G11, rows only):** a row with its own empty tie-break list (`tiebreak: []`) goes straight to the die (`src/dryrun.mjs`, `tbsOf`). Document it in `docs/SCHEMA.md`. "From random sources" inside an effect stays a gap.
+- **Random as a row (G11, one space only):** in a table with `select: one`, a row with its own empty tie-break list (`tiebreak: []`) goes straight to the die (`src/dryrun.mjs`, `pick`). Document it in `docs/SCHEMA.md`. With `select: all` the leftover ties sort by space name and use no die, so a random pick of several spaces (Government Eradicate "Random") and "from random sources" stay gaps.
 - **Loop state (G17):** the loop pattern (1.5.0 proposal, part B) writes the second pass as separate nodes. "If in loop" is then known when the node is written: the loop node uses its own table. Document it.
 - **SA fallback per Operation:** "After Assault: Transport. Otherwise: Govern" is a different linked list on each node (1.5.0).
 

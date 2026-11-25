@@ -30,15 +30,16 @@ event:
 
 decision:
   - id: d1
-    if: avail(self.guerrilla) >= 6 or canPlace(self.base, "*")
+    if: avail(self.guerrilla) >= 6 or anySpace(canPlace(self.base, $space.id) and $space.type in [city, province] and $space.opinion > opposition and count(self.guerrilla) >= 3)
+    reading: '"can place Base" = a Rally space where row 2 places one; canPlace alone checks only the pool and the limit per space.'
     yes: rally
     no: d2
     gap: ['G4 avail() has no expression (pool count)']
   - id: d2
-    if: count of spaces with rival.insurgent.base where count(self.*) >= 1  >=  half of spaces with rival.insurgent.base
+    if: 2 * sumSpaces(count(rival.insurgent.base) >= 1 and count(self.*) >= 1) >= sumSpaces(count(rival.insurgent.base) >= 1)
     yes: d3
     no: march
-    gap: ['G8 no count of spaces that meet a condition (countSpaces); anySpace exists']
+    note: sumSpaces runs the test in each space and sums true as 1.
   - id: d3
     if: anySpace(count(rival.insurgent.base) >= 1 and count(self.guerrilla[underground]) >= 1)
     yes: terror

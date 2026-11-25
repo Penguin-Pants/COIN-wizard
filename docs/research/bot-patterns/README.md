@@ -52,7 +52,7 @@ The A Distant Plain card and space list (`A_Distant_Plain_Non-Player_Bot_Card_an
 
 ## Gaps that repeat (7 sheets, schema 1.10.0)
 
-Each `gap:` line in the YAML files names one of these ids. Count: sheets out of 7 that need it. FARC is counted from its pilot notes.
+Each `gap:` line in the YAML files names one of these ids. G8 was dropped: `sumSpaces` already counts spaces. Count: sheets out of 7 that need it. FARC is counted from its pilot notes.
 
 | Id | Gap | Sheets | Count | Size |
 |---|---|---|---|---|
@@ -63,7 +63,7 @@ Each `gap:` line in the YAML files names one of these ids. Count: sheets out of 
 | G4 | `avail(piece)`: pieces Available as an expression | FARC, AUC, Cartels, Taliban, Government | 5 | Small |
 | G12 | An Operation and a Special Activity interleaved in one space ("Rally AND then Cultivate", "pause Train to Surge", "use Air Lift if unable") | Cartels, Taliban, Warlords, Coalition, Government | 5 | Large |
 | G2 | Card effect categories: "card (either part) could shift Support, place Bases, …" (`raisesSelf` and `lowersEnemy` are too coarse) | Taliban, Warlords, Coalition, Government | 4 | Medium |
-| G11 | Random selection as a priority row or as the source ("random space", "Random") | AUC, Cartels, Warlords, Government | 4 | Small |
+| G11 | Random selection of several spaces, or as the source ("random space", "Random"); one random space already works (`select: one`, empty tie-breaks) | AUC, Cartels, Warlords, Government | 4 | Small |
 | G16 | Resource budget for one Operation: "max 2/3↓ of Res, all if Res < 9", "do not spend below 41 Res" | Taliban, Warlords, Coalition, Government | 4 | Small |
 | G9 | Distance or route cost: "closer to FARC", "lowest cost route" | AUC, Taliban, Government | 3 | Medium |
 | G10 | Removal order across factions and piece types in one space ("Bases first", "ⓐ Base ⓑ Troops") | AUC, Cartels, Taliban | 3 | Medium |
@@ -73,9 +73,9 @@ Each `gap:` line in the YAML files names one of these ids. Count: sheets out of 
 | G14 | The next card (look-ahead) | Taliban, Coalition | 2 | Small |
 | G18 | Rank spaces by an action's outcome ("for greatest shift") | Warlords, Coalition | 2 | Large (with G3) |
 | G20 | A count target ("to equal Player", "as close as possible to # of Support") | Coalition, Government | 2 | Medium |
-| G8, G15, G19, G21, G22 | Count of spaces that meet a condition; an SA used for its income; another faction's action run by the bot; a row that reads what earlier rows did; a lasting card in play | 1 each | 1 | Small to medium |
+| G15, G19, G21, G22 | An SA used for its income; another faction's action run by the bot; a row that reads what earlier rows did; a lasting card in play | 1 each | 1 | Small to medium |
 
-Already in the model, seen on several sheets: if-none chains of Special Activities and a different chain per Operation (1.5.0 linked lists), the diamond that picks the Special Activity (first entry's `trigger`), "next Propaganda final" (`scoring.nextFinal`), per-row tie-breaks and targets, Support-phase choices (`bot.scoring`), Momentum and Capability boxes (`lasting`).
+Already in the model, seen on several sheets: a count of spaces that meet a condition (`sumSpaces`; AUC "in at least half of spaces with FARC Bases"), if-none chains of Special Activities and a different chain per Operation (1.5.0 linked lists), the diamond that picks the Special Activity (first entry's `trigger`), "next Propaganda final" (`scoring.nextFinal`), per-row tie-breaks and targets, Support-phase choices (`bot.scoring`), Momentum and Capability boxes (`lasting`).
 
 Proposal for the next schema version: `docs/proposals/bot-model-gaps-2.md`.
 

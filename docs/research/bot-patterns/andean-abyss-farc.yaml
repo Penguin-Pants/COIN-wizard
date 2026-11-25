@@ -36,10 +36,10 @@ event:
 
 decision:
   - id: d1
-    if: avail(self.guerrilla) >= 9 or canPlace(self.base, "*")
+    if: avail(self.guerrilla) >= 9 or anySpace(canPlace(self.base, $space.id) and $space.type in [city, province] and $space.opinion < support and count(self.guerrilla) >= 3)
     yes: rally
     no: d2
-    note: 'canPlace (1.8.0) checks Available and the limit per space only; other placement rules of the game are not checked.'
+    note: 'canPlace (1.8.0) checks Available and the limit per space only, so the test adds Rally row 2 (3+ Guerrillas in a Rally space).'
   - id: d2
     if: anySpace(($space.opinion >= support or $space.type == line) and (count(self.*, $space) >= 3 or count(self.guerrilla[underground], $space) >= 1))
     yes: d3
