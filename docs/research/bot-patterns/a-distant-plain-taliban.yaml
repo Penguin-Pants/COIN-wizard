@@ -32,7 +32,8 @@ event:
 
 decision:
   - id: d1
-    if: terror would shift opinion 3+ steps (support and opposition combined)
+    if: terror would change the Support total plus the Opposition total by 3 or more (points weighted by pop)
+    reading: '"shift 3+ Oppose and Support combined" read as the population-weighted totals, not opinion steps (confidence medium; the sheet does not name the unit).'
     yes: terror
     no: d2
     gap: ['G3 a predicted outcome of an action ("would shift", "would remove") is not a variable; canDo is legality only']
