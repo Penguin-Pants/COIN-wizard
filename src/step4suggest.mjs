@@ -133,12 +133,14 @@ function fillDeck(g, r, rep) {
 
 // A rule is still the preset default when its formula and threshold are the default ones and its text
 // is the default text, allowing for a renamed piece (the default text names the base piece).
-function isDefaultVictory(f, v) {
-  const d = victoryFor(f);
-  if (JSON.stringify([v.formula, v.threshold]) !== JSON.stringify([d.formula, d.threshold])) return false;
-  const base = f.pieces.find((p) => p.isBase)?.name;
-  const pattern = base && d.plain.includes(base) ? new RegExp(`^${d.plain.split(base).map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".+")}$`) : null;
-  return v.plain === d.plain || !!pattern?.test(v.plain);
+// A game may have switched between 3 and 5 opinion levels after the preset was made: both defaults count.
+function isDefaultVictory(f, v, g) {
+  return [victoryFor(f), victoryFor(f, g)].some((d) => {
+    if (JSON.stringify([v.formula, v.threshold]) !== JSON.stringify([d.formula, d.threshold])) return false;
+    const base = f.pieces.find((p) => p.isBase)?.name;
+    const pattern = base && d.plain.includes(base) ? new RegExp(`^${d.plain.split(base).map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".+")}$`) : null;
+    return v.plain === d.plain || !!pattern?.test(v.plain);
+  });
 }
 
 function fillVictory(g, r, rep) {
@@ -147,7 +149,7 @@ function fillVictory(g, r, rep) {
     const f = g.factions.find((x) => x.id === v?.factionId);
     if (!f || i < 0) { rep.dropped.push(`Victory for unknown faction ${v?.factionId}`); continue; }
     const cur = g.victory.perFaction[i];
-    if (!isDefaultVictory(f, cur)) { rep.skipped.push(`${f.name} victory: kept yours`); continue; }
+    if (!isDefaultVictory(f, cur, g)) { rep.skipped.push(`${f.name} victory: kept yours`); continue; }
     const next = { factionId: f.id, plain: str(v.plain) || cur.plain, formula: v.formula ?? cur.formula, threshold: Number.isInteger(v.threshold) ? v.threshold : cur.threshold };
     if (!fits(g, `/victory/perFaction/${i}`, (t) => { t.victory.perFaction[i] = next; })) { rep.dropped.push(`${f.name} victory (the formula is not valid)`); continue; }
     g.victory.perFaction[i] = next; rep.added.push(`${f.name} victory`);

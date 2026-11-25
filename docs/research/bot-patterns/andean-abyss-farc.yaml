@@ -79,7 +79,6 @@ operations:
     onEmpty: rally
     gap:
       - '"yet to move" and "stay underground" need movement state the dry run does not track.'
-      - opinion has 5 levels here (active/passive support, neutral, passive/active opposition); the model has 3 (-1, 0, 1).
 
   attack:
     mode: sequence

@@ -2,6 +2,7 @@
 import Ajv2020 from "ajv/dist/2020.js";
 import schema from "../schema/coin-game.schema.json" with { type: "json" };
 import { scanExpr, VAR_OK } from "./expr.mjs";
+import { opinionMax } from "./opinion.mjs";
 import { deriveState, applyPatch } from "./state.mjs";
 import { runCase, linkedOf } from "./dryrun.mjs";
 
@@ -90,7 +91,8 @@ export function validate(game) {
   for (const f of factionIds) if (game.setup.eligibility[f] === undefined) err("missing-setup", "/setup/eligibility", `No initial eligibility for ${f}`);
   for (const [sid, a] of Object.entries(game.setup.spaceAttributes ?? {})) {
     if (!spaceIds.has(sid)) err("missing-ref", "/setup/spaceAttributes", `Unknown space ${sid}`);
-    if (a.opinion !== undefined && ![-1, 0, 1].includes(a.opinion)) err("range", `/setup/spaceAttributes/${sid}`, `Opinion ${a.opinion} must be -1, 0 or 1`);
+    const om = opinionMax(game);
+    if (a.opinion !== undefined && !(Number.isInteger(a.opinion) && Math.abs(a.opinion) <= om)) err("range", `/setup/spaceAttributes/${sid}`, `Opinion ${a.opinion} must be a whole number from ${-om} to ${om} (${om === 2 ? "5" : "3"} opinion levels)`);
   }
   const onBoard = {}; const perSpace = {};
   game.setup.placements.forEach((pl, i) => {

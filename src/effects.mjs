@@ -5,6 +5,7 @@
 // - A roll uses the next die of the dry run (error when none is left).
 // - A step that needs a player to pick a space ("choose", or "spaces" with "filter") is an error,
 //   except in a scoring phase that bot.scoring names: its table picks (chosenRun below).
+import { opinionMax } from "./opinion.mjs";
 import { evalExpr, neighbors } from "./expr.mjs";
 
 const clamp = (v, lo, hi) => Math.min(hi ?? Infinity, Math.max(lo ?? -Infinity, v));
@@ -199,7 +200,9 @@ function runStep(game, s, ctx) {
     }
     case "shift": {
       const sp = spaceOf(s, ctx, "space");
-      sp[s.attr] = clamp((sp[s.attr] ?? 0) + (s.toward === "support" ? s.amount : -s.amount), -1, 1);
+      // One level per step, to the ends of the game's scale (3 or 5 levels, schema 1.9.0).
+      const om = opinionMax(game);
+      sp[s.attr] = clamp((sp[s.attr] ?? 0) + (s.toward === "support" ? s.amount : -s.amount), -om, om);
       return;
     }
     case "track": setTrack(game, state, s.id, trackValue(game, state, s.id) + s.delta); return;

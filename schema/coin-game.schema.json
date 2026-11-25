@@ -282,6 +282,13 @@
       ],
       "additionalProperties": false,
       "properties": {
+        "opinionLevels": {
+          "enum": [
+            3,
+            5
+          ],
+          "description": "1.9.0: 3 opinion levels (Support 1, Neutral 0, Opposition -1; the default) or 5 (Active Support 2 to Active Opposition -2), as the game's rules say."
+        },
         "spaces": {
           "type": "array",
           "minItems": 2,

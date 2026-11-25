@@ -3,6 +3,8 @@ import { fld, inp, sel, btn, chip, bound } from "../components/fields.mjs";
 import { addButton, removeButton, defineList } from "../components/listEditor.mjs";
 import { fvars, fdot } from "../components/faction.mjs";
 import { boardSvg } from "../../src/kit.mjs";
+import { opinionLevels, opinionNames } from "../../src/opinion.mjs";
+import { setOpinionLevels } from "../../src/presets.mjs";
 import { touch, check, ask, guard } from "../store.mjs";
 import { boardPrompt, fillBoard, boardBase } from "../../src/boardsuggest.mjs";
 import { mapPrompt, applyMapPositions } from "../../src/mapplace.mjs";
@@ -16,7 +18,7 @@ export function renderBoard() {
   const lnk = (id) => g.board.spaces.find((s) => s.id === id)?.name ?? id;
   return `<h2 tabindex="-1" id="h">Prepare the board and setup</h2><p class="lead">Spaces and legal connections define play. Drawing positions are separate and only change how the board looks.</p>
   ${suggestPanel(g)}
-  <section class="panel"><h3>Spaces</h3><table class="t"><thead><tr><th>Name</th><th>Type</th><th>Pop</th><th>Starting opinion</th><th><span class="sr">Actions</span></th></tr></thead><tbody>${g.board.spaces.map((s, i) => `<tr><td>${inp(`board/spaces/${i}/name`, s.name)}</td><td>${sel(`board/spaces/${i}/type`, s.type, ["city", "province", "line", "sanctuary", "custom"])}</td><td>${inp(`board/spaces/${i}/attrs/pop`, s.attrs.pop, { t: "n", type: "number", attrs: 'min="0"' })}</td><td>${sel(`setup/spaceAttributes/${s.id}/opinion`, g.setup.spaceAttributes?.[s.id]?.opinion ?? 0, [[-1, "Opposition"], [0, "Neutral"], [1, "Support"]], { t: "n" })}</td><td>${removeButton("spaces", { id: s.id })}</td></tr>`).join("")}</tbody></table>${addButton("spaces", "Add space")}</section>
+  <section class="panel"><h3>Spaces</h3><label class="fld inline"><span>Opinion levels</span><select id="oplevels" data-path="/board/opinionLevels">${[[3, "3: Support, Neutral, Opposition"], [5, "5: Active and Passive Support and Opposition"]].map(([v, l]) => `<option value="${v}" ${opinionLevels(g) === v ? "selected" : ""}>${l}</option>`).join("")}</select></label><table class="t"><thead><tr><th>Name</th><th>Type</th><th>Pop</th><th>Starting opinion</th><th><span class="sr">Actions</span></th></tr></thead><tbody>${g.board.spaces.map((s, i) => `<tr><td>${inp(`board/spaces/${i}/name`, s.name)}</td><td>${sel(`board/spaces/${i}/type`, s.type, ["city", "province", "line", "sanctuary", "custom"])}</td><td>${inp(`board/spaces/${i}/attrs/pop`, s.attrs.pop, { t: "n", type: "number", attrs: 'min="0"' })}</td><td>${sel(`setup/spaceAttributes/${s.id}/opinion`, g.setup.spaceAttributes?.[s.id]?.opinion ?? 0, [...opinionNames(g)].reverse(), { t: "n" })}</td><td>${removeButton("spaces", { id: s.id })}</td></tr>`).join("")}</tbody></table>${addButton("spaces", "Add space")}</section>
   <section class="panel"><h3>Legal connections</h3>
     <form class="row" onsubmit="return false"><label class="fld"><span>From</span><select id="lk-from">${g.board.spaces.map((s) => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join("")}</select></label><label class="fld"><span>To</span><select id="lk-to">${g.board.spaces.map((s, i) => `<option value="${esc(s.id)}" ${i === 1 ? "selected" : ""}>${esc(s.name)}</option>`).join("")}</select></label>${addButton("links", "Add connection")}</form>
     ${S.msg.link ? `<p class="err">${esc(S.msg.link)}</p>` : ""}
@@ -158,6 +160,11 @@ defineList("links", {
 // Reads the chosen image as a data URL, so the kit carries it with no outside link.
 export function onBoardChange(el) {
   if (el.id === "mapfiles") { addMaps([...(el.files ?? [])]); return true; }
+  // Opinion levels (schema 1.9.0): see setOpinionLevels.
+  if (el.id === "oplevels") {
+    setOpinionLevels(S.game, Number(el.value));
+    touch(); render(); return true;
+  }
   if (el.id !== "boardbg") return false;
   const file = el.files?.[0]; if (!file) return true;
   if (file.size > 1.5 * 1024 * 1024) { S.msg.bg = "That image is larger than 1.5 MB. Use a smaller one."; render(); return true; }

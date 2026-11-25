@@ -24,7 +24,7 @@ Goal: derive generic, faction-agnostic bot logic from the Non-Player flowcharts 
 - `self`, `state`, `rival.<kind>`: factions by role. `self.guerrilla`, `self.base`, `state.cube`, `state.police`: pieces by role; `[underground]`, `[active]` select a state.
 - `count(piece, $space)`: pieces in the space being judged (`$space` may be left out). `avail(piece)`: pieces Available.
 - `$space.type`: `city`, `province`, `line`. `$space.pop`, `$space.opinion`, `$space.control`.
-- Opinion levels: `active_opposition < opposition < neutral < support < active_support` (GMT uses 5 levels; the model has 3).
+- Opinion levels: `active_opposition < opposition < neutral < support < active_support` (GMT uses 5 levels; since 1.9.0 a game may have 3 or 5).
 - `priorities` are the numbered rows. `mode: sequence` (the usual GMT reading): work down the rows in order and do each row's selection or effect as far as possible, until the limit or the Resources run out. `mode: first`: only the first row with a match applies. Both exist in the model since 1.7.0 (priority table `mode`). `tiebreak` are lettered tie-breaks: under a row (`{ do, tiebreak }`) they apply to that row only, as printed on the sheet; at list level they apply to every row; `then` / `with` link a Special Activity; `onEmpty` is the "if none" arrow.
 
 ## Variables found so far (pilot)
@@ -38,7 +38,7 @@ Goal: derive generic, faction-agnostic bot logic from the Non-Player flowcharts 
 | `turn.position` | 1st or 2nd Eligible | Yes (1.8.0) |
 | `scoring.next.final` | next scoring card is the last | Yes (1.9.0: `scoring.nextFinal`) |
 | `$space.control` | which side controls the space | No (computed by engine only) |
-| opinion with 5 levels | active/passive support and opposition | No (3 levels) |
+| opinion with 5 levels | active/passive support and opposition | Yes (1.9.0: `board.opinionLevels` 5) |
 | `marker.sabotage`, `marker.terror` | markers on spaces | Yes (markerSet) |
 | `attr.econ` | value of a line | Yes (space attrs) |
 | cargo pieces (Shipments) as targets | target list mixing pieces and factions | No |
