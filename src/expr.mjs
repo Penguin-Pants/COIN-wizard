@@ -138,8 +138,10 @@ export function evalExpr(e, ctx) {
         card = { ...card, position: pos, lasting };
       }
       const view = own ? st : { ...st, self: act.faction, card };
-      const legal = legalityOf(act, own && ctx.$target ? { $target: ctx.$target } : {});
-      const ok = (sp) => !!evalExpr(legal, { state: view, links: ctx.links, $space: sp, ...(own && ctx.$target ? { $target: ctx.$target } : {}) });
+      // The caller's target (and piece target, schema 1.9.0) applies only to the caller's own actions.
+      const tgt = own && ctx.$target ? { $target: ctx.$target, ...(ctx.$targetPiece ? { $targetPiece: ctx.$targetPiece } : {}) } : {};
+      const legal = legalityOf(act, tgt);
+      const ok = (sp) => !!evalExpr(legal, { state: view, links: ctx.links, $space: sp, ...tgt });
       return sid === "*" ? Object.values(st.spaces).some(ok) : !!st.spaces[sid] && ok(st.spaces[sid]);
     }
     default: throw new Error(`Unknown op: ${e.op}`);

@@ -164,7 +164,8 @@ export function validate(game) {
           // An option's piece (1.9.0) needs a faction and belongs to it. Each faction and piece pair has one option.
           if (o.piece !== undefined) {
             const owner = pieces.find((x) => x.id === o.piece)?.owner;
-            if (o.faction === undefined) err("option-piece", `${p}/options/${j}`, "An option's piece needs the faction it acts against");
+            if (scope.nested || scope.owner === undefined) err("option-piece", `${p}/options/${j}/piece`, "A piece option works only on a choice at the top level of an action's effects");
+            else if (o.faction === undefined) err("option-piece", `${p}/options/${j}`, "An option's piece needs the faction it acts against");
             else if (!owner) err("missing-ref", `${p}/options/${j}/piece`, `Unknown piece ${o.piece}`);
             else if (owner !== o.faction) err("option-piece", `${p}/options/${j}/piece`, `Piece ${o.piece} does not belong to ${o.faction}`);
           }
@@ -330,7 +331,17 @@ function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionByI
       if (n.target !== undefined) {
         if (!tables[n.target]) err("missing-ref", np, `Target table not found: ${n.target}`);
         else if (tables[n.target].scope !== "opponent") err("bad-target", np, `Target table ${n.target} must pick an enemy (scope: an enemy faction)`);
-        else used.add(n.target);
+        else {
+          used.add(n.target);
+          // A piece target (1.9.0) needs the action's enemy choices at the top level: a nested one is not
+          // part of the legality check, so the action could pass and then run no choice effect.
+          const nested = (list, deep) => list.some((s) => (deep && s.op === "choose" && s.options.some((o) => o.faction)) || nested([...(s.then ?? []), ...(s.else ?? []), ...(s.options ?? []).flatMap((o) => o.steps)], true));
+          // The linked Special Activities inherit the piece target too.
+          const linkedSteps = [n.linked ?? []].flat().flatMap((L) => actionById[L.action]?.steps ?? []);
+          const steps = [...(n.parts ? n.parts.flatMap((pt) => pt.steps) : a?.steps ?? []), ...linkedSteps];
+          if (tables[n.target].steps.some((s) => s.piece) && steps.some((s) => nested([s], false)))
+            err("option-piece", np, `Node ${n.id} can pick a piece target, so the enemy choices of its action must be at the top level of its effects`);
+        }
       }
       if (!n.then || !n.onEmpty) err("incomplete-node", np, `Action ${n.id} needs "then" and "onEmpty" branches (empty target sets must have a next branch)`); else { ref(n.then, np, "Then branch"); ref(n.onEmpty, np, "Empty branch"); }
       // linked: one object (path .../linked) or a list (path .../linked/<i>). One timing per list.
