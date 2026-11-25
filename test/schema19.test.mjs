@@ -297,3 +297,28 @@ test("unmoved is a value the editor can show and reads as plain English", () => 
   assert.deepEqual(fromValue(m), e);
   assert.match(valueText(m, tan()), /not yet moved in this space/);
 });
+
+// Codex review on #32: the record of moved pieces follows later moves, removals and flips.
+test("pieces that move on, are removed or flip keep unmoved correct", () => {
+  const run = (extra) => {
+    const g = tan(), A = g.board.links[0].from, B = g.board.links[0].to;
+    const Cid = g.board.spaces.find((x) => x.id !== A && x.id !== B).id;
+    const st = applyPatch(deriveState(g, "ira"), { clearPieces: ["ira.volunteer"], spaces: { [A]: { pieces: { "ira.volunteer": { underground: 3 } } }, [B]: { pieces: { "ira.volunteer": { underground: 1 } } } } });
+    startOperation(st);
+    applyAction(g, st, { cost: { amount: 0 }, steps: [{ op: "move", piece: "ira.volunteer", count: "all", from: A, to: B, state: "underground" }, ...extra(B, Cid)] }, [B]);
+    const un = (sid, s = "*") => evalExpr({ op: "unmoved", args: ["ira.volunteer", sid, s] }, { state: st, links: g.board.links });
+    return { un, B, C: Cid };
+  };
+  let r = run((B, C) => [{ op: "move", piece: "ira.volunteer", count: "moved", from: B, to: C }]);
+  assert.equal(r.un(r.B), 1, "the 3 moved on; the 1 that never moved stays");
+  assert.equal(r.un(r.C), 0, "the 3 in C have moved");
+  assert.equal(r.un("*"), 1);
+  r = run((B) => [{ op: "flip", piece: "ira.volunteer", from: "underground", to: "active", count: "moved", space: B }]);
+  assert.equal(r.un(r.B, "underground"), 1);
+  assert.equal(r.un(r.B, "active"), 0);
+  r = run((B) => [{ op: "remove", piece: "ira.volunteer", count: "moved", to: "available", space: B }]);
+  assert.equal(r.un(r.B), 1);
+  // Other counts take the unmoved pieces first: removing 1 leaves 0 unmoved and the 3 moved.
+  r = run((B) => [{ op: "remove", piece: "ira.volunteer", count: 1, to: "available", space: B }]);
+  assert.equal(r.un(r.B), 0);
+});

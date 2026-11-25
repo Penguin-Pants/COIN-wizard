@@ -61,6 +61,21 @@ function qty(q, ctx, max, piece, st, at) {
 // this Operation, so "unmoved" can count the rest. The dry run starts it at each action node.
 export function startOperation(state) { state.arrived = {}; }
 const arrive = (state, sid, pid, st, n) => { if (!state.arrived || n === 0) return; const a = ((state.arrived[sid] ??= {})[pid] ??= {}); a[st] = (a[st] ?? 0) + n; };
+// Pieces left a space (taken: [[state, k]], counted after the take). Moved pieces go first for a step
+// with count "moved"; for any other count, pieces that have not moved go first. Returns the moved ones
+// that left, by state, so a flip can carry them to the new state.
+function depart(state, sp, pid, taken, preferMoved) {
+  const out = [];
+  if (!state.arrived) return out;
+  for (const [st, k] of taken) {
+    const have = state.arrived[sp.id]?.[pid]?.[st] ?? 0;
+    if (!have) continue;
+    const before = onSpace(sp, pid, st) + k;
+    const gone = preferMoved ? Math.min(k, have) : Math.max(0, k - (before - have));
+    if (gone) { arrive(state, sp.id, pid, st, -gone); out.push([st, gone]); }
+  }
+  return out;
+}
 
 function addPieces(sp, pid, st, n) {
   if (n <= 0) return;
@@ -160,6 +175,7 @@ function runStep(game, s, ctx) {
       const parts = s.count === "moved" && st === undefined ? (ctx.moved?.piece === pid ? Object.keys(ctx.moved.byState) : []) : [st];
       for (const ps of parts) {
         const got = takePieces(game, sp, pid, ps, qty(s.count, ctx, onSpace(sp, pid, ps), pid, ps, sp.id));
+        depart(state, sp, pid, got, s.count === "moved");
         poolOf(state, pid)[s.to] += got.reduce((t, [, c]) => t + c, 0);
         // Removed moved pieces leave the moved count.
         if (s.count === "moved") for (const [gs, k] of got) ctx.moved.byState[gs] -= k;
@@ -169,7 +185,9 @@ function runStep(game, s, ctx) {
     case "flip": {
       const sp = spaceOf(s, ctx, "space");
       const n = qty(s.count, ctx, onSpace(sp, s.piece, s.from), s.piece, s.from, sp.id);
-      takePieces(game, sp, s.piece, s.from, n);
+      const took = takePieces(game, sp, s.piece, s.from, n);
+      // Moved pieces that flip are still moved, in their new state.
+      for (const [, k] of depart(state, sp, s.piece, took, s.count === "moved")) arrive(state, sp.id, s.piece, s.to, k);
       addPieces(sp, s.piece, s.to, n);
       // Moved pieces that flip keep counting as moved, in their new state.
       if (s.count === "moved" && n) { const b = ctx.moved.byState; b[s.from] -= n; b[s.to] = (b[s.to] ?? 0) + n; }
@@ -197,7 +215,9 @@ function runStep(game, s, ctx) {
         let need = Math.min(want, left);
         for (const sp of sources.filter(ok)) {
           if (!need) break;
-          for (const [st, k] of takePieces(game, sp, s.piece, ps, need)) { put(st, k); left -= k; need -= k; }
+          const took = takePieces(game, sp, s.piece, ps, need);
+          depart(state, sp, s.piece, took, s.count === "moved");
+          for (const [st, k] of took) { put(st, k); left -= k; need -= k; }
         }
       }
       if (dest) for (const [st, k] of Object.entries(byState)) arrive(state, dest.id, s.piece, st, k);
