@@ -1077,7 +1077,7 @@
       }
     },
     "expr": {
-      "description": "Small expression language: literals, {var}, {op,args}. Ops: and or not eq ne gt gte lt lte add sub mul min max count adjCount sumSpaces anySpace attr factionCount canPlace canDo.",
+      "description": "Small expression language: literals, {var}, {op,args}. Ops: and or not eq ne gt gte lt lte add sub mul min max count adjCount sumSpaces anySpace attr factionCount canPlace canDo unmoved.",
       "oneOf": [
         {
           "type": [
@@ -1129,7 +1129,8 @@
                 "attr",
                 "factionCount",
                 "canPlace",
-                "canDo"
+                "canDo",
+                "unmoved"
               ]
             },
             "args": {
@@ -1476,6 +1477,22 @@
               },
               "filter": {
                 "$ref": "#/$defs/expr"
+              },
+              "activate": {
+                "type": "object",
+                "required": [
+                  "if",
+                  "to"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "if": {
+                    "$ref": "#/$defs/expr"
+                  },
+                  "to": {
+                    "$ref": "#/$defs/id"
+                  }
+                }
               }
             }
           }

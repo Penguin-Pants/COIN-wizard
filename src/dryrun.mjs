@@ -2,7 +2,7 @@
 // effect steps on the dry-run state (src/effects.mjs) before its linked Special Activity
 // and before the next node, so each sees the board the action left.
 import { evalExpr } from "./expr.mjs";
-import { applyAction, payCost, refundCost, withoutCost, runPhaseSteps, legalityOf } from "./effects.mjs";
+import { applyAction, payCost, refundCost, withoutCost, runPhaseSteps, legalityOf, startOperation } from "./effects.mjs";
 
 
 // A node's linked Special Activities as a list: none, one object or a list (schema 1.5.0).
@@ -219,6 +219,8 @@ export function runBot(game, bot, startState) {
       cur = d.play ? node.yes : node.no;
     } else if (node.kind === "action") {
       const action = actions[node.action];
+      // Each action node is a new Operation: no piece has moved yet (schema 1.9.0, "unmoved").
+      startOperation(state);
       // An action with a target picks the enemy first. No enemy qualifies: the same as no space.
       const picked = node.target ? selectOpponentPick(game, state, tables[node.target]) : null;
       const target = picked?.faction ?? null;

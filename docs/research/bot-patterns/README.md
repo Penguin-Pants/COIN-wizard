@@ -45,6 +45,7 @@ Goal: derive generic, faction-agnostic bot logic from the Non-Player flowcharts 
 | tie-breaks per row | a tie-break that applies to one numbered row only | Yes (1.7.0: step `tiebreak`) |
 | `mode: sequence` | numbered rows applied in order, each as far as possible | Yes (1.7.0: table `mode`); `parts` (1.5.0) covers rows with different effects |
 | target per row | each row acts against its own faction (Kidnap) | Yes (1.8.0: step `target`) |
+| movement state | "stay Underground" and "yet to move" | Yes (1.9.0: move `activate`, `unmoved`) |
 | per-card event logic | structured actions for one card | No: `eventPolicy.overrides` holds plain text |
 
 ## Open questions (need the rulebook, not the sheet)

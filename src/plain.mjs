@@ -12,7 +12,7 @@ const VARS = {
   "rivals.maxScore": "the highest enemy victory score", "rivals.minScore": "the lowest enemy victory score",
   "rivals.maxMargin": "the highest enemy victory margin", "rivals.minMargin": "the lowest enemy victory margin",
   "card.id": "the card", "card.hasEffect": "the card has an effect for this faction", "card.raisesSelf": "the card helps this faction", "card.lowersEnemy": "the card hurts the enemy", "card.lasting": "the card's lasting type",
-  "card.position": "this faction's place in the card's faction order (1 is first, 0 is not listed)", "turn.position": "this faction's place this turn (1st or 2nd Eligible)", "scoring.nextFinal": "the next scoring card is the final one",
+  "card.position": "this faction's place in the card's faction order (1 is first, 0 is not listed)", "turn.position": "this faction's place this turn (1st or 2nd Eligible)", "scoring.nextFinal": "the next scoring card is the final one", "move.count": "the number of pieces moved",
   "$space.id": "this space", "$space.name": "space name", "$space.type": "space type", "$space.pop": "Pop", "$space.opinion": "opinion"
 };
 const CMP = { eq: "is", ne: "is not", gt: "is more than", gte: "is at least", lt: "is less than", lte: "is at most" };
@@ -38,6 +38,7 @@ export function valueText(m, g) {
     case "var": return varText(g, m.name);
     case "count": return `${m.state !== "*" ? cap(m.state) + " " : ""}${pieceName(g, m.piece)} ${where(g, m.at)}`;
     case "fcount": return `${m.state !== "*" ? cap(m.state) + " " : ""}${whoText(g, m.faction)} pieces ${where(g, m.at)}`;
+    case "unmoved": return `${m.state !== "*" ? cap(m.state) + " " : ""}${pieceName(g, m.piece)} not yet moved ${where(g, m.at)}`;
     case "adj": return `${m.state !== "*" ? cap(m.state) + " " : ""}${pieceName(g, m.piece)} in adjacent spaces`;
     case "sum": return m.items.map((x) => valueText(x, g)).join(" plus ");
     case "diff": return `${valueText(m.a, g)} minus ${valueText(m.b, g)}`;
@@ -85,7 +86,7 @@ export function stepText(s, g) {
     case "place": return `${lead("Place", s.count)}${state(s.state)}${p} from ${POOL[s.from]}${target(g, s)}${many(g, s.count)}.`;
     case "remove": return `${lead("Remove", s.count)}${state(s.state)}${p}${target(g, s)} to ${POOL[s.to]}${many(g, s.count)}${s.fallbackPiece ? `, or ${pieceName(g, s.fallbackPiece)} if there is no ${p}` : ""}.`;
     case "flip": return `${lead("Flip", s.count)}${p} from ${cap(s.from)} to ${cap(s.to)}${target(g, s)}${many(g, s.count)}.`;
-    case "move": return `${lead("Move", s.count)}${state(s.state)}${p} from ${loc(g, s.from)} to ${loc(g, s.to)}${s.filter !== undefined ? ` where ${condText(toCond(s.filter), g)}` : ""}${many(g, s.count)}.`;
+    case "move": return `${lead("Move", s.count)}${state(s.state)}${p} from ${loc(g, s.from)} to ${loc(g, s.to)}${s.filter !== undefined ? ` where ${condText(toCond(s.filter), g)}` : ""}${many(g, s.count)}.${s.activate ? ` If ${condText(toCond(s.activate.if), g)} there, the moved pieces become ${s.activate.to}.` : ""}`;
     case "shift": return `Shift ${s.attr} ${s.amount} step${s.amount === 1 ? "" : "s"} toward ${cap(s.toward)}${target(g, s)}.`;
     case "track": return `${s.delta < 0 ? "Lower" : "Raise"} ${trackName(g, s.id)} by ${Math.abs(s.delta)}.`;
     case "gain": return typeof s.amount === "number" && s.amount < 0 ? `${cap(trackName(g, s.track))} loses ${-s.amount}.` : `${cap(trackName(g, s.track))} gains ${amount(g, s.amount)}.`;

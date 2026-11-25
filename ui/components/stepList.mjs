@@ -10,7 +10,7 @@ import { defineList, moveButton, removeButton, addButton } from "./listEditor.mj
 import { condEditor, valueEditor } from "./exprEditor.mjs";
 
 const LABEL = {
-  piece: "Piece", count: "How many", from: "From", to: "To", state: "State", space: "Where", spaces: "Up to spaces", filter: "Only where",
+  activate: "Activate the moved pieces", piece: "Piece", count: "How many", from: "From", to: "To", state: "State", space: "Where", spaces: "Up to spaces", filter: "Only where",
   fallbackPiece: "If none, use", attr: "Attribute", toward: "Toward", amount: "Amount", id: "Track", delta: "Change", track: "Track",
   die: "Die", store: "Store result as", marker: "Marker", value: "Value", test: "If", then: "Then", else: "Otherwise", options: "Options"
 };
@@ -56,13 +56,15 @@ function field(st, p, k, kind, ctx) {
       return `<select data-sq="${esc(p)}/${k}" data-path="/${esc(p)}/${k}" aria-label="${LABEL[k]} mode">${opts(modes, mode)}</select>${mode === "num" ? `<input type="number" ${kind === "qty" ? 'min="0"' : ""} ${ctl(p, k, "int")} value="${esc(v)}">` : mode === "formula" ? valueEditor(`${p}/${k}`, v, ctx) : ""}`;
     }
     case "cond": return condEditor(`${p}/${k}`, v, k === "filter" ? { ...ctx, space: true } : ctx);
+    // activate (1.9.0): the condition reads the destination and move.count; the moved pieces flip to "to".
+    case "activate": return `<label class="mini"><span>Moved pieces become</span><select data-sf="${esc(p)}/activate/to" data-sk="state" data-path="/${esc(p)}/activate/to" aria-label="Moved pieces become">${opts(keep((pc?.states ?? []).map((x) => [x, x]), v.to), v.to)}</select></label><span class="sl">when, at the destination,</span>${condEditor(`${p}/activate/if`, v.if, { ...ctx, space: true, move: true })}`;
     case "steps": return `<ol class="steps">${stepList(v, `${p}/${k}`, ctx)}</ol>${addButton("steps", "Add effect", { cls: "link", data: `data-p="${esc(p)}/${k}"` })}`;
     case "options": return `<div class="opts">${v.map((o, i) => `<div class="opt"><label class="mini"><span>Option ${i + 1}</span><input data-sf="${esc(p)}/options/${i}/label" data-sk="text" data-path="/${esc(p)}/options/${i}/label" value="${esc(o.label)}"></label>${o.faction ? optPiece(o, `${p}/options/${i}`) : ""}${v.length > 1 ? removeButton("options", { i, label: "Remove option", data: `data-p="${esc(p)}/options"` }) : ""}<ol class="steps">${stepList(o.steps, `${p}/options/${i}/steps`, ctx)}</ol>${addButton("steps", "Add effect", { cls: "link", data: `data-p="${esc(p)}/options/${i}/steps"` })}</div>`).join("")}${addButton("options", "Add option", { cls: "link", data: `data-p="${esc(p)}/options"` })}</div>`;
     default: return `<input ${ctl(p, k, "text")} value="${esc(v)}">`;
   }
 }
 
-const BLOCK = new Set(["cond", "steps", "options"]);
+const BLOCK = new Set(["cond", "steps", "options", "activate"]);
 function form(st, p, ctx) {
   const spec = OPS[st.op], all = fieldsOf(st.op);
   const shown = Object.keys(all).filter((k) => k in st);
@@ -99,6 +101,8 @@ function optDefault(st, k) {
     case "spaces": return 1;
     case "cond": return true;
     case "steps": return [defaultStep("track", S.game)];
+    // A new activation: the piece's last state (such as "active") when 3 or more moved.
+    case "activate": return { if: { op: "gte", args: [{ var: "move.count" }, 3] }, to: pc?.states.at(-1) };
     default: return undefined;
   }
 }
