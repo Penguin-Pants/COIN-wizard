@@ -40,6 +40,7 @@ export function resolveVar(name, ctx) {
   }
   if (name.startsWith("track.")) return state.tracks[name.slice(6)];
   if (name === "turn.position") return state.turn?.position ?? 1;
+  if (name === "scoring.nextFinal") return !!state.scoring?.nextFinal;
   if (name.startsWith("card.")) return state.card[name.slice(5)];
   if (name.startsWith("var.")) return state.vars?.[name.slice(4)];
   if (name.startsWith("$space.")) {
@@ -151,4 +152,4 @@ export function scanExpr(e, out = { vars: [], pieces: [], ops: [] }) {
 }
 
 // Faction ids in resources.<id> and similar names are checked against the game by the validator.
-export const VAR_OK = /^(eligible|self\.resources|(resources|eligible|score|margin)\.[a-z0-9._-]+|rivals\.(max|min)(Resources|Score|Margin)|\$(faction|target)\.(id|name|type|resources|eligible|score|margin)|track\.[a-z0-9._-]+|card\.(id|hasEffect|raisesSelf|lowersEnemy|lasting|position)|turn\.position|var\.[a-z0-9_]+|\$space\.(id|name|type|pop|opinion))$/;
+export const VAR_OK = /^(eligible|self\.resources|(resources|eligible|score|margin)\.[a-z0-9._-]+|rivals\.(max|min)(Resources|Score|Margin)|\$(faction|target)\.(id|name|type|resources|eligible|score|margin)|track\.[a-z0-9._-]+|card\.(id|hasEffect|raisesSelf|lowersEnemy|lasting|position)|turn\.position|scoring\.nextFinal|var\.[a-z0-9_]+|\$space\.(id|name|type|pop|opinion))$/;

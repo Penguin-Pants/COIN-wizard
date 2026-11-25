@@ -5,7 +5,7 @@ Goal: derive generic, faction-agnostic bot logic from the Non-Player flowcharts 
 ## Files
 
 - `source/<game>-<faction>.md`: the sheet's text, transcribed word for word, for research only (© GMT Games). Not used by the build, the print kit or the artifact.
-- `<game>-<faction>.yaml`: the same logic normalized: game terms replaced by role variables, in the shape of the repo's bot model (`docs/SCHEMA.md`, "Bot decision graph"). `gap:` marks logic the current schema (1.8.0) cannot express. `reading:` marks an interpretation of the sheet's words that the sheet does not state.
+- `<game>-<faction>.yaml`: the same logic normalized: game terms replaced by role variables, in the shape of the repo's bot model (`docs/SCHEMA.md`, "Bot decision graph"). `gap:` marks logic the current schema (1.9.0) cannot express. `reading:` marks an interpretation of the sheet's words that the sheet does not state.
 
 ## Status
 
@@ -36,7 +36,7 @@ Goal: derive generic, faction-agnostic bot logic from the Non-Player flowcharts 
 | `canAmbush($space)` | the linked Special Activity is legal in the space | Yes (1.8.0: `canDo(action, space)`) |
 | `card.order[0]` | first faction on the card | Yes (1.8.0: `card.position == 1`) |
 | `turn.position` | 1st or 2nd Eligible | Yes (1.8.0) |
-| `scoring.next.final` | next scoring card is the last | No |
+| `scoring.next.final` | next scoring card is the last | Yes (1.9.0: `scoring.nextFinal`) |
 | `$space.control` | which side controls the space | No (computed by engine only) |
 | opinion with 5 levels | active/passive support and opposition | No (3 levels) |
 | `marker.sabotage`, `marker.terror` | markers on spaces | Yes (markerSet) |

@@ -5,7 +5,7 @@
 # Special Activities, onEmpty fallbacks, scoring choices. mode: sequence = numbered rows applied in order
 # (GMT reading); mode: first = first row with a match only. A tie-break printed under one row
 # belongs to that row only (row: {do, tiebreak}); a tiebreak at list level applies to every row. Both now exist in the
-# model (1.7.0: table mode, step tiebreak). "gap:" marks logic the current model (1.8.0) cannot yet express.
+# model (1.7.0: table mode, step tiebreak). "gap:" marks logic the current model (1.9.0) cannot yet express.
 # "reading:" marks an interpretation of the sheet's words that the sheet does not state.
 
 archetype: guerrilla
@@ -70,7 +70,7 @@ operations:
     moving: all self.guerrilla except 1 (underground if possible) where any base
     from: $space.opinion == active_opposition or $space.pop == 0 or ($space.type == line and sabotaged)
     priorities:
-      1: unless scoring.next.final, onto every line without sabotage until each has a self.guerrilla
+      1: unless scoring.nextFinal, onto every line without sabotage until each has a self.guerrilla
       2:
         do: to up to 3 spaces with pop >= 1 and opinion >= neutral and control != self
         tiebreak: { a: "guerrillas stay underground (movement does not activate them)" }
@@ -78,7 +78,6 @@ operations:
     then: extort
     onEmpty: rally
     gap:
-      - scoring.next.final (look-ahead at the next scoring card) is not a variable.
       - '"yet to move" and "stay underground" need movement state the dry run does not track.'
       - opinion has 5 levels here (active/passive support, neutral, passive/active opposition); the model has 3 (-1, 0, 1).
 

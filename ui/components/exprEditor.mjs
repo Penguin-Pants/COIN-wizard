@@ -24,7 +24,7 @@ const sp = (ctx) => `data-xs="${ctx.space ? 1 : 0}" data-xf="${ctx.faction ? 1 :
 // ---------- variable picker: only names the validator accepts
 export function varOptions(ctx) {
   const g = S.game;
-  const names = ["eligible", "self.resources", ...g.tracks.map((t) => `track.${t.id}`), "card.id", "card.hasEffect", "card.raisesSelf", "card.lowersEnemy", "card.lasting", "card.position", "turn.position",
+  const names = ["eligible", "self.resources", ...g.tracks.map((t) => `track.${t.id}`), "card.id", "card.hasEffect", "card.raisesSelf", "card.lowersEnemy", "card.lasting", "card.position", "turn.position", "scoring.nextFinal",
     // Any faction's values, and the highest or lowest among the enemies, so 3 and 4 faction bots can compare.
     ...g.factions.flatMap((f) => ["resources", "eligible", "score", "margin"].map((k) => `${k}.${f.id}`)),
     ...["Margin", "Score", "Resources"].flatMap((k) => [`rivals.max${k}`, `rivals.min${k}`])];
