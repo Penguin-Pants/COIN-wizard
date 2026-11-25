@@ -250,3 +250,20 @@ test("a designer runs an Event exception with a table and clears it", () => with
   ov = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].eventPolicy.overrides[0];
   assert.equal("node" in ov, false, "no table removes the node");
 }));
+
+// Codex review on PR 33: picking a table shows the target select at once; "Never play" drops the node.
+test("an Event exception shows its target select after a table is picked, and Never play drops the node", () => withApp(async ({ page, db }) => {
+  await botsTab(page);
+  await page.click('[data-a="bot-addtable"]'); await frames(page);
+  await page.locator("details.act > summary").last().click(); await frames(page);
+  await page.locator('select[data-b$="/scope"]').last().selectOption("opponent"); await frames(page);
+  const ov = "bots/0/eventPolicy/overrides/0";
+  await page.locator(`select[data-b="${ov}/node/table"]`).selectOption("cw.t.crack"); await frames(page);
+  assert.equal(await page.locator(`select[data-b="${ov}/node/target"]`).count(), 1, "the target select shows without another edit");
+  await page.locator(`select[data-b="${ov}/directive"]`).selectOption("ignore"); await frames(page);
+  await page.waitForTimeout(1800);
+  const o = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].eventPolicy.overrides[0];
+  assert.equal(o.directive, "ignore");
+  assert.equal("node" in o, false, "Never play keeps no node");
+  assert.equal(await page.locator("#stepissues li.error").count(), 0);
+}));

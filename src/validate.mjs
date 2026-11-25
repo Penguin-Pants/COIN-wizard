@@ -164,7 +164,8 @@ export function validate(game) {
           // An option's piece (1.9.0) needs a faction and belongs to it. Each faction and piece pair has one option.
           if (o.piece !== undefined) {
             const owner = pieces.find((x) => x.id === o.piece)?.owner;
-            if (scope.nested || scope.owner === undefined) err("option-piece", `${p}/options/${j}/piece`, "A piece option works only on a choice at the top level of an action's effects");
+            // A card side (1.10.0) may hold one too: an Event override node with a piece target runs it.
+            if (scope.nested || (scope.owner === undefined && !scope.card)) err("option-piece", `${p}/options/${j}/piece`, "A piece option works only on a choice at the top level of an action's effects or an Event side");
             else if (o.faction === undefined) err("option-piece", `${p}/options/${j}`, "An option's piece needs the faction it acts against");
             else if (!owner) err("missing-ref", `${p}/options/${j}/piece`, `Unknown piece ${o.piece}`);
             else if (owner !== o.faction) err("option-piece", `${p}/options/${j}/piece`, `Piece ${o.piece} does not belong to ${o.faction}`);
@@ -247,7 +248,7 @@ export function validate(game) {
     } else err("card-order", p, `Card ${c.id} has no faction order`);
     if (c.type === "event") {
       if (c.sides?.length !== 2) err("card-sides", p, `Event ${c.id} needs unshaded and shaded sides`);
-      (c.sides ?? []).forEach((s, j) => checkSteps(s.steps, `${p}/sides/${j}/steps`));
+      (c.sides ?? []).forEach((s, j) => checkSteps(s.steps, `${p}/sides/${j}/steps`, { card: true }));
     }
     for (const cl of c.claimIds ?? []) if (!claimIds.has(cl)) err("missing-ref", `${p}/claimIds`, `Unknown claim ${cl}`);
   });

@@ -33,6 +33,8 @@ function applyBind(el) {
   if (t === "o" && v === "") { const o = getP(S.game, path.split("/").slice(0, -1).join("/")); delete o[path.split("/").pop()]; touch(); return; }
   if (/^brief\/claims\/\d+\/conflict$/.test(path) && v === "") { const o = getP(S.game, path.split("/").slice(0, -1).join("/")); delete o.conflict; touch(); return; }
   setP(S.game, path, v);
+  // A "Never play" override runs no Event, so it keeps no node (1.10.0).
+  if (/\/eventPolicy\/overrides\/\d+\/directive$/.test(path) && v === "ignore") delete getP(S.game, path.slice(0, path.lastIndexOf("/"))).node;
   // Text written by hand matches the steps as they are now. A later step change marks it stale.
   if (PLAIN.test(path)) { const h = getP(S.game, path.slice(0, path.lastIndexOf("/"))); h.plainOf = fingerprint(h.steps); }
   touch();

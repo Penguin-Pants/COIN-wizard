@@ -144,3 +144,15 @@ test("the sheet prints an override node's table rows only when no box prints the
   b.eventPolicy.overrides.find((o) => o.cardId === "e01").node = { table: "cw.t.ev" };
   assert.ok(evi(g).includes("The space with the most Active Volunteers."), "no box prints cw.t.ev, so the line does");
 });
+
+// Codex review on PR 33: an Event side may hold a top-level piece option, so an override node whose
+// target table picks a piece has an option to run. A nested piece option stays an error.
+test("an Event side may hold a top-level piece option", () => {
+  const g = valleys(), card = g.deck.cards.find((c) => c.type === "event");
+  const foe = g.factions[1], pc = foe.pieces[0].id;
+  const opt = { label: "Hit", faction: foe.id, piece: pc, steps: [{ op: "gain", track: foe.resourceTrack, amount: 1 }] };
+  card.sides[0].steps = [{ op: "choose", options: [opt] }];
+  assert.deepEqual(validate(g).errors.filter((e) => e.code === "option-piece"), []);
+  card.sides[0].steps = [{ op: "if", test: true, then: [{ op: "choose", options: [opt] }] }];
+  assert.ok(validate(g).errors.some((e) => e.code === "option-piece"));
+});
