@@ -240,3 +240,60 @@ test("a later action without a piece target clears the reported piece", () => {
   assert.equal(r.target, "f1");
   assert.equal(r.targetPiece, undefined);
 });
+
+// Gap 8 (owner answers 2026-11-25: Q3 an activateIf condition on the move step, checked at the
+// destination; Q4 "yet to move" = this faction's pieces that have not moved yet in this Operation).
+// GMT: "Guerrillas stay Underground" / "with the most Guerrillas yet to move".
+import { startOperation } from "../src/effects.mjs";
+function moveSetup(activate) {
+  const g = tan(), [A, B] = [g.board.links[0].from, g.board.links[0].to];
+  const st = applyPatch(deriveState(g, "ira"), { spaces: { [A]: { pieces: { "ira.volunteer": { underground: 3 } } }, [B]: { pieces: { "ira.volunteer": { underground: 1 } } } } });
+  startOperation(st);
+  const step = { op: "move", piece: "ira.volunteer", count: "all", from: A, to: B, state: "underground", ...(activate ? { activate } : {}) };
+  applyAction(g, st, { cost: { amount: 0 }, steps: [step] }, [B]);
+  return { g, st, A, B };
+}
+const mc = (n) => ({ op: "gte", args: [{ var: "move.count" }, n] });
+
+test("a move step activates the moved pieces when its condition holds at the destination", () => {
+  const on = moveSetup({ if: mc(3), to: "active" });
+  assert.deepEqual(on.st.spaces[on.B].pieces["ira.volunteer"], { underground: 1, active: 3 }, "only the 3 moved pieces flip");
+  const off = moveSetup({ if: mc(4), to: "active" });
+  assert.deepEqual(off.st.spaces[off.B].pieces["ira.volunteer"], { underground: 4 });
+  // The condition reads the destination as $space.
+  const here = moveSetup({ if: { op: "eq", args: [{ var: "$space.id" }, "nowhere"] }, to: "active" });
+  assert.equal(here.st.spaces[here.B].pieces["ira.volunteer"].active ?? 0, 0);
+});
+
+test("unmoved counts the pieces that have not moved in this Operation", () => {
+  const { g, st, B } = moveSetup();
+  const un = (sid, s) => evalExpr({ op: "unmoved", args: ["ira.volunteer", sid, s] }, { state: st, links: g.board.links });
+  assert.equal(un(B, "*"), 1, "4 in the space, 3 arrived this Operation");
+  assert.equal(un("*", "*"), evalExpr({ op: "count", args: ["ira.volunteer", "*", "*"] }, { state: st, links: g.board.links }) - 3);
+  startOperation(st);
+  assert.equal(un(B, "*"), 4, "a new Operation starts with nothing moved");
+});
+
+test("activate and unmoved are checked", () => {
+  const g = tan(), a = g.actions.find((x) => x.id === "ira.march");
+  const mv = JSON.stringify(a.steps).includes('"move"');
+  assert.ok(mv, "ira.march has a move step");
+  const step = (function find(list) { for (const s of list) { if (s.op === "move") return s; const r = find([...(s.then ?? []), ...(s.else ?? []), ...(s.options ?? []).flatMap((o) => o.steps)]); if (r) return r; } })(a.steps);
+  step.activate = { if: mc(3), to: "active" };
+  assert.deepEqual(validate(g).errors.filter((e) => /schema|missing-ref|bad-var/.test(e.code)), []);
+  step.activate.to = "nosuch"; assert.ok(validate(g).errors.some((e) => e.code === "missing-ref"));
+  step.activate.to = "active";
+  const cond = g.bots[1].nodes.find((n) => n.kind === "condition");
+  cond.test = { op: "gte", args: [{ op: "unmoved", args: ["nosuch", "*", "*"] }, 1] };
+  assert.ok(validate(g).errors.some((e) => e.code === "missing-ref"));
+});
+
+import { toValue, fromValue } from "../src/exprmodel.mjs";
+import { valueText } from "../src/plain.mjs";
+test("unmoved is a value the editor can show and reads as plain English", () => {
+  const e = { op: "unmoved", args: ["ira.volunteer", { var: "$space.id" }, "underground"] };
+  const m = toValue(e);
+  assert.equal(m.k, "unmoved");
+  assert.deepEqual(fromValue(m), e);
+  assert.match(valueText(m, tan()), /not yet moved in this space/);
+});

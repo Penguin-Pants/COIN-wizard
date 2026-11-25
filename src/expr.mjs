@@ -41,6 +41,8 @@ export function resolveVar(name, ctx) {
   if (name.startsWith("track.")) return state.tracks[name.slice(6)];
   if (name === "turn.position") return state.turn?.position ?? 1;
   if (name === "scoring.nextFinal") return !!state.scoring?.nextFinal;
+  // move.count (schema 1.9.0): pieces the move step moved, in its activate condition; 0 elsewhere.
+  if (name === "move.count") return ctx.moveCount ?? 0;
   if (name.startsWith("card.")) return state.card[name.slice(5)];
   if (name.startsWith("var.")) return state.vars?.[name.slice(4)];
   if (name.startsWith("$space.")) {
@@ -105,6 +107,12 @@ export function evalExpr(e, ctx) {
       const fid = ev(a[0]), sid = ev(a[1]), st = ev(a[2]);
       return Object.entries(ctx.state.owner ?? {}).filter(([, f]) => f === fid).reduce((s, [pid]) => s + countPieces(ctx.state, pid, sid, st), 0);
     }
+    // Pieces that have not moved in this Operation (schema 1.9.0): count minus arrivals.
+    case "unmoved": {
+      const pid = ev(a[0]), sid = ev(a[1]), st = ev(a[2]), arr = ctx.state.arrived ?? {};
+      const moved = (sid === "*" ? Object.keys(arr) : [sid]).reduce((t, id) => t + Object.entries(arr[id]?.[pid] ?? {}).filter(([s]) => st === "*" || s === st).reduce((u, [, n]) => u + n, 0), 0);
+      return countPieces(ctx.state, pid, sid, st) - moved;
+    }
     // A piece is Available and has room under its limit per space, in the space or in any space ("*") (schema 1.8.0).
     case "canPlace": {
       const pid = ev(a[0]), sid = ev(a[1]), st = ctx.state;
@@ -145,11 +153,11 @@ export function scanExpr(e, out = { vars: [], pieces: [], ops: [] }) {
   out.ops.push(e.op);
   if (["count", "adjCount"].includes(e.op) && typeof e.args[0] === "string") out.pieces.push(e.args[0]);
   if (e.op === "factionCount" && typeof e.args[0] === "string") (out.factions ??= []).push(e.args[0]);
-  if (e.op === "canPlace" && typeof e.args[0] === "string") out.pieces.push(e.args[0]);
+  if ((e.op === "canPlace" || e.op === "unmoved") && typeof e.args[0] === "string") out.pieces.push(e.args[0]);
   if (e.op === "canDo" && typeof e.args[0] === "string") (out.actions ??= []).push(e.args[0]);
   for (const x of e.args) scanExpr(x, out);
   return out;
 }
 
 // Faction ids in resources.<id> and similar names are checked against the game by the validator.
-export const VAR_OK = /^(eligible|self\.resources|(resources|eligible|score|margin)\.[a-z0-9._-]+|rivals\.(max|min)(Resources|Score|Margin)|\$(faction|target)\.(id|name|type|resources|eligible|score|margin)|track\.[a-z0-9._-]+|card\.(id|hasEffect|raisesSelf|lowersEnemy|lasting|position)|turn\.position|scoring\.nextFinal|var\.[a-z0-9_]+|\$space\.(id|name|type|pop|opinion))$/;
+export const VAR_OK = /^(eligible|self\.resources|(resources|eligible|score|margin)\.[a-z0-9._-]+|rivals\.(max|min)(Resources|Score|Margin)|\$(faction|target)\.(id|name|type|resources|eligible|score|margin)|track\.[a-z0-9._-]+|card\.(id|hasEffect|raisesSelf|lowersEnemy|lasting|position)|turn\.position|scoring\.nextFinal|move\.count|var\.[a-z0-9_]+|\$space\.(id|name|type|pop|opinion))$/;

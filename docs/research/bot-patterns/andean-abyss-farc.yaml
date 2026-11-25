@@ -73,12 +73,10 @@ operations:
       1: unless scoring.nextFinal, onto every line without sabotage until each has a self.guerrilla
       2:
         do: to up to 3 spaces with pop >= 1 and opinion >= neutral and control != self
-        tiebreak: { a: "guerrillas stay underground (movement does not activate them)" }
-      3: to 1 space with pop >= 1 adjacent to the space with the most self.guerrilla yet to move
+        tiebreak: { a: "guerrillas stay underground: the March move step's activate (1.9.0) does not hold" }
+      3: to 1 space with pop >= 1 adjacent to the space with the most unmoved(self.guerrilla)
     then: extort
     onEmpty: rally
-    gap:
-      - '"yet to move" and "stay underground" need movement state the dry run does not track.'
 
   attack:
     mode: sequence

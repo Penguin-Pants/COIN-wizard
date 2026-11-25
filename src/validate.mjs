@@ -143,6 +143,11 @@ export function validate(game) {
       const pc = pieceById[st.piece];
       if (pc) for (const k of st.op === "flip" ? ["from", "to", "state"] : ["state"]) if (st[k] !== undefined && !pc.states.includes(st[k])) err("missing-ref", p, `${pc.name} has no state ${st[k]}`);
       for (const k of ["test", "filter", "count", "amount"]) if (st[k] && typeof st[k] === "object") checkExpr(st[k], `${p}/${k}`, scope);
+      // activate (1.9.0): a state of the moved piece, and a condition read at the destination.
+      if (st.activate) {
+        checkExpr(st.activate.if, `${p}/activate/if`, { ...scope, space: true });
+        if (pc && !pc.states.includes(st.activate.to)) err("missing-ref", `${p}/activate`, `${pc.name} has no state ${st.activate.to}`);
+      }
       const inner = { ...scope, nested: true };
       if (st.then) checkSteps(st.then, `${p}/then`, inner);
       if (st.else) checkSteps(st.else, `${p}/else`, inner);

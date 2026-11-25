@@ -26,6 +26,8 @@ export const KINDS = {
   varname: { type: "string", pattern: "^[a-z0-9_]+$" },
   scalar: { type: ["integer", "string", "boolean"] },
   steps: { type: "array", items: { $ref: "#/$defs/step" } },
+  // 1.9.0: after a move, when "if" holds at the destination (move.count: pieces moved), the moved pieces flip to "to".
+  activate: { type: "object", required: ["if", "to"], additionalProperties: false, properties: { if: { $ref: "#/$defs/expr" }, to: { $ref: "#/$defs/id" } } },
   options: {
     type: "array", minItems: 1,
     items: { type: "object", required: ["label", "steps"], additionalProperties: false, properties: { label: { type: "string" }, faction: { $ref: "#/$defs/id", description: "The enemy faction this option acts against (1.6.0). A bot whose action node picked an enemy ($target) takes the option for that faction." }, piece: { $ref: "#/$defs/id", description: "1.9.0, needs faction: a piece type of that faction. A bot whose opponent table picked that piece takes this option and no other." }, legal: { $ref: "#/$defs/expr", description: "Spaces where this option can be used (1.6.0, needs faction). When the action is used against that faction, a space must meet both the action's targets and this." }, steps: { type: "array", minItems: 1, items: { $ref: "#/$defs/step" } } } }
@@ -37,7 +39,7 @@ export const OPS = {
   place: { req: { piece: "piece", count: "qty", from: "pool", to: "where" }, opt: { state: "state", ...where } },
   remove: { req: { piece: "piece", count: "qty", to: "pool" }, opt: { state: "state", fallbackPiece: "piece", ...where } },
   flip: { req: { piece: "piece", from: "state", to: "state", count: "qty" }, opt: where },
-  move: { req: { piece: "piece", count: "qty", from: "loc", to: "loc" }, opt: { state: "state", filter: "cond" } },
+  move: { req: { piece: "piece", count: "qty", from: "loc", to: "loc" }, opt: { state: "state", filter: "cond", activate: "activate" } },
   shift: { req: { attr: "attr", toward: "toward", amount: "int" }, opt: where },
   track: { req: { id: "track", delta: "int" }, opt: {} },
   gain: { req: { track: "track", amount: "amount" }, opt: {} },

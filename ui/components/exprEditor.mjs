@@ -11,7 +11,7 @@ import { btn } from "./fields.mjs";
 
 const CMP_LABEL = { eq: "is", ne: "is not", gt: "more than", gte: "at least", lt: "less than", lte: "at most" };
 const COND_KINDS = [["cmp", "Compare"], ["all", "All of"], ["any", "Any of"], ["anySpace", "Some space has"], ["canPlace", "Can place"], ["canDo", "Can do"], ["truthy", "Is true"], ["always", "Always"], ["never", "Never"]];
-const VALUE_KINDS = [["lit", "Number or text"], ["var", "Variable"], ["count", "Pieces in a space"], ["fcount", "All pieces of a faction"], ["adj", "Pieces in adjacent spaces"], ["sum", "Sum"], ["diff", "Difference"], ["sumWhere", "Total over spaces where"], ["countWhere", "Number of spaces where"], ["attr", "Space attribute"]];
+const VALUE_KINDS = [["lit", "Number or text"], ["var", "Variable"], ["count", "Pieces in a space"], ["fcount", "All pieces of a faction"], ["adj", "Pieces in adjacent spaces"], ["unmoved", "Pieces not yet moved"], ["sum", "Sum"], ["diff", "Difference"], ["sumWhere", "Total over spaces where"], ["countWhere", "Number of spaces where"], ["attr", "Space attribute"]];
 
 const opts = (list, cur) => list.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(cur) ? "selected" : ""}>${esc(l)}</option>`).join("");
 // Every control of one expression shares its data-path, so an issue on the expression lists under the editor.
@@ -29,6 +29,7 @@ export function varOptions(ctx) {
     ...g.factions.flatMap((f) => ["resources", "eligible", "score", "margin"].map((k) => `${k}.${f.id}`)),
     ...["Margin", "Score", "Resources"].flatMap((k) => [`rivals.max${k}`, `rivals.min${k}`])];
   for (const who of [["faction", ctx.faction], ["target", ctx.target]]) if (who[1]) names.unshift(...["margin", "score", "resources", "eligible", "type", "id"].map((k) => `$${who[0]}.${k}`));
+  if (ctx.move) names.push("move.count");
   if (ctx.space) names.push("$space.pop", "$space.opinion", "$space.type", "$space.name", "$space.id");
   for (const s of ctx.stores ?? []) names.push(`var.${s}`);
   return names.filter((n) => VAR_OK.test(n)).map((n) => [n, varText(g, n)]);
@@ -40,7 +41,7 @@ function newValue(k, ctx) {
   switch (k) {
     case "lit": return { k, value: 0 };
     case "var": return { k, name: varOptions(ctx)[0][0] };
-    case "count": case "adj": return { k, piece: pc, at: ctx.space ? "$space" : "*", state: "*" };
+    case "count": case "adj": case "unmoved": return { k, piece: pc, at: ctx.space ? "$space" : "*", state: "*" };
     case "fcount": return { k, faction: ctx.target ? "$target" : ctx.faction ? "$faction" : S.game.factions[0].id, at: ctx.space ? "$space" : "*", state: "*" };
     case "sum": return { k, items: [{ k: "lit", value: 0 }, { k: "lit", value: 0 }] };
     case "diff": return { k, a: { k: "lit", value: 0 }, b: { k: "lit", value: 0 } };
@@ -80,13 +81,13 @@ function valueHtml(m, mp, c, ctx) {
       const list = varOptions(ctx); if (!list.some(([n]) => n === m.name)) list.push([m.name, `${m.name} (not valid here)`]);
       body = `<select aria-label="Variable" ${attrs(c, f("name"))}>${opts(list, m.name)}</select>`; break;
     }
-    case "count": case "adj": {
+    case "count": case "adj": case "unmoved": {
       const pc = pieces().find((p) => p.id === m.piece);
       const at = [...(ctx.space ? [["$space", "this space"]] : []), ["*", "the map"], ...g.board.spaces.map((s) => [s.id, s.name])];
       if (!at.some(([v]) => v === m.at)) at.push([m.at, `${m.at} (not valid here)`]);
       body = `<select aria-label="Piece" ${attrs(c, f("piece"))}>${opts(pieces().map((p) => [p.id, p.name]), m.piece)}</select>
         <select aria-label="State" ${attrs(c, f("state"))}>${opts([["*", "any state"], ...(pc?.states ?? []).map((s) => [s, s])], m.state)}</select>
-        ${m.k === "count" ? `<span>in</span><select aria-label="Where" ${attrs(c, f("at"))}>${opts(at, m.at)}</select>` : `<span>next to</span><select aria-label="Where" ${attrs(c, f("at"))}>${opts(at.filter(([v]) => v !== "*"), m.at)}</select>`}`;
+        ${m.k !== "adj" ? `<span>in</span><select aria-label="Where" ${attrs(c, f("at"))}>${opts(at, m.at)}</select>` : `<span>next to</span><select aria-label="Where" ${attrs(c, f("at"))}>${opts(at.filter(([v]) => v !== "*"), m.at)}</select>`}`;
       break;
     }
     case "fcount": {
