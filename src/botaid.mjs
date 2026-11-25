@@ -114,7 +114,7 @@ export function aidModel(game, bot) {
       ties: t.tiebreak.map((tb) => [tb.letter, `${tb.text} (${tb.order === "max" ? "highest" : "lowest"} wins)`])
     })),
     tieRandom: `If spaces are still tied after the lettered tie-breaks: ${bot.randomization.eligibleSet} ${bot.randomization.procedure}`,
-    exceptions: bot.eventPolicy.overrides.map((o) => [o.cardId.toUpperCase() + " " + (game.deck.cards.find((c) => c.id === o.cardId)?.title ?? ""), `${o.directive}: ${o.plain}${o.targets ? " Targets: " + o.targets : ""}`]),
+    exceptions: bot.eventPolicy.overrides.map((o) => [o.cardId.toUpperCase() + " " + (game.deck.cards.find((c) => c.id === o.cardId)?.title ?? ""), `${o.directive}: ${o.plain}${o.targets ? " Targets: " + o.targets : ""}${o.node ? ` Priorities: Table ${labels[o.node.table] ?? o.node.table}${o.node.target ? `; target: Table ${labels[o.node.target] ?? o.node.target}` : ""}.` : ""}`]),
     fallback: `If every action has no legal target, or Resources are too low, Pass and gain ${passGain} Resource${passGain === 1 ? "" : "s"}.`,
     scoring: scoringText(game, bot, labels),
     outcome: "If an Operation runs and its linked Special Activity also runs, count it as Operation plus Special Activity for the sequence of play."

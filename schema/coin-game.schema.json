@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coin-wizard.local/schema/coin-game/1.9.0",
+  "$id": "https://coin-wizard.local/schema/coin-game/1.10.0",
   "title": "COIN game definition",
   "description": "Single source of truth for one COIN-style prototype. All printable text and diagrams are generated from a confirmed revision of this document.",
   "type": "object",
@@ -32,7 +32,7 @@
       "additionalProperties": false,
       "properties": {
         "schemaVersion": {
-          "const": "coin-game/1.9.0"
+          "const": "coin-game/1.10.0"
         },
         "gameId": {
           "$ref": "#/$defs/id"
@@ -2145,6 +2145,22 @@
                   },
                   "targets": {
                     "type": "string"
+                  },
+                  "node": {
+                    "type": "object",
+                    "required": [
+                      "table"
+                    ],
+                    "additionalProperties": false,
+                    "description": "How the bot runs the Event (schema 1.10.0): the steps of the side it plays. The table picks every space a step needs; the optional target table picks the enemy first. The override's plain text is the label.",
+                    "properties": {
+                      "table": {
+                        "$ref": "#/$defs/id"
+                      },
+                      "target": {
+                        "$ref": "#/$defs/id"
+                      }
+                    }
                   }
                 }
               }

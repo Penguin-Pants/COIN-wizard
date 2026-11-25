@@ -24,7 +24,7 @@ All 9 photos in `examples/non-player-bot-sheets/` were checked: Non-Player AUC, 
 |---|---|---|
 | Title band: "Non-Player" and the faction name between faction symbols | faction name, symbol | Yes |
 | "Event?" box, top left: when to play the Event, which side | `eventPolicy.playIf`, `eventPolicy.side`, `eventPolicy.plain` | Yes. Conditions that run before the Event check (such as "Eligible?") print at the top of this box. |
-| "Event Instructions": one line per card, at the bottom | `eventPolicy.overrides` (with `plain`) | Yes, card title then the plain text |
+| "Event Instructions": one line per card, at the bottom | `eventPolicy.overrides` (with `plain`, optional `node`) | Yes, card title then the plain text; with a node (1.10.0), "Priorities: <table label>" after it, and the table's rows under it when no other box prints that table |
 | Diamonds down the left: yes/no questions | `condition` nodes | Yes, with "Yes" and "No" arrow labels |
 | Operation boxes in the middle, each with a header filter ("In non-Support Depts or Cities") and "max N" | `action` node, the action's legal-space filter, table `limit` | Yes |
 | Numbered priorities ❶ ❷ ❸ in a box | priority table `steps` | Yes |
