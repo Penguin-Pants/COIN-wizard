@@ -190,7 +190,7 @@ function runParts(game, state, node, action, tables, actions, extra, result) {
   // Steps with their own target (schema 1.8.0), as for an action node without parts.
   if (Object.keys(targets).length) result.targets = targets; else delete result.targets;
   if (extra.$target) result.target = extra.$target;
-  if (extra.$targetPiece) result.targetPiece = extra.$targetPiece;
+  if (extra.$targetPiece) result.targetPiece = extra.$targetPiece; else delete result.targetPiece;
   if (links.length && !before) result.linked = runLinked(game, state, links, actions, tables, ctx, extra);
   return true;
 }
@@ -236,7 +236,7 @@ export function runBot(game, bot, startState) {
       result.path.push(node.id);
       result.chosen = chosen.map((s) => s.id);
       if (target) result.target = target;
-      if (extra.$targetPiece) result.targetPiece = extra.$targetPiece;
+      if (extra.$targetPiece) result.targetPiece = extra.$targetPiece; else delete result.targetPiece;
       // Steps with their own target (schema 1.8.0): each chosen space with the faction it acts against.
       // A later node replaces the earlier node's spaces, so its targets go too.
       if (chosen.targetOf?.size) result.targets = Object.fromEntries(chosen.targetOf); else delete result.targets;

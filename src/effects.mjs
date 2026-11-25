@@ -263,9 +263,11 @@ export function payCost(game, state, action, spaceIds) {
 // The option of a choice that runs: the one for the action's target, else the first option.
 // A piece target (schema 1.9.0, $targetPiece) takes only the option made for that piece; with none, nothing
 // runs and no space is legal. A faction target takes that faction's option without a piece, else any of its options.
+// The piece rule applies only to a choice between enemies (an option names a faction); any other choice
+// takes its first option, as before.
 const NONE = { steps: [], legal: false };
 const runOption = (s, ctx) => {
-  if (ctx.$targetPiece) return s.options.find((o) => o.faction === ctx.$target && o.piece === ctx.$targetPiece) ?? NONE;
+  if (ctx.$targetPiece && s.options.some((o) => o.faction)) return s.options.find((o) => o.faction === ctx.$target && o.piece === ctx.$targetPiece) ?? NONE;
   return (ctx.$target && (s.options.find((o) => o.faction === ctx.$target && !o.piece) ?? s.options.find((o) => o.faction === ctx.$target))) || s.options[0];
 };
 

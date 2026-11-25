@@ -215,3 +215,28 @@ test("changing the levels works with a faction that has no pieces", () => {
   assert.equal(g.board.opinionLevels, 5);
   assert.deepEqual(g.victory.perFaction.find((x) => x.factionId === g.factions[0].id), keep, "its rule is kept");
 });
+
+// Codex review on #31.
+test("an ordinary choice inside the piece option still runs its first option", () => {
+  const { g, a } = pieceTarget();
+  const tr = (fid, d) => ({ op: "track", id: g.factions.find((f) => f.id === fid).resourceTrack, delta: d });
+  a.steps[0].options[1].steps = [{ op: "choose", options: [{ label: "Lower", steps: [tr("f2", -2)] }, { label: "Other", steps: [tr("f2", -7)] }] }];
+  const st = deriveState(g, "f3"), before = st.resources.f2;
+  applyAction(g, st, a, [g.board.spaces[0].id], { $target: "f2", $targetPiece: "f2.base" }, { pay: false });
+  assert.equal(st.resources.f2, before - 2);
+});
+
+test("a later action without a piece target clears the reported piece", () => {
+  const { g, b } = pieceTarget();
+  strikeOff(g, b);
+  // After mf.op (piece target), a second targeted node picks a faction with no piece.
+  const op = b.nodes.find((n) => n.id === "mf.op");
+  const plain = { id: "mf.t.plain", scope: "opponent", select: "one", tiebreak: [], steps: [{ n: 1, text: "Republic Army.", filter: { op: "eq", args: [{ var: "$faction.id" }, "f1"] } }] };
+  b.priorityTables.push(plain);
+  b.nodes.push({ id: "mf.op2", kind: "action", text: "Again.", action: op.action, table: op.table, target: plain.id, then: op.then, onEmpty: op.then });
+  op.then = "mf.op2";
+  const r = runBot(g, b, applyPatch(deriveState(g, "f3"), { dice: [1, 1, 1, 1, 1, 1] }));
+  assert.ok(r.path.includes("mf.op2"), r.path.join(">"));
+  assert.equal(r.target, "f1");
+  assert.equal(r.targetPiece, undefined);
+});
