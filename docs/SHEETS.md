@@ -72,4 +72,6 @@ AUC and FARC (Andean Abyss), Coalition and Government (A Distant Plain) use the 
 
 1. Non-Player sheet: one page in the layout above, built from the existing bot data. No schema change. Done.
 2. Sequence of Play sheet, Card list and Spaces list. No schema change. Done.
-3. Bot model gaps (Special Activity fallback chain, Special Activity chosen by a diamond, loop, sub-actions, scoring-phase choices, Momentum and Capabilities). Each needs a schema change and a decision.
+3. Bot model gaps (Special Activity fallback chain, Special Activity chosen by a diamond, loop, sub-actions, scoring-phase choices, Momentum and Capabilities). Each needs a schema change and a decision. Done in schema 1.5.0 (`docs/proposals/bot-model-gaps.md`).
+
+Open work and later phases: `docs/PLAN.md`.
