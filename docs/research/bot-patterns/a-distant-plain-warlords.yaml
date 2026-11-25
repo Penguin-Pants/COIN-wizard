@@ -88,6 +88,7 @@ special_activities:
     yes: suborn
     no: cultivate
   cultivate:
+    max: 1
     where: pop >= 1, self.guerrilla > state.police, selected for rally or march
     priorities:
       1: if scoring.nextFinal, unless in loop, skip to traffic

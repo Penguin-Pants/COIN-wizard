@@ -55,6 +55,7 @@ operations:
 
   march:
     max: 1
+    moving: all self.guerrilla that may move (every one except the kept-back ones)
     keep_back: 1 self.guerrilla in each space with self.base
     priorities:
       1: to 1 province or city with count(*.base) < 2, adjacent to a space with count(self.guerrilla) >= 2
