@@ -181,3 +181,25 @@ test("a designer adds a tie-break to one step and removes it again", () => withA
   assert.equal("tiebreak" in s, false, "removing the last one removes the field");
   assert.equal(await page.locator("#stepissues li.error").count(), 0);
 }));
+
+// Schema 1.8.0: a step may name its own target faction; conditions offer "Can place" and "Can do".
+test("a designer sets a step's target and uses Can place in its filter", () => withApp(async ({ page, db }) => {
+  await botsTab(page);
+  await page.locator("details.act > summary", { hasText: "cw.t.crack" }).click(); await frames(page);
+  const tsel = page.locator('select[data-steptarget="bots/0/priorityTables/0/steps/0"]');
+  assert.equal(await tsel.count(), 1, "each step of a space table offers a target");
+  await tsel.selectOption("ira"); await frames(page);
+  // The filter may now read the target's values.
+  const kind = page.locator('select.xkind[data-x="bots/0/priorityTables/0/steps/0/filter"][data-xm=""]');
+  await kind.selectOption("canPlace"); await frames(page);
+  assert.equal(await page.locator('select[aria-label="Piece"][data-x="bots/0/priorityTables/0/steps/0/filter"]').count(), 1);
+  await page.waitForTimeout(1800);
+  let s = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].priorityTables[0].steps[0];
+  assert.equal(s.target, "ira");
+  assert.equal(s.filter.op, "canPlace");
+  await page.locator('select[data-steptarget="bots/0/priorityTables/0/steps/0"]').selectOption(""); await frames(page);
+  await page.waitForTimeout(1800);
+  s = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].priorityTables[0].steps[0];
+  assert.equal("target" in s, false, "none removes the field");
+  assert.equal(await page.locator("#stepissues li.error").count(), 0);
+}));

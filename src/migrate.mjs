@@ -1,6 +1,6 @@
 // Lifts older coin-game documents to the latest schema version.
 // Each entry lifts one version. Never edit an old entry: add a new one.
-export const LATEST = "coin-game/1.7.0";
+export const LATEST = "coin-game/1.8.0";
 
 const STEPS = ["brief", "factions", "board", "rules", "review"];
 
@@ -56,6 +56,10 @@ const MIGRATIONS = {
   // Priority tables may use mode "sequence". No mode means "first", as before. Nothing to rewrite.
   "coin-game/1.6.0": (g) => {
     g.meta.schemaVersion = "coin-game/1.7.0";
+  },
+  // New variables (card.position, turn.position), ops (canPlace, canDo) and an optional step target. Nothing to rewrite.
+  "coin-game/1.7.0": (g) => {
+    g.meta.schemaVersion = "coin-game/1.8.0";
   }
 };
 

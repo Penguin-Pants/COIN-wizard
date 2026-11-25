@@ -124,6 +124,7 @@ export function validate(game) {
     }
     for (const p of s.pieces) if (!pieceById[p]) err("missing-ref", path, `Unknown piece ${p}`);
     for (const f of s.factions ?? []) if (!factionIds.has(f)) err("missing-ref", path, `Unknown faction ${f}`);
+    for (const a of s.actions ?? []) if (!game.actions.some((x) => x.id === a)) err("missing-ref", path, `Unknown action ${a}`);
   };
   // scope: { target: true } for steps that run with $target (an action node with parts and a target).
   const checkSteps = (steps, path, scope = {}) => {
@@ -349,11 +350,22 @@ function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionByI
     // An opponent table reads $faction. A space table may read $target only if every node using it has a target.
     const users = tableUsers(bot, t.id);
     const scope = t.scope === "opponent" ? { faction: true } : { target: users.length > 0 && users.every((n) => n.target !== undefined) };
-    t.steps.forEach((s, j) => checkExpr(s.filter, `${tp}/steps/${j}`, scope));
+    // A step's own target (1.8.0): an enemy faction, in a space table. Its filter and tie-breaks read $target.
+    const stepScope = (s) => (s.target ? { ...scope, target: true } : scope);
+    t.steps.forEach((s, j) => {
+      if (s.target === undefined) return;
+      if (t.scope === "opponent") err("step-target", `${tp}/steps/${j}`, `Table ${t.id} picks an enemy. A step target works only in a space table`);
+      else if (!game.factions.some((f) => f.id === s.target)) err("missing-ref", `${tp}/steps/${j}`, `Unknown faction ${s.target}`);
+      else if (s.target === bot.factionId) err("step-target", `${tp}/steps/${j}`, `Step ${s.n} of table ${t.id} targets the bot's own faction. A target is an enemy`);
+    });
+    t.steps.forEach((s, j) => checkExpr(s.filter, `${tp}/steps/${j}`, stepScope(s)));
     t.steps.forEach((s, j) => { if (s.n !== j + 1) err("numbering", tp, `Table ${t.id} steps must be numbered 1, 2, 3 in order`); });
     // A step's own tie-breaks (1.7.0): same checks as the table's.
-    t.steps.forEach((s, j) => (s.tiebreak ?? []).forEach((tb, k) => { checkExpr(tb.key, `${tp}/steps/${j}/tiebreak/${k}`, scope); if (tb.letter !== String.fromCharCode(97 + k)) err("numbering", `${tp}/steps/${j}`, `Table ${t.id} step ${s.n} tie-breaks must be lettered a, b, c in order`); }));
-    t.tiebreak.forEach((tb, j) => { checkExpr(tb.key, `${tp}/tiebreak/${j}`, scope); if (tb.letter !== String.fromCharCode(97 + j)) err("numbering", tp, `Table ${t.id} tie-breaks must be lettered a, b, c in order`); });
+    t.steps.forEach((s, j) => (s.tiebreak ?? []).forEach((tb, k) => { checkExpr(tb.key, `${tp}/steps/${j}/tiebreak/${k}`, stepScope(s)); if (tb.letter !== String.fromCharCode(97 + k)) err("numbering", `${tp}/steps/${j}`, `Table ${t.id} step ${s.n} tie-breaks must be lettered a, b, c in order`); }));
+    // The table's tie-breaks apply to the steps without their own; they read $target when every such step has a target.
+    const inheritors = t.steps.filter((s) => !s.tiebreak);
+    const tbScope = inheritors.length && inheritors.every((s) => s.target) ? { ...scope, target: true } : scope;
+    t.tiebreak.forEach((tb, j) => { checkExpr(tb.key, `${tp}/tiebreak/${j}`, tbScope); if (tb.letter !== String.fromCharCode(97 + j)) err("numbering", tp, `Table ${t.id} tie-breaks must be lettered a, b, c in order`); });
     if (t.select === "all" && !t.limit) err("unbounded", tp, `Table ${t.id} selects all targets without a limit`);
     if (!used.has(t.id)) warn("unused-table", tp, `Table ${t.id} is never used`);
   });

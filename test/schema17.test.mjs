@@ -26,12 +26,11 @@ function withTable(mode) {
 }
 const chosen = (g, patch = {}) => { try { return runBot(g, g.bots[0], applyPatch(deriveState(g, "crown"), patch)).chosen; } catch (e) { return [e.message]; } };
 
-test("the latest version is 1.7.0, and a frozen 1.6.0 file migrates with only its version changed", () => {
-  assert.equal(LATEST, "coin-game/1.7.0");
+test("a frozen 1.6.0 file migrates to the latest version with only its version changed", () => {
   const old = read("./fixtures/tan-war.1.6.0.game.json");
   assert.equal(old.meta.schemaVersion, "coin-game/1.6.0");
   const m = migrate(old);
-  assert.equal(m.meta.schemaVersion, "coin-game/1.7.0");
+  assert.equal(m.meta.schemaVersion, LATEST);
   m.meta.schemaVersion = old.meta.schemaVersion; assert.deepEqual(m, old);
 });
 

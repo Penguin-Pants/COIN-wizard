@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coin-wizard.local/schema/coin-game/1.7.0",
+  "$id": "https://coin-wizard.local/schema/coin-game/1.8.0",
   "title": "COIN game definition",
   "description": "Single source of truth for one COIN-style prototype. All printable text and diagrams are generated from a confirmed revision of this document.",
   "type": "object",
@@ -32,7 +32,7 @@
       "additionalProperties": false,
       "properties": {
         "schemaVersion": {
-          "const": "coin-game/1.7.0"
+          "const": "coin-game/1.8.0"
         },
         "gameId": {
           "$ref": "#/$defs/id"
@@ -1070,7 +1070,7 @@
       }
     },
     "expr": {
-      "description": "Small expression language: literals, {var}, {op,args}. Ops: and or not eq ne gt gte lt lte add sub mul min max count adjCount sumSpaces anySpace attr.",
+      "description": "Small expression language: literals, {var}, {op,args}. Ops: and or not eq ne gt gte lt lte add sub mul min max count adjCount sumSpaces anySpace attr factionCount canPlace canDo.",
       "oneOf": [
         {
           "type": [
@@ -1120,7 +1120,9 @@
                 "sumSpaces",
                 "anySpace",
                 "attr",
-                "factionCount"
+                "factionCount",
+                "canPlace",
+                "canDo"
               ]
             },
             "args": {
@@ -2220,6 +2222,10 @@
                         }
                       },
                       "description": "Tie-breaks for this step only (1.7.0), as printed under one row of a GMT sheet. They replace the table tie-breaks for this step's matches."
+                    },
+                    "target": {
+                      "$ref": "#/$defs/id",
+                      "description": "Space tables only (1.8.0): the enemy faction this step acts against. Its filter and tie-breaks read $target, and its spaces run the action against that faction."
                     }
                   }
                 }

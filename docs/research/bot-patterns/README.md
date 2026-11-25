@@ -5,7 +5,7 @@ Goal: derive generic, faction-agnostic bot logic from the Non-Player flowcharts 
 ## Files
 
 - `source/<game>-<faction>.md`: the sheet's text, transcribed word for word, for research only (© GMT Games). Not used by the build, the print kit or the artifact.
-- `<game>-<faction>.yaml`: the same logic normalized: game terms replaced by role variables, in the shape of the repo's bot model (`docs/SCHEMA.md`, "Bot decision graph"). `gap:` marks logic the current schema (1.7.0) cannot express. `reading:` marks an interpretation of the sheet's words that the sheet does not state.
+- `<game>-<faction>.yaml`: the same logic normalized: game terms replaced by role variables, in the shape of the repo's bot model (`docs/SCHEMA.md`, "Bot decision graph"). `gap:` marks logic the current schema (1.8.0) cannot express. `reading:` marks an interpretation of the sheet's words that the sheet does not state.
 
 ## Status
 
@@ -29,13 +29,13 @@ Goal: derive generic, faction-agnostic bot logic from the Non-Player flowcharts 
 
 ## Variables found so far (pilot)
 
-| Variable | Meaning | In 1.7.0 model? |
+| Variable | Meaning | In the model? |
 |---|---|---|
 | `avail(piece)` | pieces Available | Partly (pools exist; no expression) |
-| `canPlace(piece)` | a legal space has room | No |
-| `canAmbush($space)` | the linked Special Activity is legal in the space | No |
-| `card.order[0]` | first faction on the card | No |
-| `turn.position` | 1st or 2nd Eligible | No |
+| `canPlace(piece)` | a legal space has room | Yes (1.8.0: `canPlace(piece, space)`) |
+| `canAmbush($space)` | the linked Special Activity is legal in the space | Yes (1.8.0: `canDo(action, space)`) |
+| `card.order[0]` | first faction on the card | Yes (1.8.0: `card.position == 1`) |
+| `turn.position` | 1st or 2nd Eligible | Yes (1.8.0) |
 | `scoring.next.final` | next scoring card is the last | No |
 | `$space.control` | which side controls the space | No (computed by engine only) |
 | opinion with 5 levels | active/passive support and opposition | No (3 levels) |
@@ -44,6 +44,7 @@ Goal: derive generic, faction-agnostic bot logic from the Non-Player flowcharts 
 | cargo pieces (Shipments) as targets | target list mixing pieces and factions | No |
 | tie-breaks per row | a tie-break that applies to one numbered row only | Yes (1.7.0: step `tiebreak`) |
 | `mode: sequence` | numbered rows applied in order, each as far as possible | Yes (1.7.0: table `mode`); `parts` (1.5.0) covers rows with different effects |
+| target per row | each row acts against its own faction (Kidnap) | Yes (1.8.0: step `target`) |
 | per-card event logic | structured actions for one card | No: `eventPolicy.overrides` holds plain text |
 
 ## Open questions (need the rulebook, not the sheet)

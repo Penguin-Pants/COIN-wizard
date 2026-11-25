@@ -15,6 +15,15 @@ export function cardLasting(game, bot, cardId) {
   return game.deck.cards.find((c) => c.id === cardId)?.sides?.find((s) => s.id === side)?.lasting ?? "none";
 }
 
+// card.position (schema 1.8.0): this faction's place in the card's faction order, 1 for first, 0 if not listed.
+export const cardPosition = (game, fid, cardId) => (game.deck.cards.find((c) => c.id === cardId)?.order ?? []).indexOf(fid) + 1;
+// Dry-run patches may set card.lasting and card.position; otherwise they come from the deck.
+function cardFields(game, bot, state) {
+  if (!state.card) return;
+  state.card.lasting ??= cardLasting(game, bot, state.card.id);
+  state.card.position ??= cardPosition(game, bot.factionId, state.card.id);
+}
+
 function affordable(state, action, game) {
   const f = game.factions.find((x) => x.id === state.self);
   const have = state.resources[f.id];
@@ -34,50 +43,65 @@ function rollDie(state) {
 }
 
 // Picks by a priority table: the first step with any match wins (mode "sequence": see below), then the lettered tie-breaks,
-// then a die over the rest in name order. items: spaces or factions. env(item): the expression context.
-function pick(state, table, items, env, nameOf, limitOf) {
-  if (!items.length) return [];
+// then a die over the rest in name order. items: spaces or factions. env(item, step): the expression context.
+// itemsOf(step): the items that step may pick (default: all). The result carries targetOf: item id -> the
+// target faction of the step that picked it (schema 1.8.0, steps with a target only).
+function pick(state, table, items, env, nameOf, limitOf, itemsOf = () => items) {
   const steps = [...table.steps].sort((a, b) => a.n - b.n);
+  const tag = (list, stOf) => { const out = [...list]; out.targetOf = new Map(); for (const it of out) { const t = stOf(it)?.target; if (t) out.targetOf.set(it.id, t); } return out; };
+  const match = (st) => itemsOf(st).filter((it) => !!evalExpr(st.filter, env(it, st)));
   let pool = [], hit = null;
-  for (const st of steps) { pool = items.filter((it) => !!evalExpr(st.filter, env(it))); if (pool.length) { hit = st; break; } }
-  if (!pool.length) return [];
-  const keyOf = (tb, it) => evalExpr(tb.key, env(it));
+  for (const st of steps) { pool = match(st); if (pool.length) { hit = st; break; } }
+  if (!pool.length) return tag([], () => null);
+  const keyOf = (tb, it, st) => evalExpr(tb.key, env(it, st));
   const byN = (x, y) => nameOf(x).localeCompare(nameOf(y));
   // A step's own tie-breaks (1.7.0) replace the table's for that step's matches.
   const tbsOf = (st) => st?.tiebreak ?? table.tiebreak;
-  const cmpFor = (st) => (x, y) => { for (const tb of tbsOf(st)) { const d = keyOf(tb, x) - keyOf(tb, y); if (d !== 0) return tb.order === "max" ? -d : d; } return byN(x, y); };
+  const cmpFor = (st) => (x, y) => { for (const tb of tbsOf(st)) { const d = keyOf(tb, x, st) - keyOf(tb, y, st); if (d !== 0) return tb.order === "max" ? -d : d; } return byN(x, y); };
   // Mode "sequence" (schema 1.7.0, the GMT reading): every row in order, each row's matches in
   // tie-break order, until the limit. Mode "first" (default): only the first row with a match.
   if (table.select === "all" && table.mode === "sequence") {
-    const out = [];
-    for (const st of steps) out.push(...items.filter((it) => !out.includes(it) && !!evalExpr(st.filter, env(it))).sort(cmpFor(st)));
-    return out.slice(0, limitOf(out.length));
+    const out = [], by = new Map();
+    for (const st of steps) for (const it of match(st).filter((x) => !out.includes(x)).sort(cmpFor(st))) { out.push(it); by.set(it, st); }
+    return tag(out.slice(0, limitOf(out.length)), (it) => by.get(it));
   }
   if (table.select === "all") {
     const sorted = [...pool].sort(cmpFor(hit));
-    return sorted.slice(0, limitOf(sorted.length));
+    return tag(sorted.slice(0, limitOf(sorted.length)), () => hit);
   }
   for (const tb of tbsOf(hit)) {
     if (pool.length === 1) break;
-    const keys = pool.map((it) => keyOf(tb, it));
+    const keys = pool.map((it) => keyOf(tb, it, hit));
     const best = tb.order === "max" ? Math.max(...keys) : Math.min(...keys);
     pool = pool.filter((it, i) => keys[i] === best);
   }
-  if (pool.length === 1) return pool;
+  if (pool.length === 1) return tag(pool, () => hit);
   pool.sort(byN);
   const die = rollDie(state);
-  return [pool[Math.floor(((die - 1) * pool.length) / 6)]];
+  return tag([pool[Math.floor(((die - 1) * pool.length) / 6)]], () => hit);
 }
 
 // Selects spaces. extra: { $target } when the action node picked an enemy first.
-export function selectByTable(game, state, table, legal, action, extra = {}) {
-  const env = (sp) => ({ state, links: game.board.links, $space: sp, ...extra });
+// A step with a target (schema 1.8.0) reads that target, and picks only from the spaces where the
+// action is legal against it.
+// poolFor(step): optional; the caller's own pool for a step with a target (action-node parts).
+export function selectByTable(game, state, table, legal, action, extra = {}, poolFor) {
+  const env = (sp, st) => ({ state, links: game.board.links, $space: sp, ...extra, ...(st?.target ? { $target: st.target } : {}) });
+  // The step's pool starts from every space: a space illegal against the node's target (or the
+  // first enemy option) may be legal against the step's own target. Affordability still applies.
+  const itemsOf = (st) => {
+    if (st.target && poolFor) return poolFor(st);
+    if (!st.target || !action.steps) return legal;
+    if (!affordable(state, action, game)) return [];
+    const lg = legalityOf(action, { ...extra, $target: st.target });
+    return Object.values(state.spaces).filter((sp) => !!evalExpr(lg, env(sp, st)));
+  };
   const limitOf = (n) => {
     let limit = Math.min(table.limit ?? n, action.maxSpaces ?? Infinity);
     if (action.cost.per === "space" && action.cost.amount > 0) limit = Math.min(limit, Math.floor(state.resources[state.self] / action.cost.amount));
     return limit;
   };
-  return pick(state, table, legal, env, (sp) => sp.name, limitOf);
+  return pick(state, table, legal, env, (sp) => sp.name, limitOf, itemsOf);
 }
 
 // Picks one enemy faction by an opponent table. Returns its id or null.
@@ -105,7 +129,7 @@ function runLinked(game, state, links, actions, tables, ctx, extra) {
     const sa = actions[L.action];
     if (!evalExpr(L.trigger, { ...ctx, ...extra })) continue;
     const sel = selectByTable(game, state, tables[L.table], legalSpaces(game, state, sa, extra), sa, extra);
-    if (sel.length) { applyAction(game, state, sa, sel.map((s) => s.id), extra); return `${sa.id}:${sel.map((s) => s.id).join(",")}`; }
+    if (sel.length) { applyAction(game, state, sa, sel.map((s) => s.id), extra, { targetOf: sel.targetOf }); return `${sa.id}:${sel.map((s) => s.id).join(",")}`; }
   }
   return "skipped";
 }
@@ -118,7 +142,8 @@ function runParts(game, state, node, action, tables, actions, extra, result) {
   const links = linkedOf(node), ctx = { state, links: game.board.links };
   const { amount, per } = action.cost, paid = new Set();
   // Each part runs its own steps, so the legal spaces of its own enemy option apply (schema 1.6.0).
-  const legalNow = (pt) => { const legal = legalityOf({ ...action, steps: pt.steps }, extra); return Object.values(state.spaces).filter((sp) => !!evalExpr(legal, { ...ctx, $space: sp, ...extra })); };
+  // ex: the node's extra, or a step's own target (schema 1.8.0).
+  const legalNow = (pt, ex = extra) => { const legal = legalityOf({ ...action, steps: pt.steps }, ex); return Object.values(state.spaces).filter((sp) => !!evalExpr(legal, { ...ctx, $space: sp, ...ex })); };
   // New spaces a part may still pay for. Spaces already paid for are free.
   const canNew = () => {
     const have = state.resources[state.self];
@@ -126,19 +151,21 @@ function runParts(game, state, node, action, tables, actions, extra, result) {
     if (per === "use") return paid.size || have >= amount ? Infinity : 0;
     return Math.floor(have / amount);
   };
-  const pool = (pt) => { const n = canNew(); return legalNow(pt).filter((sp) => n > 0 || paid.has(sp.id)); };
-  const env = (sp) => ({ ...ctx, $space: sp, ...extra });
-  const anyMatch = (pt) => { const p = pool(pt); return tables[pt.table].steps.some((st) => p.some((sp) => !!evalExpr(st.filter, env(sp)))); };
+  const pool = (pt, ex = extra) => { const n = canNew(); return legalNow(pt, ex).filter((sp) => n > 0 || paid.has(sp.id)); };
+  const exOf = (st) => (st.target ? { ...extra, $target: st.target } : extra);
+  // The precheck reads each step as the selection does: with its own target and its own legal spaces.
+  const anyMatch = (pt) => tables[pt.table].steps.some((st) => { const ex = exOf(st); return pool(pt, ex).some((sp) => !!evalExpr(st.filter, { ...ctx, $space: sp, ...ex })); });
   const before = links[0]?.timing === "before";
   if (before) {
     if (!node.parts.some(anyMatch)) return false;
     result.linked = runLinked(game, state, links, actions, tables, ctx, extra);
   }
-  const chosen = [];
+  const chosen = [], targets = {};
   for (const pt of node.parts) {
     const t = tables[pt.table], p = pool(pt);
     // The table ranks the pool; then new spaces stop at what is left to pay.
-    const ranked = selectByTable(game, state, t.select === "all" ? { ...t, limit: p.length || 1 } : t, p, { cost: { amount: 0 } }, extra);
+    // A step with a target ranks the spaces legal against that target, under the same payment rules.
+    const ranked = selectByTable(game, state, t.select === "all" ? { ...t, limit: Object.values(state.spaces).length } : t, p, { cost: { amount: 0 } }, extra, (st) => pool(pt, exOf(st)));
     let room = canNew();
     const picked = [];
     for (const sp of ranked) {
@@ -146,12 +173,14 @@ function runParts(game, state, node, action, tables, actions, extra, result) {
       if (!paid.has(sp.id)) { if (room <= 0) continue; room--; if (per === "space" || !paid.size) payCost(game, state, action, [sp.id]); paid.add(sp.id); }
       picked.push(sp.id);
     }
-    applyAction(game, state, { ...action, steps: pt.steps }, picked, extra, { pay: false });
-    for (const id of picked) if (!chosen.includes(id)) chosen.push(id);
+    applyAction(game, state, { ...action, steps: pt.steps }, picked, extra, { pay: false, targetOf: ranked.targetOf });
+    for (const id of picked) { if (!chosen.includes(id)) chosen.push(id); const t = ranked.targetOf?.get(id); if (t) targets[id] = t; }
   }
   if (!before && !chosen.length) return false;
   result.path.push(node.id);
   result.chosen = chosen;
+  // Steps with their own target (schema 1.8.0), as for an action node without parts.
+  if (Object.keys(targets).length) result.targets = targets; else delete result.targets;
   if (extra.$target) result.target = extra.$target;
   if (links.length && !before) result.linked = runLinked(game, state, links, actions, tables, ctx, extra);
   return true;
@@ -160,8 +189,7 @@ function runParts(game, state, node, action, tables, actions, extra, result) {
 export function runBot(game, bot, startState) {
   const state = structuredClone(startState);
   state.self = bot.factionId;
-  // A dry-run patch may set card.lasting; otherwise it comes from the deck.
-  if (state.card) state.card.lasting ??= cardLasting(game, bot, state.card.id);
+  cardFields(game, bot, state);
   const nodes = Object.fromEntries(bot.nodes.map((n) => [n.id, n]));
   const tables = Object.fromEntries(bot.priorityTables.map((t) => [t.id, t]));
   const actions = Object.fromEntries(game.actions.map((a) => [a.id, a]));
@@ -197,6 +225,10 @@ export function runBot(game, bot, startState) {
       result.path.push(node.id);
       result.chosen = chosen.map((s) => s.id);
       if (target) result.target = target;
+      // Steps with their own target (schema 1.8.0): each chosen space with the faction it acts against.
+      // A later node replaces the earlier node's spaces, so its targets go too.
+      if (chosen.targetOf?.size) result.targets = Object.fromEntries(chosen.targetOf); else delete result.targets;
+      const targetOf = chosen.targetOf;
       // A linked Special Activity with timing "before" resolves on the board before the Operation;
       // "after" and "during" resolve after the Operation's steps.
       // A before-timed Special Activity must leave enough for the Operation: the Operation's cost
@@ -206,17 +238,20 @@ export function runBot(game, bot, startState) {
       const links = linkedOf(node);
       const before = links[0]?.timing === "before";
       if (before) payCost(game, state, action, result.chosen);
-      else applyAction(game, state, action, result.chosen, extra);
+      else applyAction(game, state, action, result.chosen, extra, { targetOf });
       if (links.length) result.linked = runLinked(game, state, links, actions, tables, ctx, extra);
       if (before) {
         // Spaces the Special Activity made illegal are dropped and their cost is refunded. The
         // recheck reads a view without the Operation's own reserved cost.
         const view = withoutCost(game, state, action, result.chosen);
-        const legalNow = (id) => !!evalExpr(legalityOf(action, extra), { state: view, links: game.board.links, $space: view.spaces[id], ...extra });
+        // Each space is checked against its own step target (schema 1.8.0), else the node's.
+        const legalNow = (id) => { const ex = targetOf?.get(id) ? { ...extra, $target: targetOf.get(id) } : extra; return !!evalExpr(legalityOf(action, ex), { state: view, links: game.board.links, $space: view.spaces[id], ...ex }); };
         const kept = result.chosen.filter(legalNow);
         refundCost(game, state, action, result.chosen, kept);
         result.chosen = kept;
-        applyAction(game, state, action, kept, extra, { pay: false });
+        // Report targets only for the spaces the Operation still runs in.
+        if (result.targets) { result.targets = Object.fromEntries(Object.entries(result.targets).filter(([id]) => kept.includes(id))); if (!Object.keys(result.targets).length) delete result.targets; }
+        applyAction(game, state, action, kept, extra, { pay: false, targetOf });
       }
       cur = node.then;
     } else if (node.kind === "end") {
@@ -235,8 +270,7 @@ export function runScoring(game, bot, startState) {
   const state = structuredClone(startState);
   state.self = bot.factionId;
   const tables = Object.fromEntries(bot.priorityTables.map((t) => [t.id, t]));
-  // As in runBot: a dry-run patch may set card.lasting; otherwise it comes from the deck.
-  if (state.card) state.card.lasting ??= cardLasting(game, bot, state.card.id);
+  cardFields(game, bot, state);
   const result = { path: [], chosen: [], linked: undefined, side: undefined, outcome: "none", target: undefined };
   for (const ph of game.rules.scoring.phases) {
     const sc = (bot.scoring ?? []).find((x) => x.phaseId === ph.id);

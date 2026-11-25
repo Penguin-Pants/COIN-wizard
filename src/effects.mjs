@@ -270,7 +270,11 @@ export function legalityOf(action, extra = {}) {
 
 // Pays the action's cost (unless pay is false), then runs its steps once per chosen space
 // (in the chosen order). Changes state in place. extra: { $target } when the action picked an enemy.
-export function applyAction(game, state, action, spaceIds, extra = {}, { pay = true } = {}) {
+// targetOf: space id -> the target faction of the table step that picked it (schema 1.8.0).
+export function applyAction(game, state, action, spaceIds, extra = {}, { pay = true, targetOf } = {}) {
   if (pay) payCost(game, state, action, spaceIds);
-  for (const id of spaceIds) runSteps(game, action.steps, { state, links: game.board.links, $space: state.spaces[id], ...extra });
+  for (const id of spaceIds) {
+    const t = targetOf?.get(id);
+    runSteps(game, action.steps, { state, links: game.board.links, $space: state.spaces[id], ...extra, ...(t ? { $target: t } : {}) });
+  }
 }
