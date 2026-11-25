@@ -131,3 +131,16 @@ test("the bot aid names the override node's table in the Event exceptions", () =
   assert.ok(md, "the aid exists");
   assert.match(md, new RegExp(`Priorities: Table ${tableLabels(b)["cw.t.crack"]}\\.`));
 });
+
+// Owner decision (2026-11-25): the sheet prints the node table's rows under the override line only
+// when no Operation, Special Activity or scoring box prints that table.
+test("the sheet prints an override node's table rows only when no box prints them", () => {
+  const sheet = (g) => Object.fromEntries(buildFiles(g, { toMermaid, toMarkdown, toPolicyYaml }))[`kit/${g.meta.gameId}.crown.nonplayer.html`];
+  const evi = (g) => { const h = sheet(g); return h.slice(h.indexOf('class="evi"')); };
+  const { g, b } = flyingColumn();
+  const crack = b.priorityTables.find((t) => t.id === "cw.t.crack");
+  assert.ok(!evi(g).includes(crack.steps[0].text), "an Operation box prints cw.t.crack, so the line does not");
+  b.priorityTables.push({ id: "cw.t.ev", scope: "space", select: "one", steps: [{ n: 1, text: "The space with the most Active Volunteers.", filter: true }], tiebreak: [] });
+  b.eventPolicy.overrides.find((o) => o.cardId === "e01").node = { table: "cw.t.ev" };
+  assert.ok(evi(g).includes("The space with the most Active Volunteers."), "no box prints cw.t.ev, so the line does");
+});
