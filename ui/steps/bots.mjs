@@ -4,6 +4,7 @@ import { graphSvg } from "../../src/graphsvg.mjs";
 import { aidModel, toMarkdown } from "../../src/botaid.mjs";
 import { renameId, tableUsers } from "../../src/validate.mjs";
 import { linkedOf } from "../../src/dryrun.mjs";
+import { opinionMax } from "../../src/opinion.mjs";
 import { isExpr } from "../../src/exprmodel.mjs";
 import { S, esc, getP } from "../state.mjs";
 import { fld, inp, area, sel, btn, chip } from "../components/fields.mjs";
@@ -128,7 +129,7 @@ function patchForm(b, bi, d, di) {
   const spaces = Object.entries(pt.spaces ?? {}).map(([sid, sp]) => {
     const name = g.board.spaces.find((s) => s.id === sid)?.name ?? sid;
     const lines = Object.entries(sp.pieces ?? {}).map(([pid, by]) => { const pc = pcs.find((x) => x.id === pid); return `<div class="row"><b>${esc(pc?.name ?? pid)}</b>${(pc?.states ?? Object.keys(by)).map((st) => `<label class="mini"><span>${esc(st)}</span><input type="number" min="0" ${ctl(`spaces.${sid}.pieces.${pid}.${st}`, "num")} value="${by[st] ?? ""}"></label>`).join("")}</div>`; }).join("");
-    return `<div class="opt"><div class="row"><b>${esc(name)}</b><label class="mini"><span>Opinion</span><input type="number" min="-2" max="2" placeholder="as in setup" ${ctl(`spaces.${sid}.opinion`, "num")} value="${sp.opinion ?? ""}"></label><select ${ctl(`spaces.${sid}.pieces`, "addpiece", "", 'aria-label="Set a piece count"')}><option value="">Set a piece count...</option>${pcs.map((x) => `<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select>${btn("dry-delspace", "Remove", { cls: "link", data: `data-dry="${k}" data-s="${esc(sid)}"` })}</div>${lines}</div>`;
+    return `<div class="opt"><div class="row"><b>${esc(name)}</b><label class="mini"><span>Opinion</span><input type="number" min="${-opinionMax(g)}" max="${opinionMax(g)}" placeholder="as in setup" ${ctl(`spaces.${sid}.opinion`, "num")} value="${sp.opinion ?? ""}"></label><select ${ctl(`spaces.${sid}.pieces`, "addpiece", "", 'aria-label="Set a piece count"')}><option value="">Set a piece count...</option>${pcs.map((x) => `<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select>${btn("dry-delspace", "Remove", { cls: "link", data: `data-dry="${k}" data-s="${esc(sid)}"` })}</div>${lines}</div>`;
   }).join("");
   const add = `<select ${ctl("spaces", "addspace")} aria-label="Change a space"><option value="">Change a space...</option>${g.board.spaces.filter((s) => !pt.spaces?.[s.id]).map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join("")}</select>`;
   return `<div class="grid4">${elig}${res}${tr}</div><div class="row">${card}</div><div class="row">${turn}</div>${dice}${clear}<h4>Board changes</h4>${spaces}${add}`;

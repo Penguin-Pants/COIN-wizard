@@ -2,6 +2,7 @@
 // starting pieces, pieces out of play, track starts and starting eligibility.
 // applyBoard turns that raw answer into a valid board. It never trusts the answer: unknown names,
 // pieces and states are dropped and reported, and piece counts always add up to the supply.
+import { opinionMax, opinionNames, opinionLevels } from "./opinion.mjs";
 import { chunkText } from "./sources.mjs";
 
 const TYPES = ["city", "province", "line", "sanctuary", "custom"];
@@ -19,7 +20,7 @@ export function boardPrompt(game, texts) {
 Places named in the overview: ${o.places.join("; ") || "none"}.
 Start of the game: ${o.period || "not set; use the start of the period the sources cover"}. Base the starting setup on the situation at that time.
 Using the sources below, suggest the map and the starting setup. Base each space on a real region, city, border area or sanctuary from the sources. Paraphrase, never copy sentences.
-Space types: city, province, line (a road or rail line), sanctuary (a foreign base area), custom. pop is population weight 0 to 3 (cities 1 to 3, empty areas 0). opinion is -1 Opposition, 0 Neutral, 1 Support at the start.
+Space types: city, province, line (a road or rail line), sanctuary (a foreign base area), custom. pop is population weight 0 to 3 (cities 1 to 3, empty areas 0). opinion at the start is ${opinionNames(game).map(([v, n]) => `${v} ${n}`).join(", ")}.
 ${set.length ? `Spaces the designer already set (keep these names exactly and link new spaces to them): ${set.join(", ")}.\n` : ""}Give 8 to 20 spaces. Every space must be reachable through links. Links are legal movement between spaces that touch.
 Pieces (use these ids and states exactly):
 ${pieces}
@@ -69,7 +70,8 @@ export function applyBoard(game, r) {
     x.out = { id: x.id, name: String(x.s.name).trim(), type, attrs: { ...(x.prev?.attrs ?? {}), pop: int(x.s.pop, 0, 9, 1) } };
     const a = (2 * Math.PI * i) / spaces.length;
     positions[x.id] = game.board.presentation.positions[x.id] ?? { x: Math.round(360 + 220 * Math.cos(a)), y: Math.round(240 + 180 * Math.sin(a)) };
-    const op = [-1, 0, 1].includes(Number(x.s.opinion)) ? Number(x.s.opinion) : 0;
+    const om = opinionMax(game), n = Number(x.s.opinion);
+    const op = Number.isInteger(n) && Math.abs(n) <= om ? n : 0;
     attrs[x.id] = { ...(game.setup.spaceAttributes?.[x.id] ?? {}), opinion: op };
   });
   const removed = game.board.spaces.map((s) => s.id).filter((id) => !kept.includes(id));
@@ -133,7 +135,8 @@ export function applyBoard(game, r) {
 }
 
 // What a suggestion depends on: factions, pieces and tracks. A proposal is applied only while this is unchanged.
-export const boardBase = (g) => JSON.stringify([g.factions.map((f) => [f.id, f.pieces]), g.tracks.map((t) => [t.id, t.min, t.max])]);
+// The opinion levels (schema 1.9.0) count too: a suggestion uses the scale it was made for.
+export const boardBase = (g) => JSON.stringify([g.factions.map((f) => [f.id, f.pieces]), g.tracks.map((t) => [t.id, t.min, t.max]), opinionLevels(g)]);
 
 // fillBoard: the suggestion fills only empty fields (owner decision, 2026-11-22).
 // - A placeholder space (default name "Space N" or "New space N", no starting pieces, and not

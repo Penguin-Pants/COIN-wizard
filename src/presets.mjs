@@ -1,5 +1,6 @@
 // Faction presets and the generators that add or remove a faction from a game.
 // Every generator returns plain-language lines that say what it changed, for the preview.
+import { opinionLevels } from "./opinion.mjs";
 import { fromValue } from "./exprmodel.mjs";
 
 const piece = (key, name, states, supply, extra = {}) => ({ key, name, states, supply, isBase: false, ...extra });
@@ -21,12 +22,16 @@ export function presetPieces(fid, type) {
 
 // Victory by preset: Support Pop for the state side, Opposition Pop plus own bases for the others,
 // own pieces on the map for a custom faction.
-export function victoryFor(f) {
-  const pop = (side) => ({ k: "sumWhere", cond: { k: "cmp", cmp: "eq", a: { k: "var", name: "$space.opinion" }, b: { k: "lit", value: side } }, v: { k: "var", name: "$space.pop" } });
+// With 5 opinion levels (schema 1.9.0) Active spaces count twice, as GMT Total Support does.
+export function victoryFor(f, game) {
+  const pop1 = (side) => ({ k: "sumWhere", cond: { k: "cmp", cmp: "eq", a: { k: "var", name: "$space.opinion" }, b: { k: "lit", value: side } }, v: { k: "var", name: "$space.pop" } });
+  const pop = (side) => (opinionLevels(game) === 5 ? { k: "sum", items: [pop1(2 * side), pop1(2 * side), pop1(side)] } : pop1(side));
   const base = f.pieces.find((p) => p.isBase), unit = f.pieces[0];
   const kind = PRESETS[f.type].victory;
-  if (kind === "support") return { factionId: f.id, plain: "Support Pop: total Pop of spaces at Support.", formula: fromValue(pop(1)), threshold: 8 };
-  if (kind === "opposition") return { factionId: f.id, plain: `Opposition Pop plus ${base?.name ?? "bases"} on the map.`, formula: fromValue(base ? { k: "sum", items: [pop(-1), { k: "count", piece: base.id, at: "*", state: "*" }] } : pop(-1)), threshold: 8 };
+  const five = opinionLevels(game) === 5;
+  if (kind === "support") return { factionId: f.id, plain: five ? "Total Support: Pop at Active Support counts twice, Pop at Passive Support once." : "Support Pop: total Pop of spaces at Support.", formula: fromValue(pop(1)), threshold: 8 };
+  if (kind === "opposition") return { factionId: f.id, plain: five ? `Total Opposition (Active twice, Passive once) plus ${base?.name ?? "bases"} on the map.` : `Opposition Pop plus ${base?.name ?? "bases"} on the map.`, formula: fromValue(base ? { k: "sum", items: [pop(-1), { k: "count", piece: base.id, at: "*", state: "*" }] } : pop(-1)), threshold: 8 };
+  if (!unit) return null; // a custom faction with no pieces has no preset rule
   return { factionId: f.id, plain: `${unit.name} on the map.`, formula: fromValue({ k: "count", piece: unit.id, at: "*", state: "*" }), threshold: 10 };
 }
 
@@ -47,14 +52,14 @@ export function addFaction(game, type) {
   for (const p of f.pieces) game.setup.pools[p.id] = { available: p.supply, outOfPlay: 0 };
   game.setup.eligibility[id] = true;
   game.rules.sequence.passGain[id] = PRESETS[type].passGain;
-  game.victory.perFaction.push(victoryFor(f));
+  game.victory.perFaction.push(victoryFor(f, game));
   for (const c of game.deck.cards) c.order.push(id);
   game.meta.factionCount = game.factions.length;
   return [
     `Adds ${name} (${type}) with ${f.pieces.map((p) => `${p.supply} ${p.name}`).join(", ")}, all Available.`,
     `Adds the track ${track.name}, starting at ${track.start}.`,
     `${name} starts Eligible and gains ${PRESETS[type].passGain} on Pass.`,
-    `Adds a victory rule: ${victoryFor(f).plain}`,
+    `Adds a victory rule: ${victoryFor(f, game).plain}`,
     ...(game.deck.cards.length ? [`Adds ${name} last in the card faction order of ${game.deck.cards.length} cards.`] : [])
   ];
 }
@@ -96,4 +101,27 @@ export function setFactionCount(game, n) {
   for (const f of game.factions) { const i = want.indexOf(f.type); if (i >= 0) want.splice(i, 1); }
   while (game.factions.length < n) out.push(...addFaction(game, want.shift() ?? "custom"));
   return out;
+}
+
+// Sets 3 or 5 opinion levels (schema 1.9.0). 3 is the default and leaves no field. Starting opinion
+// outside the new scale moves to its end. A victory rule that is still the preset default for the old
+// levels (see matchesDefault) becomes the default for the new levels; edited rules stay.
+// A rule is still the preset default d when its formula and threshold are d's and its text is d's,
+// allowing for a renamed piece (the default text names the base piece).
+export function matchesDefault(f, v, d) {
+  if (!d || JSON.stringify([v.formula, v.threshold]) !== JSON.stringify([d.formula, d.threshold])) return false;
+  const base = f.pieces.find((p) => p.isBase)?.name;
+  const pattern = base && d.plain.includes(base) ? new RegExp(`^${d.plain.split(base).map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".+")}$`) : null;
+  return v.plain === d.plain || !!pattern?.test(v.plain);
+}
+
+export function setOpinionLevels(game, levels) {
+  const old = Object.fromEntries(game.factions.map((f) => [f.id, victoryFor(f, game)]));
+  if (levels === 5) game.board.opinionLevels = 5; else delete game.board.opinionLevels;
+  const om = levels === 5 ? 2 : 1;
+  for (const a of Object.values(game.setup.spaceAttributes ?? {})) if (typeof a.opinion === "number") a.opinion = Math.max(-om, Math.min(om, a.opinion));
+  game.victory.perFaction.forEach((v, i) => {
+    const f = game.factions.find((x) => x.id === v.factionId);
+    if (f && matchesDefault(f, v, old[v.factionId])) game.victory.perFaction[i] = victoryFor(f, game);
+  });
 }

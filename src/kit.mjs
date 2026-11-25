@@ -1,4 +1,5 @@
 // Print kit generators. Everything reads the confirmed definition only.
+import { opinionName } from "./opinion.mjs";
 import { aidModel, toHtml, stepNumbers, tableLabels } from "./botaid.mjs";
 import { graphSvg } from "./graphsvg.mjs";
 import { linkedOf, cardLasting } from "./dryrun.mjs";
@@ -27,7 +28,7 @@ function nameLines(name) {
 // position), cities are round markers and lines are bars, both drawn on top. Lines between centers
 // are the legal connections. Region tint shows starting opinion. With a map image the board keeps the
 // editor frame, so each space stays on its place on the image.
-const OPINION_FILL = { 1: "#dbe7f3", 0: "#efeadb", "-1": "#f3dcd8" };
+const OPINION_FILL = { 2: "#c4d8ee", 1: "#dbe7f3", 0: "#efeadb", "-1": "#f3dcd8", "-2": "#ecc4bd" };
 export function boardSvg(g, { fixed = false } = {}) {
   const pos = g.board.presentation.positions;
   const bg = g.board.presentation.background;
@@ -56,7 +57,7 @@ export function boardSvg(g, { fixed = false } = {}) {
 
 export function setupSheetMd(g) {
   const L = [`# ${g.meta.title}: setup sheet`, draftNote(g), "", "## 1. Spaces", "| Space | Opinion | Pieces |", "|---|---|---|"];
-  const opin = (v) => (v > 0 ? "Support" : v < 0 ? "Opposition" : "Neutral");
+  const opin = (v) => opinionName(g, v);
   for (const s of g.board.spaces) {
     const here = g.setup.placements.filter((p) => p.space === s.id).map((p) => {
       const pc = g.factions.flatMap((f) => f.pieces).find((x) => x.id === p.piece);
