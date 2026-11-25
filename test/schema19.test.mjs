@@ -253,3 +253,26 @@ test("piece options and piece targets need enemy choices at the top level", () =
   a.steps = [{ op: "if", test: true, then: [a.steps[0]] }];
   assert.ok(validate(g).errors.some((e) => e.code === "option-piece" && /nodes/.test(e.path)), validate(g).errors.map((e) => `${e.code} ${e.path}`).join("; "));
 });
+
+// Codex review on #31 (second round).
+test("a linked Special Activity of a piece-targeted node needs its enemy choices at the top level", () => {
+  const { g, b } = pieceTarget();
+  const op = b.nodes.find((n) => n.id === "mf.op");
+  const sa = g.actions.find((x) => x.id === "f3.ambush");
+  const any = b.priorityTables.find((t) => t.scope !== "opponent").id;
+  sa.steps = [{ op: "if", test: true, then: [{ op: "choose", options: [{ label: "Valley Militia", faction: "f2", steps: [{ op: "track", id: g.factions.find((f) => f.id === "f2").resourceTrack, delta: -1 }] }] }] }];
+  op.linked = { action: "f3.ambush", timing: "after", trigger: true, table: any };
+  assert.ok(validate(g).errors.some((e) => e.code === "option-piece" && /nodes/.test(e.path)), validate(g).errors.map((e) => `${e.code} ${e.path}`).join("; "));
+});
+
+test("canDo keeps the piece target for the bot's own action", () => {
+  const { g, a } = pieceTarget();
+  a.steps[0].options[0].legal = false;            // faction option: nowhere
+  a.steps[0].options[1].legal = true;             // piece option: everywhere
+  const st = deriveState(g, "f3");
+  const ctx = (extra) => ({ state: st, links: g.board.links, ...extra });
+  const sp = Object.values(st.spaces).find((x) => evalExpr(a.targets, ctx({ $space: x }))).id;
+  const q = { op: "canDo", args: ["f3.recruit", sp] };
+  assert.equal(evalExpr(q, ctx({ $target: "f2" })), false, "faction target: the faction option");
+  assert.equal(evalExpr(q, ctx({ $target: "f2", $targetPiece: "f2.base" })), true, "piece target: the piece option");
+});

@@ -331,7 +331,9 @@ function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionByI
           // A piece target (1.9.0) needs the action's enemy choices at the top level: a nested one is not
           // part of the legality check, so the action could pass and then run no choice effect.
           const nested = (list, deep) => list.some((s) => (deep && s.op === "choose" && s.options.some((o) => o.faction)) || nested([...(s.then ?? []), ...(s.else ?? []), ...(s.options ?? []).flatMap((o) => o.steps)], true));
-          const steps = n.parts ? n.parts.flatMap((pt) => pt.steps) : a?.steps ?? [];
+          // The linked Special Activities inherit the piece target too.
+          const linkedSteps = [n.linked ?? []].flat().flatMap((L) => actionById[L.action]?.steps ?? []);
+          const steps = [...(n.parts ? n.parts.flatMap((pt) => pt.steps) : a?.steps ?? []), ...linkedSteps];
           if (tables[n.target].steps.some((s) => s.piece) && steps.some((s) => nested([s], false)))
             err("option-piece", np, `Node ${n.id} can pick a piece target, so the enemy choices of its action must be at the top level of its effects`);
         }
