@@ -2,7 +2,7 @@
 // starting pieces, pieces out of play, track starts and starting eligibility.
 // applyBoard turns that raw answer into a valid board. It never trusts the answer: unknown names,
 // pieces and states are dropped and reported, and piece counts always add up to the supply.
-import { opinionMax, opinionNames } from "./opinion.mjs";
+import { opinionMax, opinionNames, opinionLevels } from "./opinion.mjs";
 import { chunkText } from "./sources.mjs";
 
 const TYPES = ["city", "province", "line", "sanctuary", "custom"];
@@ -135,7 +135,8 @@ export function applyBoard(game, r) {
 }
 
 // What a suggestion depends on: factions, pieces and tracks. A proposal is applied only while this is unchanged.
-export const boardBase = (g) => JSON.stringify([g.factions.map((f) => [f.id, f.pieces]), g.tracks.map((t) => [t.id, t.min, t.max])]);
+// The opinion levels (schema 1.9.0) count too: a suggestion uses the scale it was made for.
+export const boardBase = (g) => JSON.stringify([g.factions.map((f) => [f.id, f.pieces]), g.tracks.map((t) => [t.id, t.min, t.max]), opinionLevels(g)]);
 
 // fillBoard: the suggestion fills only empty fields (owner decision, 2026-11-22).
 // - A placeholder space (default name "Space N" or "New space N", no starting pieces, and not

@@ -114,3 +114,33 @@ test("changing the levels updates preset victory rules the designer did not edit
   assert.equal(g.setup.spaceAttributes[sp].opinion, -1);
   assert.deepEqual(g.victory.perFaction[0], victoryFor(f, g));
 });
+
+// Codex review on #30.
+import { boardBase } from "../src/boardsuggest.mjs";
+import { blankGame } from "../src/blank.mjs";
+import { addFaction } from "../src/presets.mjs";
+test("a board suggestion made before the levels changed no longer applies", () => {
+  const g = tan(), base = boardBase(g);
+  setOpinionLevels(g, 5);
+  assert.notEqual(boardBase(g), base);
+});
+
+test("an unedited preset victory rule follows the levels after its base piece is renamed", () => {
+  const g = blankGame(2);
+  const f = g.factions.find((x) => x.pieces.some((p) => p.isBase) && /Opposition/.test(g.victory.perFaction.find((v) => v.factionId === x.id)?.plain ?? ""));
+  assert.ok(f, "a blank game has an opposition faction with a base");
+  f.pieces.find((p) => p.isBase).name = "Safe House";
+  setOpinionLevels(g, 5);
+  assert.deepEqual(g.victory.perFaction.find((v) => v.factionId === f.id).formula, victoryFor(f, g).formula);
+});
+
+test("changing the levels works with a faction that has no pieces", () => {
+  const g = blankGame(2);
+  g.factions[0].type = "custom"; g.factions[0].pieces = [];
+  const v = g.victory.perFaction.find((x) => x.factionId === g.factions[0].id);
+  Object.assign(v, { plain: "Own track.", formula: 3 });
+  const keep = structuredClone(v);
+  setOpinionLevels(g, 5);
+  assert.equal(g.board.opinionLevels, 5);
+  assert.deepEqual(g.victory.perFaction.find((x) => x.factionId === g.factions[0].id), keep, "its rule is kept");
+});

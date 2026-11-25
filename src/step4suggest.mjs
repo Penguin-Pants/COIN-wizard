@@ -7,7 +7,7 @@ import { VAR_OK } from "./expr.mjs";
 import { validate } from "./validate.mjs";
 import { addCard, buildPiles } from "./deck.mjs";
 import { newBot } from "./botedit.mjs";
-import { victoryFor } from "./presets.mjs";
+import { victoryFor, matchesDefault } from "./presets.mjs";
 
 export const PARTS = ["rules", "deck", "victory", "bots"];
 export const RULE_SECTIONS = ["overview", "components", "setup", "sequence", "operations", "events", "scoring", "victory"];
@@ -134,14 +134,7 @@ function fillDeck(g, r, rep) {
 // A rule is still the preset default when its formula and threshold are the default ones and its text
 // is the default text, allowing for a renamed piece (the default text names the base piece).
 // A game may have switched between 3 and 5 opinion levels after the preset was made: both defaults count.
-function isDefaultVictory(f, v, g) {
-  return [victoryFor(f), victoryFor(f, g)].some((d) => {
-    if (JSON.stringify([v.formula, v.threshold]) !== JSON.stringify([d.formula, d.threshold])) return false;
-    const base = f.pieces.find((p) => p.isBase)?.name;
-    const pattern = base && d.plain.includes(base) ? new RegExp(`^${d.plain.split(base).map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".+")}$`) : null;
-    return v.plain === d.plain || !!pattern?.test(v.plain);
-  });
-}
+const isDefaultVictory = (f, v, g) => [victoryFor(f), victoryFor(f, g)].some((d) => matchesDefault(f, v, d));
 
 function fillVictory(g, r, rep) {
   for (const v of arr(r?.perFaction)) {

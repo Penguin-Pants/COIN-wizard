@@ -116,7 +116,7 @@ async function suggestBoard() {
 function acceptBoard() {
   const { game, base } = S.proposal; const g = S.game;
   // Factions, pieces or tracks changed since the suggestion: its counts would no longer fit.
-  if (base !== boardBase(g)) { S.proposal = null; S.msg.board = "Factions, pieces or tracks changed after this suggestion, so it was discarded. Ask Claude again."; render(); return; }
+  if (base !== boardBase(g)) { S.proposal = null; S.msg.board = "Factions, pieces, tracks or opinion levels changed after this suggestion, so it was discarded. Ask Claude again."; render(); return; }
   g.board = game.board; g.setup = game.setup; g.tracks = game.tracks;
   S.proposal = null; touch(); check(); render();
 }

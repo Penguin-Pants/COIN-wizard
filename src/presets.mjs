@@ -31,6 +31,7 @@ export function victoryFor(f, game) {
   const five = opinionLevels(game) === 5;
   if (kind === "support") return { factionId: f.id, plain: five ? "Total Support: Pop at Active Support counts twice, Pop at Passive Support once." : "Support Pop: total Pop of spaces at Support.", formula: fromValue(pop(1)), threshold: 8 };
   if (kind === "opposition") return { factionId: f.id, plain: five ? `Total Opposition (Active twice, Passive once) plus ${base?.name ?? "bases"} on the map.` : `Opposition Pop plus ${base?.name ?? "bases"} on the map.`, formula: fromValue(base ? { k: "sum", items: [pop(-1), { k: "count", piece: base.id, at: "*", state: "*" }] } : pop(-1)), threshold: 8 };
+  if (!unit) return null; // a custom faction with no pieces has no preset rule
   return { factionId: f.id, plain: `${unit.name} on the map.`, formula: fromValue({ k: "count", piece: unit.id, at: "*", state: "*" }), threshold: 10 };
 }
 
@@ -104,14 +105,23 @@ export function setFactionCount(game, n) {
 
 // Sets 3 or 5 opinion levels (schema 1.9.0). 3 is the default and leaves no field. Starting opinion
 // outside the new scale moves to its end. A victory rule that is still the preset default for the old
-// levels (same formula, threshold and text) becomes the default for the new levels; edited rules stay.
+// levels (see matchesDefault) becomes the default for the new levels; edited rules stay.
+// A rule is still the preset default d when its formula and threshold are d's and its text is d's,
+// allowing for a renamed piece (the default text names the base piece).
+export function matchesDefault(f, v, d) {
+  if (!d || JSON.stringify([v.formula, v.threshold]) !== JSON.stringify([d.formula, d.threshold])) return false;
+  const base = f.pieces.find((p) => p.isBase)?.name;
+  const pattern = base && d.plain.includes(base) ? new RegExp(`^${d.plain.split(base).map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".+")}$`) : null;
+  return v.plain === d.plain || !!pattern?.test(v.plain);
+}
+
 export function setOpinionLevels(game, levels) {
   const old = Object.fromEntries(game.factions.map((f) => [f.id, victoryFor(f, game)]));
   if (levels === 5) game.board.opinionLevels = 5; else delete game.board.opinionLevels;
   const om = levels === 5 ? 2 : 1;
   for (const a of Object.values(game.setup.spaceAttributes ?? {})) if (typeof a.opinion === "number") a.opinion = Math.max(-om, Math.min(om, a.opinion));
   game.victory.perFaction.forEach((v, i) => {
-    const f = game.factions.find((x) => x.id === v.factionId), d = old[v.factionId];
-    if (f && d && JSON.stringify([v.formula, v.threshold, v.plain]) === JSON.stringify([d.formula, d.threshold, d.plain])) game.victory.perFaction[i] = victoryFor(f, game);
+    const f = game.factions.find((x) => x.id === v.factionId);
+    if (f && matchesDefault(f, v, old[v.factionId])) game.victory.perFaction[i] = victoryFor(f, game);
   });
 }
