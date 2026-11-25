@@ -248,7 +248,9 @@ export function validate(game) {
     } else err("card-order", p, `Card ${c.id} has no faction order`);
     if (c.type === "event") {
       if (c.sides?.length !== 2) err("card-sides", p, `Event ${c.id} needs unshaded and shaded sides`);
-      (c.sides ?? []).forEach((s, j) => checkSteps(s.steps, `${p}/sides/${j}/steps`, { card: true }));
+      // A side reads $target (1.10.0) when every override node that runs it has a target table.
+      const runners = (sd) => game.bots.flatMap((b) => b.eventPolicy.overrides.filter((o) => o.cardId === c.id && o.node && o.directive !== "ignore" && (o.side ?? b.eventPolicy.side) === sd.id));
+      (c.sides ?? []).forEach((s, j) => { const r = runners(s); checkSteps(s.steps, `${p}/sides/${j}/steps`, { card: true, target: r.length > 0 && r.every((o) => o.node.target !== undefined) }); });
     }
     for (const cl of c.claimIds ?? []) if (!claimIds.has(cl)) err("missing-ref", `${p}/claimIds`, `Unknown claim ${cl}`);
   });

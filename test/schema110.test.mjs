@@ -156,3 +156,16 @@ test("an Event side may hold a top-level piece option", () => {
   card.sides[0].steps = [{ op: "if", test: true, then: [{ op: "choose", options: [opt] }] }];
   assert.ok(validate(g).errors.some((e) => e.code === "option-piece"));
 });
+
+// Codex review on PR 33: a side that only override nodes with a target run may read $target.
+test("an Event side reads $target when every override node that runs it has a target", () => {
+  const g = valleys(), b = g.bots[0], card = g.deck.cards.find((c) => c.type === "event");
+  card.sides[0].steps = [{ op: "shift", attr: "opinion", toward: "support", amount: 1, space: "choose", filter: { op: "gte", args: [{ op: "factionCount", args: [{ var: "$target.id" }, { var: "$space.id" }, "*"] }, 1] } }];
+  b.priorityTables.push({ id: "ra.any", scope: "space", select: "one", steps: [{ n: 1, text: "Any space.", filter: true }], tiebreak: [] });
+  const bad = () => validate(g).errors.filter((e) => e.code === "bad-var" && e.path.includes("/sides/0"));
+  assert.equal(bad().length, 1, "no node runs the side, so $target is unknown");
+  b.eventPolicy.overrides = [{ cardId: card.id, directive: "force", plain: "Hit the leading enemy.", node: { table: "ra.any", target: "ra.enemy" } }];
+  assert.deepEqual(bad(), []);
+  b.eventPolicy.overrides[0].node = { table: "ra.any" };
+  assert.equal(bad().length, 1, "a node without a target runs the side too");
+});
