@@ -235,3 +235,18 @@ test("a designer sets an opponent step to a piece target and clears it", () => w
   t = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].priorityTables.at(-1);
   assert.equal("piece" in t.steps[0], false);
 }));
+
+// Schema 1.10.0 gap 11: an Event exception may run the Event with a table; "no" removes the node.
+test("a designer runs an Event exception with a table and clears it", () => withApp(async ({ page, db }) => {
+  await botsTab(page);
+  const ts = 'select[data-b="bots/0/eventPolicy/overrides/0/node/table"]';
+  await page.locator(ts).selectOption("cw.t.crack"); await frames(page);
+  await page.waitForTimeout(1800);
+  let ov = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].eventPolicy.overrides[0];
+  assert.deepEqual(ov.node, { table: "cw.t.crack" });
+  assert.equal(await page.locator("#stepissues li.error").count(), 0);
+  await page.locator(ts).selectOption(""); await frames(page);
+  await page.waitForTimeout(1800);
+  ov = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].eventPolicy.overrides[0];
+  assert.equal("node" in ov, false, "no table removes the node");
+}));

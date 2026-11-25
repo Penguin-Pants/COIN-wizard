@@ -28,6 +28,8 @@ function applyBind(el) {
   // t "o": an optional field. An empty choice removes the key.
   // t "on": an optional number. Empty removes the key.
   if (t === "on") { if (v === "") { const o = getP(S.game, path.split("/").slice(0, -1).join("/")); delete o[path.split("/").pop()]; touch(); return; } v = Number(v); }
+  // An Event override node without a table is no node (1.10.0).
+  if (t === "o" && v === "" && /\/eventPolicy\/overrides\/\d+\/node\/table$/.test(path)) { const ov = getP(S.game, path.split("/").slice(0, -2).join("/")); delete ov.node; touch(); return; }
   if (t === "o" && v === "") { const o = getP(S.game, path.split("/").slice(0, -1).join("/")); delete o[path.split("/").pop()]; touch(); return; }
   if (/^brief\/claims\/\d+\/conflict$/.test(path) && v === "") { const o = getP(S.game, path.split("/").slice(0, -1).join("/")); delete o.conflict; touch(); return; }
   setP(S.game, path, v);

@@ -306,9 +306,11 @@ export function nonPlayerSheetHtml(g, bot) {
   const card = (id) => g.deck.cards.find((c) => c.id === id)?.title ?? id.toUpperCase();
   // Overrides for lasting cards (card.lasting of the side this bot plays) print in their own box.
   const playSide = (o) => (o.directive === "ignore" ? "" : ` (play the ${o.side ?? ep.side} side)`);
+  // An override node (1.10.0): the plain text is the label, then the table that picks the spaces.
+  const ovNode = (o) => (o.node ? ` <i>Priorities: ${labels[o.node.table] ?? o.node.table}${o.node.target ? `; target: ${labels[o.node.target] ?? o.node.target}` : ""}.</i>` : "");
   const lasting = (o) => cardLasting(g, bot, o.cardId);
   const lastingOvs = ep.overrides.filter((o) => lasting(o) !== "none");
-  const evi = `<section class="evi"><h2>Event Instructions</h2>${ep.overrides.filter((o) => lasting(o) === "none").map((o) => `<p><b>${h(card(o.cardId))}:</b> ${h(o.plain)}${playSide(o)}</p>`).join("") || "<p>None.</p>"}</section>${lastingOvs.length ? `<section class="evi"><h2>Momentum, Capability</h2>${lastingOvs.map((o) => `<p><b>${h(card(o.cardId))}</b> (${LASTING[lasting(o)]}): ${h(o.plain)}${playSide(o)}</p>`).join("")}</section>` : ""}`;
+  const evi = `<section class="evi"><h2>Event Instructions</h2>${ep.overrides.filter((o) => lasting(o) === "none").map((o) => `<p><b>${h(card(o.cardId))}:</b> ${h(o.plain)}${playSide(o)}${ovNode(o)}</p>`).join("") || "<p>None.</p>"}</section>${lastingOvs.length ? `<section class="evi"><h2>Momentum, Capability</h2>${lastingOvs.map((o) => `<p><b>${h(card(o.cardId))}</b> (${LASTING[lasting(o)]}): ${h(o.plain)}${playSide(o)}${ovNode(o)}</p>`).join("")}</section>` : ""}`;
   const terms = bot.measures.length ? `<div class="terms"><b>Terms.</b> ${bot.measures.map((m) => `<b>${h(m.name)}:</b> ${h(m.plain)}`).join(" ")}</div>` : "";
   const gain = g.rules.sequence.passGain[bot.factionId] ?? 0;
   const foot = `<p class="foot">Ties after the lettered tie-breaks, when one space or faction is chosen: ${h(bot.randomization.eligibleSet)} ${h(bot.randomization.procedure)} Pass: gain ${gain} Resource${gain === 1 ? "" : "s"}.</p>`;

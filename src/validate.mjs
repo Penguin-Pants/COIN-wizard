@@ -299,7 +299,7 @@ function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionByI
   bot.eventPolicy.overrides.forEach((o, i) => {
     const c = cardById[o.cardId];
     if (!c || c.type !== "event") err("missing-ref", `${p}/eventPolicy/overrides/${i}`, `Override names unknown Event card ${o.cardId}`);
-    if (o.targets && o.directive !== "ignore") warn("solo", `${p}/eventPolicy/overrides/${i}`, `Event exception for ${o.cardId} names its targets in text only. The engine cannot read it: express the choice with the card's effects or a table.`);
+    if (o.targets && !o.node && o.directive !== "ignore") warn("solo", `${p}/eventPolicy/overrides/${i}`, `Event exception for ${o.cardId} names its targets in text only. The engine cannot read it: express the choice with the card's effects or a table.`);
     if (o.directive === "conditional") { if (!o.when) err("override", `${p}/eventPolicy/overrides/${i}`, `Conditional override for ${o.cardId} needs a "when" condition`); else checkExpr(o.when, `${p}/eventPolicy/overrides/${i}/when`); }
   });
   const ref = (id, path, what) => { if (!nodes[id]) err("missing-ref", path, `${what} not found: ${id}`); };
@@ -333,13 +333,10 @@ function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionByI
         else if (tables[n.target].scope !== "opponent") err("bad-target", np, `Target table ${n.target} must pick an enemy (scope: an enemy faction)`);
         else {
           used.add(n.target);
-          // A piece target (1.9.0) needs the action's enemy choices at the top level: a nested one is not
-          // part of the legality check, so the action could pass and then run no choice effect.
-          const nested = (list, deep) => list.some((s) => (deep && s.op === "choose" && s.options.some((o) => o.faction)) || nested([...(s.then ?? []), ...(s.else ?? []), ...(s.options ?? []).flatMap((o) => o.steps)], true));
           // The linked Special Activities inherit the piece target too.
           const linkedSteps = [n.linked ?? []].flat().flatMap((L) => actionById[L.action]?.steps ?? []);
           const steps = [...(n.parts ? n.parts.flatMap((pt) => pt.steps) : a?.steps ?? []), ...linkedSteps];
-          if (tables[n.target].steps.some((s) => s.piece) && steps.some((s) => nested([s], false)))
+          if (tables[n.target].steps.some((s) => s.piece) && nestedChoice(steps))
             err("option-piece", np, `Node ${n.id} can pick a piece target, so the enemy choices of its action must be at the top level of its effects`);
         }
       }
@@ -359,6 +356,23 @@ function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionByI
     } else if (n.kind === "end") {
       if (!n.outcome) err("incomplete-node", np, `End node ${n.id} needs an outcome`); else outcomes.add(n.outcome);
       if (n.outcome === "pass" && !seq.choices.includes("pass")) err("pass-illegal", np, "Bot passes but the rules do not allow Pass");
+    }
+  });
+  // Event override nodes (1.10.0): a space table, an optional enemy table, and an override that plays.
+  bot.eventPolicy.overrides.forEach((o, i) => {
+    if (!o.node) return;
+    const op = `${p}/eventPolicy/overrides/${i}/node`, { table, target } = o.node;
+    if (o.directive === "ignore") err("override", op, `Override for ${o.cardId} never plays the Event, so it runs no node`);
+    if (!tables[table]) err("missing-ref", op, `Event table not found: ${table}`);
+    else { used.add(table); if (tables[table].scope === "opponent") err("bad-target", op, `Table ${table} picks an enemy. The Event chooses spaces with a space table`); }
+    if (target === undefined) return;
+    if (!tables[target]) err("missing-ref", op, `Target table not found: ${target}`);
+    else if (tables[target].scope !== "opponent") err("bad-target", op, `Target table ${target} must pick an enemy (scope: an enemy faction)`);
+    else {
+      used.add(target);
+      const side = o.side ?? bot.eventPolicy.side, steps = cardById[o.cardId]?.sides?.find((sd) => sd.id === side)?.steps ?? [];
+      if (tables[target].steps.some((s) => s.piece) && nestedChoice(steps))
+        err("option-piece", op, `The Event node for ${o.cardId} can pick a piece target, so the enemy choices of the card side must be at the top level of its effects`);
     }
   });
   // Scoring choices: a known phase, a space table, and one scoring entry per phase over all bots.
@@ -438,7 +452,17 @@ function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionByI
 
 // What chooses with a table: nodes (as the node's table or a linked entry's table) and scoring
 // entries. A scoring entry has no target, so a table it uses may not read $target.
-export const tableUsers = (bot, id) => [...bot.nodes.filter((n) => n.table === id || linkedOf(n).some((L) => L.table === id) || (n.parts ?? []).some((pt) => pt.table === id)), ...(bot.scoring ?? []).filter((sc) => sc.table === id)];
+// An Event override node (1.10.0) uses its table like an action node.
+export const tableUsers = (bot, id) => [...bot.nodes.filter((n) => n.table === id || linkedOf(n).some((L) => L.table === id) || (n.parts ?? []).some((pt) => pt.table === id)), ...(bot.scoring ?? []).filter((sc) => sc.table === id), ...bot.eventPolicy.overrides.filter((o) => o.node?.table === id).map((o) => o.node)];
+
+// True when an enemy choice sits below the top level of the steps (inside if, else or another
+// choice). A piece target (1.9.0) needs every enemy choice at the top level: a nested one is not
+// part of the legality check, so the action could pass and then run no choice effect.
+const nestedChoice = (steps) => {
+  const deep = (list) => list.some((s) => (s.op === "choose" && s.options.some((o) => o.faction)) || deep(below(s)));
+  const below = (s) => [...(s.then ?? []), ...(s.else ?? []), ...(s.options ?? []).flatMap((o) => o.steps)];
+  return steps.some((s) => deep(below(s)));
+};
 
 function result(issues) {
   return { ok: !issues.some((i) => i.severity === "error"), errors: issues.filter((i) => i.severity === "error"), warnings: issues.filter((i) => i.severity === "warning") };

@@ -265,9 +265,10 @@ function runStep(game, s, ctx) {
   }
 }
 
-// Runs a scoring phase's steps. choose(filter, n) picks up to n spaces for each choice step.
-export function runPhaseSteps(game, state, steps, choose) {
-  runSteps(game, steps, { state, links: game.board.links, choose });
+// Runs steps with no space context: a scoring phase, or an Event side (schema 1.10.0).
+// choose(filter, n) picks up to n spaces for each choice step. extra: { $target } for an Event.
+export function runPhaseSteps(game, state, steps, choose, extra = {}) {
+  runSteps(game, steps, { state, links: game.board.links, ...extra, choose });
 }
 
 // The cost of an action in the chosen spaces.

@@ -5,7 +5,7 @@ Goal: derive generic, faction-agnostic bot logic from the Non-Player flowcharts 
 ## Files
 
 - `source/<game>-<faction>.md`: the sheet's text, transcribed word for word, for research only (© GMT Games). Not used by the build, the print kit or the artifact.
-- `<game>-<faction>.yaml`: the same logic normalized: game terms replaced by role variables, in the shape of the repo's bot model (`docs/SCHEMA.md`, "Bot decision graph"). `gap:` marks logic the current schema (1.9.0) cannot express. `reading:` marks an interpretation of the sheet's words that the sheet does not state.
+- `<game>-<faction>.yaml`: the same logic normalized: game terms replaced by role variables, in the shape of the repo's bot model (`docs/SCHEMA.md`, "Bot decision graph"). `gap:` marks logic the current schema (1.10.0) cannot express. `reading:` marks an interpretation of the sheet's words that the sheet does not state.
 
 ## Status
 
@@ -46,7 +46,7 @@ Goal: derive generic, faction-agnostic bot logic from the Non-Player flowcharts 
 | `mode: sequence` | numbered rows applied in order, each as far as possible | Yes (1.7.0: table `mode`); `parts` (1.5.0) covers rows with different effects |
 | target per row | each row acts against its own faction (Kidnap) | Yes (1.8.0: step `target`) |
 | movement state | "stay Underground" and "yet to move" | Yes (1.9.0: move `activate`, `unmoved`) |
-| per-card event logic | structured actions for one card | No: `eventPolicy.overrides` holds plain text |
+| per-card event logic | structured actions for one card | Partly (1.10.0: override `node` runs the card side with a space table and an optional target table). Branches inside one card (General Offensive, Kill Zone) and Operations changed by a card (Mono Jojoy) stay plain text |
 
 ## Open questions (need the rulebook, not the sheet)
 

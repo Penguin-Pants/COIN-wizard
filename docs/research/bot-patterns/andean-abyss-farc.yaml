@@ -173,5 +173,5 @@ event_instructions:              # eventPolicy.overrides; card names stay as ids
       2: where count(self.guerrilla) >= 1
     mode: first
   gap:
-    - Per-card logic fits eventPolicy.overrides only as plain text; the model has no structured per-card action.
+    - Per-card logic (1.10.0) - an override node runs the card side with a space table (raul_reyes, airdropped_aks). Branches inside one card (general_offensive, kill_zone) and an Operation changed by a card (mono_jojoy) stay plain text.
     - '"Flip Active Guerrillas" (Mono Jojoy): the sheet does not say to which state; read as to Underground.'

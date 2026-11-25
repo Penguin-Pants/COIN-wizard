@@ -125,10 +125,30 @@ function eventDecision(bot, state, game) {
   const ov = bot.eventPolicy.overrides.find((o) => o.cardId === card.id);
   if (ov) {
     if (ov.directive === "ignore") return { play: false };
-    if (ov.directive === "force") return { play: !!card.hasEffect, side: ov.side ?? bot.eventPolicy.side };
-    if (ov.directive === "conditional") return { play: !!card.hasEffect && !!evalExpr(ov.when, ctx), side: ov.side ?? bot.eventPolicy.side };
+    if (ov.directive === "force") return { play: !!card.hasEffect, side: ov.side ?? bot.eventPolicy.side, node: ov.node };
+    if (ov.directive === "conditional") return { play: !!card.hasEffect && !!evalExpr(ov.when, ctx), side: ov.side ?? bot.eventPolicy.side, node: ov.node };
   }
   return { play: !!evalExpr(bot.eventPolicy.playIf, ctx), side: bot.eventPolicy.side };
+}
+
+// choose(filter, n) for effect steps that need a space: the table picks up to n spaces (1 for
+// "choose") that meet the step's filter. Each chosen space is added to result.chosen.
+const tableChooser = (game, state, table, result, extra = {}) => (filter, n) => {
+  const legal = Object.values(state.spaces).filter((sp) => filter === undefined || !!evalExpr(filter, { state, links: game.board.links, $space: sp, ...extra }));
+  const sel = selectByTable(game, state, table, legal, { cost: { amount: 0 }, maxSpaces: n }, extra);
+  result.chosen.push(...sel.map((sp) => sp.id));
+  return sel;
+};
+
+// An Event override's node (schema 1.10.0): the bot runs the steps of the side it plays. Its table
+// picks every space a step needs; its optional target table picks the enemy first. No enemy
+// qualifies: the Event runs with no target.
+function runEventNode(game, state, node, side, tables, result) {
+  const steps = game.deck.cards.find((c) => c.id === state.card.id)?.sides?.find((s) => s.id === side)?.steps ?? [];
+  const picked = node.target ? selectOpponentPick(game, state, tables[node.target]) : null;
+  const extra = picked ? { $target: picked.faction, ...(picked.piece ? { $targetPiece: picked.piece } : {}) } : {};
+  if (picked) { result.target = picked.faction; if (picked.piece) result.targetPiece = picked.piece; }
+  runPhaseSteps(game, state, steps, tableChooser(game, state, tables[node.table], result, extra), extra);
 }
 
 // Tries a node's linked Special Activities in order (first trigger that holds and finds a space runs).
@@ -216,6 +236,7 @@ export function runBot(game, bot, startState) {
       result.path.push(node.id);
       const d = eventDecision(bot, state, game);
       if (d.play) result.side = d.side;
+      if (d.play && d.node) runEventNode(game, state, d.node, d.side, tables, result);
       cur = d.play ? node.yes : node.no;
     } else if (node.kind === "action") {
       const action = actions[node.action];
@@ -290,13 +311,7 @@ export function runScoring(game, bot, startState) {
     const sc = (bot.scoring ?? []).find((x) => x.phaseId === ph.id);
     if (!sc) continue;
     result.path.push(ph.id);
-    const choose = (filter, n) => {
-      const legal = Object.values(state.spaces).filter((sp) => filter === undefined || !!evalExpr(filter, { state, links: game.board.links, $space: sp }));
-      const sel = selectByTable(game, state, tables[sc.table], legal, { cost: { amount: 0 }, maxSpaces: n });
-      result.chosen.push(...sel.map((sp) => sp.id));
-      return sel;
-    };
-    runPhaseSteps(game, state, ph.steps, choose);
+    runPhaseSteps(game, state, ph.steps, tableChooser(game, state, tables[sc.table], result));
   }
   return result;
 }
