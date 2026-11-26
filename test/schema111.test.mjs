@@ -293,6 +293,8 @@ test("Control rules validate: sides, exclude and types, and $space.control needs
   assert.match(errs({ sides: [{ id: "f3", name: "F3", factions: ["f1", "f2"] }] }), /f3/);
   assert.match(errs({ sides: [{ id: "none", name: "None", factions: ["f1", "f2"] }] }), /none/);
   assert.match(errs({ exclude: ["nothing"] }), /nothing/);
+  // Codex review on PR 40: two sides with one id would count as one alliance.
+  assert.match(errs({ sides: [{ id: "a", name: "A", factions: ["f1", "f2"] }, { id: "a", name: "A2", factions: ["f3", "f4"] }] }), /two sides/i);
   const tg = tan(), cond = tg.bots[0].nodes.find((n) => n.id === "cw.low");
   cond.test = { op: "anySpace", args: [{ op: "eq", args: [{ var: "$space.control" }, "crown"] }] };
   assert.ok(validate(tg).errors.some((e) => e.code === "bad-control" && /rules\.control/.test(e.message)), "no Control rules");

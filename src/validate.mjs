@@ -214,6 +214,7 @@ export function validate(game) {
     (ctl.sides ?? []).forEach((sd, i) => {
       const sp = `/rules/control/sides/${i}`;
       if (factionIds.has(sd.id) || sd.id === "none") err("bad-control", sp, `Side id ${sd.id} is a faction id or "none". Use another id`);
+      if (ctl.sides.findIndex((x) => x.id === sd.id) < i) err("bad-control", sp, `Two sides use the id ${sd.id}. Each side needs its own id`);
       for (const f of sd.factions) {
         if (!factionIds.has(f)) err("bad-control", sp, `Side ${sd.id} names unknown faction ${f}`);
         else if (seen[f]) err("bad-control", sp, `Faction ${f} is in sides ${seen[f]} and ${sd.id}. A faction is in one side at most`);
