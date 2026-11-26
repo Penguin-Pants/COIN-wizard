@@ -105,6 +105,8 @@ function takable(s, ctx, sp, pid) {
   if (!s.keep || (s.keep.if !== undefined && !evalExpr(s.keep.if, { ...ctx, $space: sp }))) return have;
   return Math.max(0, have - Math.max(0, Number(evalExpr(s.keep.count, { ...ctx, $space: sp }))));
 }
+// Passes over states with keep.prefer last, so the kept pieces stay in that state (schema 1.11.0).
+const lastPrefer = (list, prefer, stateOf) => (prefer === undefined ? list : [...list.filter((x) => stateOf(x) !== prefer), ...list.filter((x) => stateOf(x) === prefer)]);
 const poolOf = (state, pid) => (state.pools[pid] ??= { available: 0, outOfPlay: 0 });
 const isPool = (w) => w === "available" || w === "outOfPlay";
 
@@ -181,7 +183,7 @@ function runStep(game, s, ctx) {
       const primary = onSpace(sp, s.piece, s.state) > 0 || !s.fallbackPiece;
       const pid = primary ? s.piece : s.fallbackPiece, st = primary ? s.state : undefined;
       // "moved" with no state removes the moved pieces in the states they moved in.
-      const parts = s.count === "moved" && st === undefined ? (ctx.moved?.piece === pid ? Object.keys(ctx.moved.byState) : []) : [st];
+      const parts = lastPrefer(s.count === "moved" && st === undefined ? (ctx.moved?.piece === pid ? Object.keys(ctx.moved.byState) : []) : [st], s.keep?.prefer, (x) => x);
       let cap = takable(s, ctx, sp, pid);
       for (const ps of parts) {
         const got = takePieces(game, sp, pid, ps, Math.min(cap, qty(s.count, ctx, Math.min(cap, onSpace(sp, pid, ps)), pid, ps, sp.id)), s.keep?.prefer);
@@ -223,7 +225,7 @@ function runStep(game, s, ctx) {
       if (isPool(s.from)) { poolOf(state, s.piece)[s.from] -= left; put(s.state ?? defaultOf(game, s.piece), left); left = 0; }
       // "moved" with no state moves the moved pieces in their own states; otherwise one pass.
       const passes = s.count === "moved" && s.state === undefined && ctx.moved?.piece === s.piece
-        ? Object.entries(ctx.moved.byState).filter(([, n]) => n > 0) : [[s.state, left]];
+        ? lastPrefer(Object.entries(ctx.moved.byState).filter(([, n]) => n > 0), s.keep?.prefer, ([x]) => x) : [[s.state, left]];
       for (const [ps, want] of passes) {
         let need = Math.min(want, left);
         for (const sp of sources.filter(ok)) {

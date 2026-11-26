@@ -42,6 +42,18 @@ function cardIdLiterals(game, visit) {
   walk(game.bots, "/bots");
 }
 
+// inPlay.<card> variables (schema 1.11.0) anywhere in the game, and dry-run patches that set inPlay.
+function inPlayVars(game, visit) {
+  const walk = (v, path) => {
+    if (Array.isArray(v)) return v.forEach((x, i) => walk(x, `${path}/${i}`));
+    if (!v || typeof v !== "object") return;
+    if (typeof v.var === "string" && v.var.startsWith("inPlay.")) visit(v, path);
+    for (const [k, x] of Object.entries(v)) walk(x, `${path}/${k}`);
+  };
+  for (const k of ["actions", "deck", "rules", "victory", "bots"]) walk(game[k], `/${k}`);
+}
+const inPlayPatches = (game, visit) => game.bots.forEach((b, bi) => b.dryRuns.forEach((d, di) => { if (d.patch?.inPlay) visit(d.patch, `/bots/${bi}/dryRuns/${di}/patch/inPlay`, b, d); }));
+
 export function cardRefs(game, id) {
   const out = [];
   game.deck.preparation.piles.forEach((p, i) => {
@@ -53,12 +65,15 @@ export function cardRefs(game, id) {
     b.dryRuns.forEach((d, di) => { if (d.patch?.card?.id === id) out.push({ path: `/bots/${bi}/dryRuns/${di}/patch/card`, label: `Bot ${b.id} dry run "${d.case}"` }); });
   });
   cardIdLiterals(game, (e, i, path) => { if (e.args[i] === id) out.push({ path, label: "A bot condition on the card" }); });
+  inPlayVars(game, (e, path) => { if (e.var === `inPlay.${id}`) out.push({ path, label: "An expression that reads the card in play" }); });
+  inPlayPatches(game, (pt, path, b, d) => { if (pt.inPlay.includes(id)) out.push({ path, label: `Bot ${b.id} dry run "${d.case}" cards in play` }); });
   return out;
 }
 
 // Removes the card and the references that can go with it. Returns each reference with fixed true or false.
 export function deleteCard(game, id) {
-  const refs = cardRefs(game, id).map((r) => ({ ...r, fixed: /\/events$|\/overrides\/\d+$/.test(r.path) }));
+  const refs = cardRefs(game, id).map((r) => ({ ...r, fixed: /\/events$|\/overrides\/\d+$|\/patch\/inPlay$/.test(r.path) }));
+  inPlayPatches(game, (pt) => { pt.inPlay = pt.inPlay.filter((c) => c !== id); if (!pt.inPlay.length) delete pt.inPlay; });
   game.deck.cards = game.deck.cards.filter((c) => c.id !== id);
   for (const p of game.deck.preparation.piles) p.events = p.events.filter((e) => e !== id);
   for (const b of game.bots) b.eventPolicy.overrides = b.eventPolicy.overrides.filter((o) => o.cardId !== id);
@@ -75,6 +90,8 @@ export function renameCard(game, oldId, newId) {
     for (const d of b.dryRuns) if (d.patch?.card?.id === oldId) d.patch.card.id = newId;
   }
   cardIdLiterals(g, (e, i) => { if (e.args[i] === oldId) e.args[i] = newId; });
+  inPlayVars(g, (e) => { if (e.var === `inPlay.${oldId}`) e.var = `inPlay.${newId}`; });
+  inPlayPatches(g, (pt) => { pt.inPlay = pt.inPlay.map((c) => (c === oldId ? newId : c)); });
   return g;
 }
 

@@ -10,6 +10,7 @@ import { toValue, fromValue, toCond } from "../src/exprmodel.mjs";
 import { runCase, budgetOf } from "../src/dryrun.mjs";
 import { budgetText, condText, stepText } from "../src/plain.mjs";
 import { applyAction } from "../src/effects.mjs";
+import { cardRefs, renameCard, deleteCard } from "../src/deck.mjs";
 import { nonPlayerSheetHtml, boardSvg } from "../src/kit.mjs";
 import { setupControl } from "../src/expr.mjs";
 import { aidModel, toMarkdown } from "../src/botaid.mjs";
@@ -414,4 +415,29 @@ test("keep and inPlay validate, and read as plain English", () => {
   assert.match(stepText(step, g), new RegExp(`Leave at least 1 plus ${card.title} is in play ${vn} in each space they leave where Pop is at least 1, underground first\\.`));
   assert.match(stepText({ op: "flip", piece: vol, from: "underground", to: "active", count: "all", keep: { count: 1 } }, g), new RegExp(`Leave at least 1 underground ${vn} there\\.`));
   assert.equal(varText(g, `inPlay.${card.id}`), `${card.title} is in play`);
+});
+
+test("keep.prefer holds when the count is the moved pieces (Codex review on PR 41)", () => {
+  const g = tan(), keep = { count: 1, prefer: "underground" };
+  for (const second of [{ op: "move", piece: vol, count: "moved", from: "$space", to: "limerick", keep }, { op: "remove", piece: vol, count: "moved", to: "available", keep }]) {
+    const st = board(g, { tipperary: { pieces: { [vol]: { active: 1, underground: 1 } } } });
+    applyAction(g, st, { cost: { amount: 0 }, steps: [{ op: "move", piece: vol, count: "all", from: "tipperary", to: "$space" }, second] }, ["kerry"], {}, { pay: false });
+    assert.deepEqual(here(st, "kerry"), { underground: 1 }, `${second.op}: the kept piece is Underground`);
+  }
+});
+
+test("renaming or deleting a card updates inPlay references (Codex review on PR 41)", () => {
+  const g = tan(), card = g.deck.cards.find((c) => c.type === "event"), a = g.actions.find((x) => x.id === "ira.march");
+  card.sides[0].lasting = "capability";
+  a.steps = [{ op: "move", piece: vol, count: "all", from: "adjacent", to: "$space", keep: { count: { op: "add", args: [1, { var: `inPlay.${card.id}` }] } } }];
+  g.bots[0].dryRuns[0].patch.inPlay = [card.id];
+  const refs = cardRefs(g, card.id).map((r) => r.path);
+  assert.ok(refs.some((p) => p.startsWith("/actions/")), "the expression is a reference");
+  assert.ok(refs.includes("/bots/0/dryRuns/0/patch/inPlay"), "the dry-run patch is a reference");
+  const r = renameCard(g, card.id, "e99");
+  assert.deepEqual(r.actions.find((x) => x.id === "ira.march").steps[0].keep.count.args[1], { var: "inPlay.e99" });
+  assert.deepEqual(r.bots[0].dryRuns[0].patch.inPlay, ["e99"]);
+  const d = structuredClone(g), out = deleteCard(d, card.id);
+  assert.equal("inPlay" in d.bots[0].dryRuns[0].patch, false, "delete removes the card from the patch");
+  assert.ok(out.some((x) => x.path.startsWith("/actions/") && !x.fixed), "an expression is reported, not fixed");
 });
