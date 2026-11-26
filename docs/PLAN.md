@@ -26,9 +26,8 @@ Owner: **Owner** (a person must act or decide) or **Claude** (code or docs, afte
 
 | # | Item | Owner | Start when |
 |---|---|---|---|
-| B1 | Answer design question 2 of part E (keep-back limits the count, or the legal spaces) | Owner | Now |
-| B2 | Implement 1.11.0: parts A (player flag), B (`avail`), C (budget), D (Control), E (keep-back), F (card effect categories), G14 (next card) | Claude | After B1. One part per PR |
-| B3 | Green circled "2" on the AA Event box: check the printed rulebook | Owner | Any time |
+| B1 | Implement 1.11.0: parts A (player flag), B (`avail`), C (budget), D (Control), E (keep-back), F (card effect categories), G14 (next card) | Claude | After PR 35 merges. One part per PR |
+| B2 | Green circled "2" on the AA Event box: check the printed rulebook | Owner | Any time |
 
 ### C. Later versions and imports (approved 2026-11-26, review items R7 to R13)
 

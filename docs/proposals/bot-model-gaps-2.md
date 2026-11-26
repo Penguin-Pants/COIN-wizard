@@ -27,7 +27,7 @@ Model today: `coin-game/1.10.0`.
 ## Design questions before E (keep-back)
 
 1. Answered from the rulebooks: "1(2)" means 1, or 2 when a capability is in effect (Find Fix Finish, PRTs). So `keep.count` must be an expression that can read a lasting card in play (gap G22).
-2. Is "keep" a limit on the step's count (the step moves fewer pieces), or on the spaces the step may use (a space that would break the rule is not legal)?
+2. Answered by the owner (2026-11-26): "keep" limits the step's count. The step still uses the space and moves or removes fewer pieces, so the kept pieces stay. It does not change which spaces are legal.
 
 ## Cost per part
 
@@ -47,7 +47,7 @@ Model today: `coin-game/1.10.0`.
 | B `avail()` | Approved (R6) |
 | C Resource budget | Approved (R6) |
 | D Control | Approved (R5) |
-| E Keep-back | Approved (R4). Design question 2 is still open; the count is an expression (question 1 answered) |
+| E Keep-back | Approved (R4). The count is an expression; keep limits the count, not the legal spaces |
 | F Card effect categories | Moved into the next version (R10) |
 | G, H Predicted outcome; Operation and SA in one space | No decision yet. Recommendation stays: defer to their own version |
 | I Next card (G14) | Moved into the next version (R10). The rest of part I stays deferred |
