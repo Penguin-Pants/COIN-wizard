@@ -13,7 +13,7 @@ const VARS = {
   "rivals.maxMargin": "the highest enemy victory margin", "rivals.minMargin": "the lowest enemy victory margin",
   "card.id": "the card", "card.hasEffect": "the card has an effect for this faction", "card.raisesSelf": "the card helps this faction", "card.lowersEnemy": "the card hurts the enemy", "card.lasting": "the card's lasting type",
   "card.position": "this faction's place in the card's faction order (1 is first, 0 is not listed)", "turn.position": "this faction's place this turn (1st or 2nd Eligible)", "scoring.nextFinal": "the next scoring card is the final one", "move.count": "the number of pieces moved",
-  "$space.id": "this space", "$space.name": "space name", "$space.type": "space type", "$space.pop": "Pop", "$space.opinion": "opinion"
+  "$space.id": "this space", "$space.name": "space name", "$space.type": "space type", "$space.pop": "Pop", "$space.opinion": "opinion", "$space.control": "the controller of this space"
 };
 const CMP = { eq: "is", ne: "is not", gt: "is more than", gte: "is at least", lt: "is less than", lte: "is at most" };
 
@@ -51,6 +51,15 @@ export function valueText(m, g) {
   }
 }
 
+// "COIN controls this space" for $space.control compared with a side, a faction or "none" (schema 1.11.0).
+export const controllerName = (g, id) => g.rules.control?.sides?.find((s) => s.id === id)?.name ?? factionName(g, id);
+function controlCmp(m, g) {
+  if (!["eq", "ne"].includes(m.cmp) || m.a.k !== "var" || m.a.name !== "$space.control" || m.b.k !== "lit" || typeof m.b.value !== "string") return null;
+  const yes = m.cmp === "eq";
+  if (m.b.value === "none") return yes ? "no one controls this space" : "someone controls this space";
+  return `${controllerName(g, m.b.value)} ${yes ? "controls" : "does not control"} this space`;
+}
+
 export function condText(m, g) {
   let t;
   switch (m.k) {
@@ -58,7 +67,7 @@ export function condText(m, g) {
     case "truthy": t = valueText(m.v, g); break;
     case "all": t = m.items.map((x) => condText(x, g)).join(" and "); break;
     case "any": t = m.items.map((x) => condText(x, g)).join(" or "); break;
-    case "cmp": t = `${valueText(m.a, g)} ${CMP[m.cmp]} ${valueText(m.b, g)}`; break;
+    case "cmp": t = controlCmp(m, g) ?? `${valueText(m.a, g)} ${CMP[m.cmp]} ${valueText(m.b, g)}`; break;
     case "anySpace": t = `some space has ${condText(m.cond, g)}`; break;
     case "canPlace": t = `a ${pieceName(g, m.piece)} can be placed ${m.at === "*" ? "in some space" : where(g, m.at)}`; break;
     case "canDo": t = `${g.actions.find((x) => x.id === m.action)?.name ?? m.action} is possible ${m.at === "*" ? "in some space" : where(g, m.at)}`; break;

@@ -6,10 +6,11 @@ import { migrate, LATEST } from "../src/migrate.mjs";
 import { evalExpr, VAR_OK } from "../src/expr.mjs";
 import { deriveState, applyPatch } from "../src/state.mjs";
 import { varText, valueText } from "../src/plain.mjs";
-import { toValue, fromValue } from "../src/exprmodel.mjs";
+import { toValue, fromValue, toCond } from "../src/exprmodel.mjs";
 import { runCase, budgetOf } from "../src/dryrun.mjs";
-import { budgetText } from "../src/plain.mjs";
-import { nonPlayerSheetHtml } from "../src/kit.mjs";
+import { budgetText, condText } from "../src/plain.mjs";
+import { nonPlayerSheetHtml, boardSvg } from "../src/kit.mjs";
+import { setupControl } from "../src/expr.mjs";
 import { aidModel, toMarkdown } from "../src/botaid.mjs";
 import Ajv2020 from "ajv/dist/2020.js";
 
@@ -227,4 +228,99 @@ test("a share is fixed at the start: Resources gained during the Operation do no
   };
   assert.deepEqual(crack({ share: [1, 2] }, 2, gainParts).chosen, ["kerry"], "a share of 1 pays for 1 space");
   assert.deepEqual(crack({ floor: 1 }, 2, gainParts).chosen, ["kerry", "tipperary"], "after the gain, 3 Resources keep 1 back and pay 1 more");
+});
+
+// Part D (gap G7, owner decisions 2026-11-26): Control. Optional rules.control: sides (factions that
+// control together, such as COIN = US + ARVN), exclude (pieces that do not count) and types (space
+// types that can be controlled; none listed: every space). A faction or side controls a space when its
+// pieces there outnumber all other pieces. $space.control: the side id, the faction id or "none".
+// GMT: "COIN Control", "lose no Control", "no FARC Control". The editor board preview shows Control at setup.
+const valleys = () => read("../examples/four-valleys.game.json");
+const ctl = (g, sid, patch = {}) => {
+  const state = applyPatch(deriveState(g, g.factions[0].id), { clearPieces: g.factions.flatMap((f) => f.pieces.map((p) => p.id)), ...patch });
+  return evalExpr({ var: "$space.control" }, { state, links: g.board.links, $space: state.spaces[sid] });
+};
+const put = (sid, pieces) => ({ spaces: { [sid]: { pieces } } });
+
+test("Control: more pieces than all others; no rules means none", () => {
+  const g = tan();
+  assert.equal(ctl(g, "kerry", put("kerry", { "crown.army": { normal: 2 }, "ira.volunteer": { active: 1 } })), "none", "no rules.control");
+  g.rules.control = {};
+  assert.equal(ctl(g, "kerry", put("kerry", { "crown.army": { normal: 2 }, "ira.volunteer": { active: 1 } })), "crown");
+  assert.equal(ctl(g, "kerry", put("kerry", { "crown.army": { normal: 1 }, "ira.volunteer": { underground: 1 } })), "none", "a tie is no Control");
+  assert.equal(ctl(g, "kerry", put("kerry", { "ira.volunteer": { underground: 1, active: 1 }, "ira.hq": { normal: 1 } })), "ira");
+  assert.equal(ctl(g, "kerry"), "none", "an empty space");
+});
+
+test("Control by sides: the side's pieces together outnumber all others", () => {
+  const g = valleys();
+  g.rules.control = { sides: [{ id: "coin", name: "COIN", factions: ["f1", "f2"] }] };
+  const p = put("space2", { "f1.troops": { [g.factions[0].pieces[0].states[0]]: 1 }, "f2.police": { [g.factions[1].pieces[1].states[0]]: 1 }, "f3.guerrilla": { [g.factions[2].pieces[0].states[0]]: 1 } });
+  assert.equal(ctl(g, "space2", p), "coin");
+  delete g.rules.control.sides;
+  assert.equal(ctl(g, "space2", p), "none", "alone, no faction has more than all others");
+});
+
+test("Control: excluded pieces do not count; only the listed space types can be controlled", () => {
+  const g = tan(), p = put("kerry", { "crown.army": { normal: 2 }, "ira.volunteer": { active: 1 } });
+  g.rules.control = { exclude: ["crown.army"] };
+  assert.equal(ctl(g, "kerry", p), "ira");
+  g.rules.control = { types: ["city"] };
+  assert.equal(ctl(g, "kerry", p), "none", "a province is not a listed type");
+  assert.equal(ctl(g, "dublin", put("dublin", { "crown.army": { normal: 2 } })), "crown");
+});
+
+test("$space.control works in tables and victory sums, and a dry-run patch changes it", () => {
+  const g = tan();
+  g.rules.control = { types: ["city", "province"] };
+  const crownPop = { op: "sumSpaces", args: [{ op: "mul", args: [{ op: "eq", args: [{ var: "$space.control" }, "crown"] }, { var: "$space.pop" }] }] };
+  const kerry = g.board.spaces.find((s) => s.id === "kerry").attrs.pop;
+  const st = (patch) => applyPatch(deriveState(g, "crown"), { clearPieces: ["crown.army", "crown.police", "crown.barracks", "ira.volunteer", "ira.hq"], ...patch });
+  assert.equal(evalExpr(crownPop, { state: st(put("kerry", { "crown.army": { normal: 1 } })), links: g.board.links }), kerry);
+  assert.equal(evalExpr(crownPop, { state: st({}), links: g.board.links }), 0);
+});
+
+test("Control rules validate: sides, exclude and types, and $space.control needs rules", () => {
+  const check = new Ajv2020({ allErrors: true, strict: false }).compile(read("../schema/coin-game.schema.json"));
+  const g = valleys();
+  g.rules.control = { sides: [{ id: "coin", name: "COIN", factions: ["f1", "f2"] }], exclude: ["f1.base"], types: ["city", "province"] };
+  assert.equal(check(g), true, JSON.stringify(check.errors?.slice(0, 3)));
+  assert.deepEqual(validate(g).errors.filter((e) => e.code === "bad-control"), []);
+  for (const bad of [{ sides: [{ id: "x", name: "X", factions: ["f1"] }] }, { types: [] }, { other: 1 }, { types: ["sea"] }]) { g.rules.control = bad; assert.equal(check(g), false, JSON.stringify(bad)); }
+  const errs = (c) => { g.rules.control = c; return validate(g).errors.filter((e) => e.code === "bad-control").map((e) => e.message).join(" | "); };
+  assert.match(errs({ sides: [{ id: "coin", name: "COIN", factions: ["f1", "nobody"] }] }), /nobody/);
+  assert.match(errs({ sides: [{ id: "a", name: "A", factions: ["f1", "f2"] }, { id: "b", name: "B", factions: ["f2", "f3"] }] }), /f2/);
+  assert.match(errs({ sides: [{ id: "f3", name: "F3", factions: ["f1", "f2"] }] }), /f3/);
+  assert.match(errs({ sides: [{ id: "none", name: "None", factions: ["f1", "f2"] }] }), /none/);
+  assert.match(errs({ exclude: ["nothing"] }), /nothing/);
+  // Codex review on PR 40: two sides with one id would count as one alliance.
+  assert.match(errs({ sides: [{ id: "a", name: "A", factions: ["f1", "f2"] }, { id: "a", name: "A2", factions: ["f3", "f4"] }] }), /two sides/i);
+  const tg = tan(), cond = tg.bots[0].nodes.find((n) => n.id === "cw.low");
+  cond.test = { op: "anySpace", args: [{ op: "eq", args: [{ var: "$space.control" }, "crown"] }] };
+  assert.ok(validate(tg).errors.some((e) => e.code === "bad-control" && /rules\.control/.test(e.message)), "no Control rules");
+  tg.rules.control = {};
+  assert.deepEqual(validate(tg).errors.filter((e) => e.code === "bad-control"), []);
+  cond.test = { op: "anySpace", args: [{ op: "eq", args: [{ var: "$space.control" }, "coin"] }] };
+  assert.ok(validate(tg).errors.some((e) => e.code === "bad-control" && /coin/.test(e.message)), "an unknown controller");
+});
+
+test("Control reads as plain English, and the editor board preview shows it at setup", () => {
+  const g = valleys();
+  g.rules.control = { sides: [{ id: "coin", name: "COIN", factions: ["f1", "f2"] }] };
+  assert.equal(varText(g, "$space.control"), "the controller of this space");
+  const said = (op, who) => condText(toCond({ op, args: [{ var: "$space.control" }, who] }), g);
+  assert.equal(said("eq", "coin"), "COIN controls this space");
+  assert.equal(said("ne", "coin"), "COIN does not control this space");
+  assert.equal(said("eq", "f3"), `${g.factions[2].name} controls this space`);
+  assert.equal(said("eq", "none"), "no one controls this space");
+  assert.equal(said("ne", "none"), "someone controls this space");
+  const t = tan();
+  t.rules.control = {};
+  const owned = Object.entries(setupControl(t)).filter(([, c]) => c !== "none");
+  assert.ok(owned.length > 0, "Tan War setup has controlled spaces");
+  const [sid, who] = owned[0], name = t.factions.find((f) => f.id === who).name;
+  assert.ok(boardSvg(t, { fixed: true, control: true }).includes(`Control: ${name}`), `${sid} shows its controller`);
+  assert.ok(!boardSvg(t).includes("Control:"), "the printed board shows no Control");
+  delete t.rules.control;
+  assert.ok(!boardSvg(t, { fixed: true, control: true }).includes("Control:"), "no rules: no labels");
 });

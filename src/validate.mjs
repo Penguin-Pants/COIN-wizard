@@ -112,6 +112,8 @@ export function validate(game) {
   }
   for (const k of Object.keys(game.setup.pools)) if (!pieceById[k]) err("missing-ref", "/setup/pools", `Pool for unknown piece ${k}`);
 
+  const ctl = game.rules.control;
+  const controllers = new Set(["none", ...factionIds, ...(ctl?.sides ?? []).map((s) => s.id)]);
   // ---- reference walkers for steps and expressions
   // scope.faction: inside an opponent table ($faction). scope.target: an action node picked an enemy ($target).
   const checkExpr = (e, path, scope = {}) => {
@@ -127,6 +129,11 @@ export function validate(game) {
     for (const p of s.pieces) if (!pieceById[p]) err("missing-ref", path, `Unknown piece ${p}`);
     for (const f of s.factions ?? []) if (!factionIds.has(f)) err("missing-ref", path, `Unknown faction ${f}`);
     for (const a of s.actions ?? []) if (!game.actions.some((x) => x.id === a)) err("missing-ref", path, `Unknown action ${a}`);
+    // $space.control (1.11.0) needs rules.control; a compare must name a side, a faction or "none".
+    if (s.vars.includes("$space.control")) {
+      if (!ctl) err("bad-control", path, "$space.control needs Control rules (rules.control)");
+      else for (const who of controlNames(e)) if (!controllers.has(who)) err("bad-control", path, `Unknown controller ${who}: use a side id, a faction id or none`);
+    }
   };
   // scope: { target: true } for steps that run with $target (an action node with parts and a target).
   const checkSteps = (steps, path, scope = {}) => {
@@ -201,6 +208,21 @@ export function validate(game) {
   });
 
   // ---- sequence of play
+  // ---- Control (1.11.0)
+  if (ctl) {
+    const seen = {};
+    (ctl.sides ?? []).forEach((sd, i) => {
+      const sp = `/rules/control/sides/${i}`;
+      if (factionIds.has(sd.id) || sd.id === "none") err("bad-control", sp, `Side id ${sd.id} is a faction id or "none". Use another id`);
+      if (ctl.sides.findIndex((x) => x.id === sd.id) < i) err("bad-control", sp, `Two sides use the id ${sd.id}. Each side needs its own id`);
+      for (const f of sd.factions) {
+        if (!factionIds.has(f)) err("bad-control", sp, `Side ${sd.id} names unknown faction ${f}`);
+        else if (seen[f]) err("bad-control", sp, `Faction ${f} is in sides ${seen[f]} and ${sd.id}. A faction is in one side at most`);
+        else seen[f] = sd.id;
+      }
+    });
+    for (const p of ctl.exclude ?? []) if (!pieceById[p]) err("bad-control", "/rules/control/exclude", `Control excludes unknown piece ${p}`);
+  }
   const seq = game.rules.sequence;
   for (const first of ["event", "operationSpecial", "operation", "pass"]) {
     if (!seq.secondActorOptions[first]?.length) err("incomplete-sequence", "/rules/sequence/secondActorOptions", `No second actor options after first actor choice "${first}"`);
@@ -493,4 +515,12 @@ export function renameId(game, oldId, newId) {
     return x;
   };
   return walk(game);
+}
+
+// Text values compared with $space.control (eq or ne) in an expression.
+function controlNames(e, out = []) {
+  if (e === null || typeof e !== "object" || "var" in e) return out;
+  if ((e.op === "eq" || e.op === "ne") && e.args.some((x) => x?.var === "$space.control")) for (const x of e.args) if (typeof x === "string") out.push(x);
+  for (const x of e.args) controlNames(x, out);
+  return out;
 }

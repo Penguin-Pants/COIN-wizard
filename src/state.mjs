@@ -32,8 +32,10 @@ export function deriveState(game, selfFactionId) {
   // so canDo can read card.lasting as another faction.
   const sideOf = Object.fromEntries(game.bots.map((b) => [b.factionId, { side: b.eventPolicy.side, overrides: Object.fromEntries(b.eventPolicy.overrides.filter((o) => o.side).map((o) => [o.cardId, o.side])) }]));
   const lastingOf = Object.fromEntries(game.deck.cards.map((c) => [c.id, Object.fromEntries((c.sides ?? []).map((sd) => [sd.id, sd.lasting ?? "none"]))]));
+  // Control rules (schema 1.11.0): $space.control reads them. None: no space is controlled.
+  const control = game.rules.control ?? null;
   return {
-    self: selfFactionId, factions, owner, victory, maxPer, actions, cardOrder, sideOf, lastingOf,
+    self: selfFactionId, factions, owner, victory, maxPer, actions, cardOrder, sideOf, lastingOf, control,
     eligible: { ...game.setup.eligibility },
     resources,
     tracks: { ...game.setup.tracks },

@@ -17,7 +17,7 @@ import { onBriefChange } from "./steps/brief.mjs";
 import { record, recordSoon, resetHistory, onKey, stepChanged, recoveryActions } from "./recovery.mjs";
 import { stepsText, fingerprint } from "../src/plain.mjs";
 import { confirmActions } from "./components/confirmButton.mjs";
-import { rulesActions } from "./steps/rules.mjs";
+import { rulesActions, onControlChange } from "./steps/rules.mjs";
 import { reviewActions, openFile } from "./steps/review.mjs";
 
 function applyBind(el) {
@@ -82,7 +82,7 @@ export function bindEvents() {
   });
   document.addEventListener("change", (e) => {
     const el = e.target;
-    if (onExprChange(el) || onStepChange(el) || onDeckChange(el) || onBotChange(el) || onBriefChange(el) || onBoardChange(el)) return;
+    if (onExprChange(el) || onStepChange(el) || onDeckChange(el) || onBotChange(el) || onControlChange(el) || onBriefChange(el) || onBoardChange(el)) return;
     if (el.dataset?.b && !(el.tagName === "TEXTAREA" || el.type === "text" || el.type === "number" || el.type === "color")) { applyBind(el); if (el.dataset.r) render(); }
     else if (el.dataset?.b && el.dataset.r) render();
     else if (el.dataset?.src) { const src = S.game.brief.sources.find((s) => s.id === el.dataset.src); src.status = "pending"; delete src.readScope; delete src.failure; writeSource(src.id); touch(); render(); }

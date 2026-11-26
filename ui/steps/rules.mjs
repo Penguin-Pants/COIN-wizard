@@ -49,6 +49,34 @@ function accept(part) {
   delete S.msg[k]; APPLY[part](S.game, next.game); S.proposal = null; touch(); check(); render();
 }
 
+// Control (schema 1.11.0): sides, pieces that do not count and the space types that can be controlled.
+function controlPanel(g) {
+  const c = g.rules.control, chk = (kind, val, on, label, extra = "") => `<label class="chk"><input type="checkbox" data-ctl="${kind}" value="${esc(val)}" data-path="/rules/control" ${extra} ${on ? "checked" : ""}> ${esc(label)}</label>`;
+  const head = `${chk("on", "on", !!c, "This game uses Control")}<p><small>A faction or side controls a space when its pieces there outnumber all other pieces. Bots read it as "the controller of this space".</small></p>`;
+  if (!c) return `<section class="panel"><h3>Control</h3>${head}</section>`;
+  const types = [...new Set([...g.board.spaces.map((s) => s.type), ...(c.types ?? [])])];
+  const sides = (c.sides ?? []).map((sd, i) => `<div class="sblock"><div class="grid2">${fld("Side id (bots compare with it)", `<input data-ctl="side-id" data-i="${i}" data-path="/rules/control/sides/${i}" value="${esc(sd.id)}">`)}${fld("Side name", `<input data-ctl="side-name" data-i="${i}" data-path="/rules/control/sides/${i}" value="${esc(sd.name)}">`)}</div><p>${g.factions.map((f) => chk("side-f", f.id, sd.factions.includes(f.id), f.name, `data-i="${i}"`)).join(" ")}</p>${btn("ctl-side-del", "Remove this side", { cls: "link", data: `data-i="${i}"` })}</div>`).join("");
+  return `<section class="panel"><h3>Control</h3>${head}
+    <h4>Spaces that can be controlled</h4><p>${types.map((t) => chk("type", t, c.types?.includes(t), t)).join(" ")}</p><p><small>None checked: every space.</small></p>
+    <h4>Pieces that do not count</h4><p>${g.factions.flatMap((f) => f.pieces).map((p) => chk("exclude", p.id, c.exclude?.includes(p.id), p.name)).join(" ")}</p>
+    <h4>Sides</h4><p><small>Factions in one side control together, such as COIN (US and ARVN). A faction in no side controls alone.</small></p>${sides}${btn("ctl-side-add", "Add a side", { cls: "link" })}</section>`;
+}
+
+// Returns true when the change belonged to the Control panel.
+export function onControlChange(el) {
+  const k = el.dataset?.ctl;
+  if (!k) return false;
+  const g = S.game;
+  if (k === "on") { if (el.checked) g.rules.control = {}; else delete g.rules.control; touch(); render(); return true; }
+  const c = g.rules.control, i = Number(el.dataset.i);
+  const toggle = (list, v) => { const s = new Set(list ?? []); if (el.checked) s.add(v); else s.delete(v); return [...s]; };
+  if (k === "type" || k === "exclude") { const key = k === "type" ? "types" : "exclude", v = toggle(c[key], el.value); if (v.length) c[key] = v; else delete c[key]; }
+  if (k === "side-f") c.sides[i].factions = g.factions.map((f) => f.id).filter((id) => toggle(c.sides[i].factions, el.value).includes(id));
+  if (k === "side-id" && el.value.trim()) c.sides[i].id = el.value.trim();
+  if (k === "side-name") c.sides[i].name = el.value;
+  touch(); render(); return true;
+}
+
 export function renderRules() {
   const g = S.game, T = S.tab;
   const tabs = [["rules", "Rules"], ["deck", "Event and scoring deck"], ["victory", "Victory"], ["bots", "Bots"]];
@@ -62,6 +90,7 @@ export function renderRules() {
     <div class="grid3">${g.factions.map((f) => fld(`${esc(f.name)} Pass gain`, inp(`rules/sequence/passGain/${f.id}`, seq.passGain[f.id], { t: "n", type: "number", attrs: 'min="0"' }))).join("")}</div>
     ${fld("If every acting faction would be Ineligible", inp("rules/sequence/eligibilityAfter/bothIneligibleResult", seq.eligibilityAfter.bothIneligibleResult))}</section>
     <section class="panel"><h3>${esc(g.rules.scoring.name)} phases</h3>${g.rules.scoring.phases.map((p, i) => `<div class="phase">${fld(esc(p.name), area(`rules/scoring/phases/${i}/text`, p.text, { rows: 2 }))}<ol class="steps">${stepList(p.steps, `rules/scoring/phases/${i}/steps`)}</ol>${addButton("steps", "Add effect", { cls: "link", data: `data-p="rules/scoring/phases/${i}/steps"` })}</div>`).join("")}</section>`;
+    body += controlPanel(g);
   } else if (T === "deck") {
     body = renderDeck();
   } else if (T === "victory") {
@@ -74,6 +103,14 @@ export function renderRules() {
 }
 
 export const rulesActions = {
+  "ctl-side-add": () => {
+    const g = S.game, c = g.rules.control, sides = (c.sides ??= []);
+    const used = new Set(sides.flatMap((s) => s.factions)), free = g.factions.map((f) => f.id).filter((id) => !used.has(id));
+    let n = sides.length + 1; while (sides.some((s) => s.id === `side${n}`)) n++;
+    sides.push({ id: `side${n}`, name: `Side ${n}`, factions: (free.length >= 2 ? free : g.factions.map((f) => f.id)).slice(0, 2) });
+    touch(); render();
+  },
+  "ctl-side-del": (d) => { const c = S.game.rules.control; c.sides.splice(Number(d.i), 1); if (!c.sides.length) delete c.sides; touch(); render(); },
   tab: (d) => { S.tab = d.tab; render(); },
   "step4-suggest": (d) => guard(keyOf(d.part), () => suggest(d.part)),
   "step4-accept": (d) => accept(d.part),
