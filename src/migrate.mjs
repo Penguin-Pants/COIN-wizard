@@ -74,7 +74,8 @@ const MIGRATIONS = {
   // Part B: ops avail and factionAvail and the dry-run patch "pools".
   // Part C: optional budget on an action node.
   // Part D: optional rules.control and the variable $space.control.
-  // Part E: optional keep on move, remove and flip; variable inPlay.<card>; dry-run patch inPlay. Nothing to rewrite.
+  // Part E: optional keep on move, remove and flip; variable inPlay.<card>; dry-run patch inPlay.
+  // Part F: op cardCould; variables next.id and next.lasting; dry-run patch next. Nothing to rewrite.
   "coin-game/1.10.0": (g) => {
     g.meta.schemaVersion = "coin-game/1.11.0";
   }

@@ -4,6 +4,7 @@ import { cardsHtml } from "../../src/kit.mjs";
 import { S, esc } from "../state.mjs";
 import { fld, inp, area, sel, btn, chip, bound } from "../components/fields.mjs";
 import { stepList } from "../components/stepList.mjs";
+import { sideEffectsText } from "../../src/plain.mjs";
 import { addButton, defineList, moveButton } from "../components/listEditor.mjs";
 import { confirmButton } from "../components/confirmButton.mjs";
 import { draftButton, staleChip } from "../components/plainText.mjs";
@@ -18,7 +19,7 @@ function cardEditor(c, i) {
   const refs = S.confirm === `del-${c.id}` ? cardRefs(g, c.id) : [];
   const refNote = refs.length ? `<p class="note">Deleting removes ${esc(c.id)} from: ${refs.map((r) => esc(r.label)).join("; ")}. Dry runs that use it keep the old id and show a blocker to fix.</p>` : "";
   const order = c.order.map((f, j) => sel(`${p}/order/${j}`, f, g.factions.map((x) => [x.id, x.name]), { r: true })).join("");
-  const sides = (c.sides ?? []).map((s, j) => `<div class="side"><b>${s.id === "unshaded" ? "Unshaded" : "Shaded"}</b><div class="grid2">${fld("Label", inp(`${p}/sides/${j}/label`, s.label))}${fld(`Text${staleChip(s)}`, area(`${p}/sides/${j}/text`, s.text, { rows: 2 }))}${fld("Lasting", sel(`${p}/sides/${j}/lasting`, s.lasting ?? "", [["", "No (one-time Event)"], ["momentum", "Momentum"], ["capability", "Capability"]], { t: "o" }), "Printed as a tag on the card. The bot reads it as \"the card's lasting type\".")}</div>${draftButton(`${p}/sides/${j}`, "text")}<h4>Effects, in order</h4><ol class="steps">${stepList(s.steps, `${p}/sides/${j}/steps`)}</ol>${addButton("steps", "Add effect", { cls: "link", data: `data-p="${p}/sides/${j}/steps"` })}</div>`).join("");
+  const sides = (c.sides ?? []).map((s, j) => `<div class="side"><b>${s.id === "unshaded" ? "Unshaded" : "Shaded"}</b><div class="grid2">${fld("Label", inp(`${p}/sides/${j}/label`, s.label))}${fld(`Text${staleChip(s)}`, area(`${p}/sides/${j}/text`, s.text, { rows: 2 }))}${fld("Lasting", sel(`${p}/sides/${j}/lasting`, s.lasting ?? "", [["", "No (one-time Event)"], ["momentum", "Momentum"], ["capability", "Capability"]], { t: "o" }), "Printed as a tag on the card. The bot reads it as \"the card's lasting type\".")}</div>${draftButton(`${p}/sides/${j}`, "text")}<h4>Effects, in order</h4><ol class="steps">${stepList(s.steps, `${p}/sides/${j}/steps`)}</ol>${couldLine(s)}${addButton("steps", "Add effect", { cls: "link", data: `data-p="${p}/sides/${j}/steps"` })}</div>`).join("");
   return `<details class="card" data-k="${esc(k)}" ${isOpen(k, false) ? "open" : ""}><summary><b>${esc(c.title)}</b> <small>${c.type === "event" ? "Event" : "Scoring"} ${esc(c.id)}</small>${c.final ? ` ${chip("wait", "final")}` : ""}</summary>
     <div class="row">${moveButton("cards", "up", i)}${moveButton("cards", "down", i)}${btn("card-dup", "Duplicate", { data: `data-id="${esc(c.id)}"` })}${confirmButton(`del-${c.id}`, "Delete card", { action: "card-delete", data: `data-id="${esc(c.id)}"` })}</div>${refNote}
     <div class="grid3">${fld("Card id", `<input data-cardid="${esc(c.id)}" data-path="/${p}/id" value="${esc(c.id)}">`, "Renames it in piles, bot exceptions and dry runs.")}${fld("Title", inp(`${p}/title`, c.title, { r: true }))}${fld("Flavor text", inp(`${p}/flavor`, c.flavor ?? ""))}</div>
@@ -47,6 +48,9 @@ function piles() {
     ${assign}${strip}
     ${fld("Preparation text (printed)", area("deck/preparation/text", prep.text, { rows: 3 }))}</section>`;
 }
+
+// What bots read from a side's steps (schema 1.11.0, "the card could").
+const couldLine = (s) => { const fx = sideEffectsText(S.game, s.steps); return `<p class="could"><small>Bots read: this side could ${fx.length ? esc(fx.join("; ")) : "do nothing (no effect steps)"}.</small></p>`; };
 
 export function renderDeck() {
   const g = S.game;

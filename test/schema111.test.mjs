@@ -6,9 +6,9 @@ import { migrate, LATEST } from "../src/migrate.mjs";
 import { evalExpr, VAR_OK } from "../src/expr.mjs";
 import { deriveState, applyPatch } from "../src/state.mjs";
 import { varText, valueText } from "../src/plain.mjs";
-import { toValue, fromValue, toCond } from "../src/exprmodel.mjs";
+import { toValue, fromValue, toCond, fromCond } from "../src/exprmodel.mjs";
 import { runCase, budgetOf } from "../src/dryrun.mjs";
-import { budgetText, condText, stepText } from "../src/plain.mjs";
+import { budgetText, condText, stepText, sideEffectsText } from "../src/plain.mjs";
 import { applyAction } from "../src/effects.mjs";
 import { cardRefs, renameCard, deleteCard } from "../src/deck.mjs";
 import { nonPlayerSheetHtml, boardSvg } from "../src/kit.mjs";
@@ -449,4 +449,109 @@ test("keep.prefer applies only where keep.if holds (Codex review on PR 41)", () 
     run(g, st, step, "tipperary");
     assert.deepEqual(here(st, "tipperary"), { active: 1 }, `${step.op}: no keep here, so Underground goes first as usual`);
   }
+});
+
+// Part F (gaps G2 and G14, owner decisions 2026-11-26): what a card could do, read from its sides' steps.
+// cardCould(which, verb, what) on the current card: which = played (the side this bot plays) or either;
+// verb = shift (support | opposition), place or remove (a piece id, a faction id or "*"), resources (a
+// faction id), track (a track id), marker (a marker name). A move from a pool places, to a pool removes.
+// The next card: next.id and next.lasting; default none; dry-run patch next: { id }.
+// GMT ADP Coalition: "Play unshaded part if it is effective AND card (either part) could: shift Support up,
+// place or remove Taliban Bases or Coalition pieces"; "If current or next card is a Capability".
+const could = (g, self, which, verb, what, patch = {}) => evalExpr({ op: "cardCould", args: [which, verb, what] }, { state: applyPatch(deriveState(g, self), { card: { id: "e01" }, ...patch }), links: g.board.links });
+const fx = () => {
+  const g = tan(), c = g.deck.cards.find((x) => x.id === "e01");
+  c.sides[0].steps = [{ op: "shift", attr: "opinion", toward: "support", amount: 1, space: "choose" }, { op: "if", test: true, then: [{ op: "remove", piece: "ira.hq", count: 1, to: "available", space: "choose" }] }];
+  c.sides[1].steps = [{ op: "move", piece: "ira.volunteer", count: 2, from: "available", to: "kerry" }, { op: "gain", track: "res.ira", amount: 2 }, { op: "track", id: "repression", delta: 1 }, { op: "markerSet", marker: "curfew", value: true, space: "kerry" }];
+  return g;
+};
+
+test("cardCould reads what either side's steps could do, nested steps too", () => {
+  const g = fx();
+  assert.equal(could(g, "crown", "either", "shift", "support"), true);
+  assert.equal(could(g, "crown", "either", "shift", "opposition"), false);
+  assert.equal(could(g, "crown", "either", "remove", "ira.hq"), true, "a remove inside an if");
+  assert.equal(could(g, "crown", "either", "remove", "ira"), true, "a faction id means any of its pieces");
+  assert.equal(could(g, "crown", "either", "remove", "*"), true);
+  assert.equal(could(g, "crown", "either", "place", "ira.volunteer"), true, "a move from a pool places");
+  assert.equal(could(g, "crown", "either", "place", "crown"), false);
+  assert.equal(could(g, "crown", "either", "resources", "ira"), true, "a gain on the faction's resource track");
+  assert.equal(could(g, "crown", "either", "resources", "crown"), false);
+  assert.equal(could(g, "crown", "either", "track", "repression"), true);
+  assert.equal(could(g, "crown", "either", "track", "res.ira"), true, "a resource track is a track too");
+  assert.equal(could(g, "crown", "either", "marker", "curfew"), true);
+});
+
+test("cardCould played reads the side this bot plays; the target can be named", () => {
+  const g = fx(); // crown plays unshaded, ira plays shaded
+  assert.equal(could(g, "crown", "played", "shift", "support"), true);
+  assert.equal(could(g, "crown", "played", "place", "ira.volunteer"), false);
+  assert.equal(could(g, "ira", "played", "place", "ira.volunteer"), true);
+  assert.equal(could(g, "ira", "played", "shift", "support"), false);
+  g.bots[1].eventPolicy.overrides.push({ cardId: "e01", directive: "force", side: "unshaded" });
+  assert.equal(could(g, "ira", "played", "shift", "support"), true, "an override's side");
+  assert.equal(evalExpr({ op: "cardCould", args: ["either", "remove", { var: "$target.id" }] }, { state: applyPatch(deriveState(g, "crown"), { card: { id: "e01" } }), links: g.board.links, $target: "ira" }), true);
+  assert.equal(could(g, "crown", "either", "shift", "support", { card: { id: "s1" } }), false, "a card with no sides could do nothing");
+});
+
+test("next.id and next.lasting read the next card; a dry-run patch sets it", () => {
+  const g = tan(), c = g.deck.cards.find((x) => x.type === "event" && x.id !== "e01");
+  const v = (name, patch = {}) => evalExpr({ var: name }, { state: applyPatch(deriveState(g, "crown"), patch), links: g.board.links });
+  assert.equal(v("next.id"), "none");
+  assert.equal(v("next.lasting"), "none");
+  assert.equal(v("next.id", { next: { id: c.id } }), c.id);
+  assert.equal(v("next.lasting", { next: { id: c.id } }), "none");
+  c.sides[1].lasting = "momentum";
+  assert.equal(v("next.lasting", { next: { id: c.id } }), "momentum");
+  c.sides[0].lasting = "capability";
+  assert.equal(v("next.lasting", { next: { id: c.id } }), "capability", "a Capability on any side wins");
+  assert.throws(() => applyPatch(deriveState(g, "crown"), { next: { id: "nothing" } }), /unknown card/i);
+});
+
+test("cardCould and next validate, pass the schema file and read as plain English", () => {
+  const check = new Ajv2020({ allErrors: true, strict: false }).compile(read("../schema/coin-game.schema.json"));
+  const g = fx(), cond = g.bots[0].nodes.find((n) => n.id === "cw.low");
+  const cc = (...a) => ({ op: "cardCould", args: a });
+  cond.test = { op: "and", args: [cc("either", "remove", "ira"), { op: "eq", args: [{ var: "next.lasting" }, "capability"] }] };
+  assert.equal(check(g), true, JSON.stringify(check.errors?.slice(0, 3)));
+  const errs = (t) => { cond.test = t; return validate(g).errors.filter((e) => e.path.includes("/nodes/")).map((e) => e.message).join(" | "); };
+  assert.equal(errs(cond.test), "");
+  assert.match(errs(cc("both", "remove", "ira")), /played or either/);
+  assert.match(errs(cc("either", "burn", "ira")), /burn/);
+  assert.match(errs(cc("either", "shift", "up")), /support or opposition/);
+  assert.match(errs(cc("either", "place", "nothing")), /nothing/);
+  assert.match(errs(cc("either", "resources", "ira.hq")), /faction/);
+  assert.match(errs(cc("either", "track", "nothing")), /nothing/);
+  const m = toCond(cc("either", "place", "ira.volunteer"));
+  assert.deepEqual(m, { k: "cardCould", which: "either", verb: "place", what: "ira.volunteer" });
+  assert.deepEqual(fromCond(m), cc("either", "place", "ira.volunteer"));
+  const vn = g.factions[1].pieces[0].name;
+  assert.equal(condText(m, g), `the card (either side) could place ${vn}`);
+  assert.equal(condText(toCond(cc("played", "shift", "support")), g), "the side this faction plays could shift toward Support");
+  assert.equal(condText(toCond(cc("either", "resources", "ira")), g), `the card (either side) could change ${g.factions[1].name} Resources`);
+  assert.equal(varText(g, "next.lasting"), "the next card's lasting type");
+  assert.deepEqual(sideEffectsText(g, g.deck.cards.find((x) => x.id === "e01").sides[1].steps), [`place ${vn}`, `change ${g.factions[1].name} Resources`, `change ${g.tracks.find((t) => t.id === "res.ira").name}`, `change ${g.tracks.find((t) => t.id === "repression").name}`, "set curfew"]);
+});
+
+test("renaming or deleting a card updates next-card references (Codex review on PR 42)", () => {
+  const g = tan(), cond = g.bots[0].nodes.find((n) => n.id === "cw.low");
+  cond.test = { op: "eq", args: [{ var: "next.id" }, "e01"] };
+  g.bots[0].dryRuns[0].patch.next = { id: "e01" };
+  const refs = cardRefs(g, "e01").map((r) => r.path);
+  assert.ok(refs.includes("/bots/0/dryRuns/0/patch/next"), "the dry-run patch is a reference");
+  assert.ok(refs.some((p) => p.includes("/nodes/")), "the next.id compare is a reference");
+  const r = renameCard(g, "e01", "e99");
+  assert.deepEqual(r.bots[0].dryRuns[0].patch.next, { id: "e99" });
+  assert.deepEqual(r.bots[0].nodes.find((n) => n.id === "cw.low").test.args[1], "e99");
+  const d = structuredClone(g);
+  deleteCard(d, "e01");
+  assert.equal("next" in d.bots[0].dryRuns[0].patch, false, "delete removes the next card from the patch");
+});
+
+test("cardCould reads a shift's direction from toward and the amount's sign (Codex review on PR 42)", () => {
+  const g = tan(), c = g.deck.cards.find((x) => x.id === "e01");
+  c.sides[0].steps = [{ op: "shift", attr: "opinion", toward: "support", amount: -1, space: "kerry" }];
+  c.sides[1].steps = [{ op: "shift", attr: "opinion", toward: "opposition", amount: 0, space: "kerry" }];
+  assert.equal(could(g, "crown", "either", "shift", "opposition"), true, "a negative shift toward Support lowers opinion");
+  assert.equal(could(g, "crown", "either", "shift", "support"), false, "and a zero shift does nothing");
 });

@@ -10,7 +10,7 @@ import { render } from "../shell.mjs";
 import { btn } from "./fields.mjs";
 
 const CMP_LABEL = { eq: "is", ne: "is not", gt: "more than", gte: "at least", lt: "less than", lte: "at most" };
-const COND_KINDS = [["cmp", "Compare"], ["all", "All of"], ["any", "Any of"], ["anySpace", "Some space has"], ["canPlace", "Can place"], ["canDo", "Can do"], ["truthy", "Is true"], ["always", "Always"], ["never", "Never"]];
+const COND_KINDS = [["cmp", "Compare"], ["all", "All of"], ["any", "Any of"], ["anySpace", "Some space has"], ["canPlace", "Can place"], ["canDo", "Can do"], ["cardCould", "The card could"], ["truthy", "Is true"], ["always", "Always"], ["never", "Never"]];
 const VALUE_KINDS = [["lit", "Number or text"], ["var", "Variable"], ["count", "Pieces in a space"], ["fcount", "All pieces of a faction"], ["adj", "Pieces in adjacent spaces"], ["unmoved", "Pieces not yet moved"], ["avail", "Pieces Available"], ["favail", "Available pieces of a faction"], ["sum", "Sum"], ["diff", "Difference"], ["sumWhere", "Total over spaces where"], ["countWhere", "Number of spaces where"], ["attr", "Space attribute"]];
 
 const opts = (list, cur) => list.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(cur) ? "selected" : ""}>${esc(l)}</option>`).join("");
@@ -31,6 +31,7 @@ export function varOptions(ctx) {
   for (const who of [["faction", ctx.faction], ["target", ctx.target]]) if (who[1]) names.unshift(...["margin", "score", "resources", "eligible", "player", "type", "id"].map((k) => `$${who[0]}.${k}`));
   // inPlay (1.11.0): cards with a lasting side.
   names.push(...g.deck.cards.filter((c) => (c.sides ?? []).some((sd) => sd.lasting)).map((c) => `inPlay.${c.id}`));
+  names.push("next.id", "next.lasting");
   if (ctx.move) names.push("move.count");
   if (ctx.space) names.push("$space.pop", "$space.opinion", "$space.type", "$space.name", "$space.id", ...(g.rules.control ? ["$space.control"] : []));
   for (const s of ctx.stores ?? []) names.push(`var.${s}`);
@@ -63,6 +64,7 @@ function newCond(k, ctx) {
     case "truthy": return { k, v: { k: "var", name: "eligible" } };
     case "canPlace": return { k, piece: pieces().find((p) => p.isBase)?.id ?? pieces()[0]?.id ?? "", at: ctx.space ? "$space" : "*" };
     case "canDo": return { k, action: S.game.actions[0]?.id ?? "", at: ctx.space ? "$space" : "*" };
+    case "cardCould": return { k, which: "either", verb: "place", what: "*" };
     case "always": return { k: "bool", value: true };
     case "never": return { k: "bool", value: false };
     default: throw new Error(`Unknown condition kind ${k}`);
@@ -130,6 +132,14 @@ function condHtml(m, mp, c, ctx) {
       const what = m.k === "canPlace" ? `<span>a</span><select aria-label="Piece" ${attrs(c, f("piece"))}>${opts(keepAt(pieces().map((p) => [p.id, p.name]), m.piece), m.piece)}</select>` : `<select aria-label="Action" ${attrs(c, f("action"))}>${opts(keepAt(S.game.actions.map((a) => [a.id, a.name]), m.action), m.action)}</select>`;
       body = `${what}<span>in</span><select aria-label="Where" ${attrs(c, f("at"))}>${opts(at, m.at)}</select>`; break;
     }
+    // cardCould (1.11.0): what the current card's steps could do. The "what" list depends on the effect.
+    case "cardCould": {
+      const g = S.game, who = whoList(ctx, m.what);
+      const whats = { shift: [["support", "toward Support"], ["opposition", "toward Opposition"]], place: [["*", "any piece"], ...who.map(([v, l]) => [v, `${l} pieces`]), ...pieces().map((p) => [p.id, p.name])], resources: who, track: g.tracks.map((t) => [t.id, t.name]) };
+      whats.remove = whats.place;
+      const what = m.verb === "marker" ? `<input aria-label="Marker" ${attrs(c, f("what"))} value="${esc(m.what)}">` : `<select aria-label="What" ${attrs(c, f("what"))}>${opts(keepAt(whats[m.verb] ?? [], m.what), m.what)}</select>`;
+      body = `<select aria-label="Which side" ${attrs(c, f("which"))}>${opts([["either", "either side"], ["played", "the side this faction plays"]], m.which)}</select><span>could</span><select aria-label="Effect" ${attrs(c, f("verb"))}>${opts([["shift", "shift opinion"], ["place", "place"], ["remove", "remove"], ["resources", "change Resources of"], ["track", "change track"], ["marker", "set marker"]], m.verb)}</select>${what}`; break;
+    }
     case "bool": body = ""; break;
     default: body = rawBox(c, mp, m.expr, "cond");
   }
@@ -175,7 +185,10 @@ export function onExprChange(el) {
   const v = t === "bool" ? el.checked : t === "lit" ? parseLoose(el.value) : el.value;
   edit(el, (m, mp) => {
     if (t === "bool" && !v) { const n = getAt(m, mp.replace(/\.?not$/, "")); delete n.not; return m; }
-    return put(m, mp, v);
+    const out = put(m, mp, v);
+    // A new effect of "the card could" starts with a "what" that fits it (1.11.0).
+    if (/(^|\.)verb$/.test(mp)) { const n = getAt(out, mp.replace(/\.?verb$/, "")); if (n?.k === "cardCould") n.what = { shift: "support", resources: S.game.factions[0]?.id, track: S.game.tracks[0]?.id, marker: "" }[v] ?? "*"; }
+    return out;
   });
   return true;
 }

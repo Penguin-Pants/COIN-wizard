@@ -1,4 +1,5 @@
 // Derive a board state from setup and apply dry-run patches.
+import { sideEffects, cardLastingAny } from "./cardfx.mjs";
 
 export function deriveState(game, selfFactionId) {
   const spaces = {};
@@ -32,10 +33,13 @@ export function deriveState(game, selfFactionId) {
   // so canDo can read card.lasting as another faction.
   const sideOf = Object.fromEntries(game.bots.map((b) => [b.factionId, { side: b.eventPolicy.side, overrides: Object.fromEntries(b.eventPolicy.overrides.filter((o) => o.side).map((o) => [o.cardId, o.side])) }]));
   const lastingOf = Object.fromEntries(game.deck.cards.map((c) => [c.id, Object.fromEntries((c.sides ?? []).map((sd) => [sd.id, sd.lasting ?? "none"]))]));
+  // What each card side could do (schema 1.11.0, cardCould), and each card's lasting type (next.lasting).
+  const cardFx = Object.fromEntries(game.deck.cards.map((c) => [c.id, Object.fromEntries((c.sides ?? []).map((sd) => [sd.id, sideEffects(game, sd.steps)]))]));
+  const cardLast = Object.fromEntries(game.deck.cards.map((c) => [c.id, cardLastingAny(c)]));
   // Control rules (schema 1.11.0): $space.control reads them. None: no space is controlled.
   const control = game.rules.control ?? null;
   return {
-    self: selfFactionId, factions, owner, victory, maxPer, actions, cardOrder, sideOf, lastingOf, control,
+    self: selfFactionId, factions, owner, victory, maxPer, actions, cardOrder, sideOf, lastingOf, control, cardFx, cardLast,
     eligible: { ...game.setup.eligibility },
     resources,
     tracks: { ...game.setup.tracks },
@@ -50,6 +54,8 @@ export function deriveState(game, selfFactionId) {
     players: Object.fromEntries(game.factions.map((f) => [f.id, !game.bots.some((b) => b.factionId === f.id)])),
     // inPlay (schema 1.11.0): lasting cards in play. A dry-run patch may set them.
     inPlay: [],
+    // next (schema 1.11.0): the next card. None by default; a dry-run patch may set it.
+    next: { id: "none" },
     dice: [],
     vars: {},
     spaces
@@ -61,6 +67,7 @@ export function deriveState(game, selfFactionId) {
 // - players: faction id -> true (a human plays it) or false; an unknown faction is an error
 // - pools.<pieceId>.available (1.11.0): a whole number >= 0 replaces the Available count; Out of Play stays.
 //   An unknown piece or another key is an error.
+// - next (1.11.0): { id } of the next card; an unknown card is an error.
 // - inPlay (1.11.0): card ids in play; replaces. An unknown card is an error.
 // - dice: replace
 // - clearPieces: remove these piece ids from every space
@@ -77,6 +84,10 @@ export function applyPatch(state, patch = {}) {
     if (Object.keys(pool).some((k) => k !== "available")) throw new Error(`Patch pools.${pid} may set only available`);
     if (!Number.isInteger(pool.available) || pool.available < 0) throw new Error(`Patch pools.${pid}.available must be a whole number, 0 or more`);
     s.pools[pid] = { outOfPlay: 0, ...s.pools[pid], available: pool.available };
+  }
+  if (patch.next?.id !== undefined) {
+    if (!(patch.next.id in s.cardOrder)) throw new Error(`Patch names unknown card: ${patch.next.id}`);
+    s.next = { id: patch.next.id };
   }
   if (patch.inPlay) {
     for (const id of patch.inPlay) if (!(id in s.cardOrder)) throw new Error(`Patch names unknown card: ${id}`);
