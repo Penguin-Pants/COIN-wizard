@@ -1,6 +1,6 @@
 # Plan: COIN Wizard
 
-Date: 2026-11-25. `main`: c7521d9. Schema: `coin-game/1.11.0` (frozen).
+Date: 2026-11-26. `main`: 55102c8. Schema: `coin-game/1.11.0` (frozen).
 This file lists the work still open. Finished work and its evidence are in `docs/ACCEPTANCE.md`.
 
 ## Status
@@ -9,6 +9,7 @@ This file lists the work still open. Finished work and its evidence are in `docs
 |---|---|---|
 | Phases 0 to 12 (wizard, kit, print) | Done | `docs/ACCEPTANCE.md`, "Results" |
 | Bot model gaps, items 13 to 21 (schemas 1.5.0 to 1.10.0) | Done | `docs/ACCEPTANCE.md`, rows 13 to 21 |
+| Schema 1.11.0, parts A to F | Done | `docs/ACCEPTANCE.md`, rows 24 to 29 |
 | GMT sheet research | 7 of 7 sheets done; 5 of 6 rule questions answered; 1.11.0 parts decided | `docs/research/bot-patterns/README.md`, `docs/proposals/bot-model-gaps-2.md` |
 | Live artifact | Build c7521d9, schema 1.10.0 (published 2026-11-25) | Artifact `8d21134e-1d1c-4dce-a1b5-57b010d5c92c` |
 
@@ -22,11 +23,10 @@ Owner: **Owner** (a person must act or decide) or **Claude** (code or docs, afte
 |---|---|---|---|
 | A1 | Publish the next schema version after it merges: `npm run build`, then publish `dist/index.html` to the artifact | Claude | The owner says "publish" |
 
-### B. Next schema version (1.11.0)
+### B. Schema 1.11.0 follow-up
 
 | # | Item | Owner | Start when |
 |---|---|---|---|
-| B1 | Implement 1.11.0 (part A done, ACCEPTANCE row 24; part B done, row 25; part C done, row 26; part D done, row 27; part E done, row 28; part F with G14 done, row 29): all parts done | Claude | After PR 35 merges. One part per PR |
 | B2 | Green circled "2" on the AA Event box: check the printed rulebook | Owner | Any time |
 
 ### C. Later versions and imports (approved 2026-11-26, review items R7 to R13)
@@ -40,7 +40,6 @@ Owner: **Owner** (a person must act or decide) or **Claude** (code or docs, afte
 | C5 | Scenarios, optional modules, playtest log, provenance tag | Claude | R12 |
 | C6 | Held cards (Pivotal), system-run factions, hidden hands | Claude | R13 |
 | C7 | A choice inside one Event card (General Offensive, Kill Zone); an Event that changes an Operation (Mono Jojoy); cost by space type | Owner decides | Earlier items C1 to C3 |
-| C8 | The card effect editor does not offer `$target` as a value | Claude | PR 33 |
 
 GMT material in this public repo stays as it is (owner decision R1, 2026-11-26).
 

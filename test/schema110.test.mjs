@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { validate } from "../src/validate.mjs";
+import { validate, sideReadsTarget } from "../src/validate.mjs";
 import { migrate, LATEST } from "../src/migrate.mjs";
 import { deriveState, applyPatch } from "../src/state.mjs";
 import { runBot } from "../src/dryrun.mjs";
@@ -167,4 +167,17 @@ test("an Event side reads $target when every override node that runs it has a ta
   assert.deepEqual(bad(), []);
   b.eventPolicy.overrides[0].node = { table: "ra.any" };
   assert.equal(bad().length, 1, "a node without a target runs the side too");
+});
+
+// Plan item C8: the card editor and the validator share sideReadsTarget. Crown bot override 0 runs e01 unshaded.
+test("a card side reads $target only when every override node that runs it has a target table", () => {
+  const g = tan(), o = g.bots[0].eventPolicy.overrides[0];
+  assert.equal(sideReadsTarget(g, "e01", "unshaded"), false, "no node: nothing runs the side");
+  o.node = { table: "cw.t.crack" };
+  assert.equal(sideReadsTarget(g, "e01", "unshaded"), false, "a node with no target table");
+  o.node.target = "cw.t.enemy";
+  assert.equal(sideReadsTarget(g, "e01", "unshaded"), true);
+  assert.equal(sideReadsTarget(g, "e01", "shaded"), false, "the node runs the other side");
+  o.directive = "ignore";
+  assert.equal(sideReadsTarget(g, "e01", "unshaded"), false, "an ignored card runs no side");
 });

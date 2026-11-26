@@ -283,6 +283,24 @@ test("an Event exception shows its target select after a table is picked, and Ne
   assert.equal(await page.locator("#stepissues li.error").count(), 0);
 }));
 
+// Plan item C8: a card side reads $target when every Event exception node that runs it has a target table.
+test("the card effect editor offers the target when the Event exception node picks an enemy", () => withApp(async ({ page }) => {
+  await botsTab(page);
+  await page.click('[data-a="bot-addtable"]'); await frames(page);
+  await page.locator("details.act > summary").last().click(); await frames(page);
+  await page.locator('select[data-b$="/scope"]').last().selectOption("opponent"); await frames(page);
+  const ov = "bots/0/eventPolicy/overrides/0";
+  await page.locator(`select[data-b="${ov}/node/table"]`).selectOption("cw.t.crack"); await frames(page);
+  await page.locator(`select[data-b="${ov}/node/target"]`).selectOption({ index: 1 }); await frames(page);
+  await page.click('[data-a="tab"][data-tab="deck"]'); await frames(page);
+  await page.locator('details.card[data-k="card-e01"] > summary').click(); await frames(page);
+  const flags = (j) => page.locator(`[data-path^="/deck/cards/0/sides/${j}/steps"][data-xt2]`).evaluateAll((els) => els.map((e) => e.dataset.xt2));
+  const run = await flags(0), other = await flags(1);
+  assert.ok(run.length > 0 && other.length > 0, "both sides have an expression editor");
+  assert.ok(run.every((x) => x === "1"), `the side the exception runs reads the target: ${run}`);
+  assert.ok(other.every((x) => x === "0"), `the other side does not: ${other}`);
+}));
+
 // Schema 1.11.0 part A: a dry run sets who plays a faction; conditions offer "has a human player".
 test("a dry run sets a faction to a human player and clears it", () => withApp(async ({ page, db }) => {
   await botsTab(page);
