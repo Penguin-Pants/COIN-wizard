@@ -45,7 +45,7 @@ Model today: `coin-game/1.10.0`.
 |---|---|
 | A Human player flag | Approved (review item R3). Done in 1.11.0 part A |
 | B `avail()` | Approved (R6). Done in 1.11.0 part B as `avail(piece)` and `factionAvail(faction)`, with the dry-run patch `pools.<piece>.available` (owner decisions 2026-11-26: no state argument, since pools hold none) |
-| C Resource budget | Approved (R6) |
+| C Resource budget | Approved (R6). Done in 1.11.0 part C: `budget: { share, allBelow, floor }`, parts combine (smaller spend wins), a per-use cost is checked too, a linked Special Activity pays from the full Resources (owner decisions 2026-11-26) |
 | D Control | Approved (R5) |
 | E Keep-back | Approved (R4). The count is an expression; keep limits the count, not the legal spaces |
 | F Card effect categories | Moved into the next version (R10) |

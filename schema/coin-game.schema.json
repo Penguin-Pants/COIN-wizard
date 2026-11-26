@@ -2547,6 +2547,31 @@
           "$ref": "#/$defs/id",
           "description": "An opponent table. The action picks this enemy first; its space table can read $target."
         },
+        "budget": {
+          "type": "object",
+          "description": "Action nodes only (1.11.0): what the Operation may spend. share: [num, den] of Resources, rounded down; allBelow: spend all when Resources are below it; floor: keep at least this many. With share and floor, the smaller spend wins. A linked Special Activity pays from the full Resources.",
+          "minProperties": 1,
+          "additionalProperties": false,
+          "properties": {
+            "share": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "allBelow": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "floor": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
         "parts": {
           "type": "array",
           "minItems": 1,

@@ -5,6 +5,7 @@ import { aidModel, toMarkdown } from "../../src/botaid.mjs";
 import { renameId, tableUsers } from "../../src/validate.mjs";
 import { linkedOf } from "../../src/dryrun.mjs";
 import { opinionMax } from "../../src/opinion.mjs";
+import { budgetText } from "../../src/plain.mjs";
 import { isExpr } from "../../src/exprmodel.mjs";
 import { S, esc, getP } from "../state.mjs";
 import { fld, inp, area, sel, btn, chip } from "../components/fields.mjs";
@@ -33,6 +34,12 @@ function picker() {
   return `<div class="tabs" role="tablist" aria-label="Bots">${tabs}</div>${free.length ? `<div class="row"><small>No bot yet:</small>${free.map((f) => btn("bot-new", `Add a bot for ${esc(f.name)}`, { cls: "link", data: `data-f="${esc(f.id)}"` })).join("")}</div>` : ""}`;
 }
 
+// budget (1.11.0): what the Operation may spend. Each field is optional; an empty field removes its key.
+function budgetForm(n, p) {
+  const bg = n.budget ?? {}, ctl = (k, val, extra) => `<input data-budget="${p}" data-bk="${k}" data-path="/${p}/budget" value="${esc(val ?? "")}" ${extra}>`;
+  return `<details class="sblock" ${n.budget ? "open" : ""}><summary>Spending limit${n.budget ? `: ${esc(budgetText(n.budget))}` : " (none)"}</summary><div class="grid3">${fld("Share of Resources", ctl("share", bg.share?.join("/"), 'placeholder="for example 2/3" aria-label="Share of Resources"'), "Rounded down.")}${fld("Spend all if Resources are below", ctl("allBelow", bg.allBelow, 'type="number" min="1" aria-label="Spend all below"'), "Needs a share.")}${fld("Keep at least", ctl("floor", bg.floor, 'type="number" min="0" aria-label="Keep at least"'), "Resources the Operation leaves.")}</div><small>A linked Special Activity pays from the full Resources.</small></details>`;
+}
+
 function nodeForm(b, bi) {
   const ni = b.nodes.findIndex((n) => n.id === S.botNode);
   if (ni < 0) return "<p><small>Select a node in the list or the flowchart.</small></p>";
@@ -54,6 +61,7 @@ function nodeForm(b, bi) {
     };
     const enemyTables = [["", "(none: act without a target)"], ...b.priorityTables.filter((t) => t.scope === "opponent").map((t) => [t.id, t.id])];
     body = `<div class="grid2">${fld("Pick the enemy first", sel(`${p}/target`, n.target ?? "", enemyTables, { t: "o", r: true }), "An enemy table picks one enemy faction. The space table can then use \"the target\".")}${fld("Operation", sel(`${p}/action`, n.action ?? "", [["", "(choose)"], ...ops], { t: "o", r: true }))}${n.parts ? "" : fld("Priority table", sel(`${p}/table`, n.table ?? "", tables, { t: "o", r: true }), "The table picks the spaces, so the bot needs no judgment.")}${branch("then", "After it acts, go to")}${branch("onEmpty", "If no space qualifies (fallback), go to")}</div>
+      ${budgetForm(n, p)}
       ${partsForm(n, p, tables)}
       <label class="chk"><input type="checkbox" data-a="bot-linked" data-p="${p}" ${L ? "checked" : ""}> Linked Special Activity</label><small> Runs with the Operation when its trigger holds and its table finds a space.</small>
       ${entries.map(entry).join("")}${L ? `<div class="row">${btn("bot-linked-add", "Add an If none Special Activity", { cls: "link", data: `data-p="${p}"` })}<small> Tried in order: the first one whose trigger holds and whose table finds a space runs.</small></div>` : ""}`;
@@ -277,6 +285,17 @@ export function onBotChange(el) {
     else if (d.dt === "addspace" && v) setPatch(pt, `spaces/${v}/opinion`, S.game.setup.spaceAttributes?.[v]?.opinion ?? 0);
     else if (d.dt === "addpiece" && v) { const pc = S.game.factions.flatMap((f) => f.pieces).find((x) => x.id === v); setPatch(pt, `${d.dk}/${v}/${pc.states[0]}`, 0); }
     if (d.dk.startsWith("card/id") && pt.card && pt.card.hasEffect === undefined) pt.card.hasEffect = true;
+    done(); return true;
+  }
+  if (d.budget) {
+    const n = getP(S.game, d.budget), v = el.value.trim(), bg = { ...n.budget };
+    if (d.bk === "share") {
+      const m = /^(\d+)\s*\/\s*(\d+)$/.exec(v);
+      if (v && !m) { el.classList.add("invalid"); return true; }
+      el.classList.remove("invalid");
+      if (m) bg.share = [Number(m[1]), Number(m[2])]; else delete bg.share;
+    } else if (v === "") delete bg[d.bk]; else bg[d.bk] = Number(v);
+    if (Object.keys(bg).length) n.budget = bg; else delete n.budget;
     done(); return true;
   }
   // A step's own target (schema 1.8.0): an enemy faction, or none.

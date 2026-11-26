@@ -316,3 +316,24 @@ test("a dry run sets a piece's Available count and clears it", () => withApp(asy
   assert.equal("pools" in pt, false, "an empty field removes the key");
   assert.equal(await page.locator("#stepissues li.error").count(), 0);
 }));
+
+// Schema 1.11.0 part C: an action node's spending limit (budget).
+test("a designer sets a spending limit on an Operation node and clears it", () => withApp(async ({ page, db }) => {
+  await botsTab(page);
+  await page.locator('.flow g[data-node="cw.crack"]').click(); await frames(page);
+  await page.locator(".nodeform details > summary", { hasText: "Spending limit" }).click(); await frames(page);
+  const field = (k) => page.locator(`.nodeform input[data-bk="${k}"]`);
+  const nodeOf = async () => JSON.parse((await db())["data/users/u1/draft"].json).bots[0].nodes.find((n) => n.id === "cw.crack");
+  await field("share").fill("2 of 3"); await field("share").dispatchEvent("change"); await frames(page);
+  assert.equal(await field("share").evaluate((e) => e.classList.contains("invalid")), true, "a share must read a/b");
+  await field("share").fill("2/3"); await field("share").dispatchEvent("change"); await frames(page);
+  await field("allBelow").fill("9"); await field("allBelow").dispatchEvent("change"); await frames(page);
+  await field("floor").fill("1"); await field("floor").dispatchEvent("change"); await frames(page);
+  assert.match(await page.innerText(".nodeform details summary"), /Spend at most 2\/3 of Resources \(round down\), or all if Resources are below 9\. Keep at least 1 Resources\./);
+  await page.waitForTimeout(1800);
+  assert.deepEqual((await nodeOf()).budget, { share: [2, 3], allBelow: 9, floor: 1 });
+  for (const k of ["share", "allBelow", "floor"]) { await field(k).fill(""); await field(k).dispatchEvent("change"); await frames(page); }
+  await page.waitForTimeout(1800);
+  assert.equal("budget" in (await nodeOf()), false, "empty fields remove the budget");
+  assert.equal(await page.locator("#stepissues li.error").count(), 0);
+}));

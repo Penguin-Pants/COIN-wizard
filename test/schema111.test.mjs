@@ -7,7 +7,10 @@ import { evalExpr, VAR_OK } from "../src/expr.mjs";
 import { deriveState, applyPatch } from "../src/state.mjs";
 import { varText, valueText } from "../src/plain.mjs";
 import { toValue, fromValue } from "../src/exprmodel.mjs";
-import { runCase } from "../src/dryrun.mjs";
+import { runCase, budgetOf } from "../src/dryrun.mjs";
+import { budgetText } from "../src/plain.mjs";
+import { nonPlayerSheetHtml } from "../src/kit.mjs";
+import { aidModel, toMarkdown } from "../src/botaid.mjs";
 import Ajv2020 from "ajv/dist/2020.js";
 
 // Schema 1.11.0, from the 7 GMT Non-Player sheets (docs/proposals/bot-model-gaps-2.md), added in parts.
@@ -127,4 +130,88 @@ test("avail and factionAvail round-trip through the form model and read as plain
   assert.equal(valueText({ k: "avail", piece: "ira.volunteer" }, g), `Available ${vol}`);
   assert.equal(valueText({ k: "favail", faction: "crown" }, g), `Available pieces of ${g.factions[0].name}`);
   assert.equal(valueText({ k: "favail", faction: "$target" }, g), "Available pieces of the target");
+});
+
+// Part C (gap G16, owner decisions 2026-11-26): an optional budget on an action node limits what its
+// Operation spends: { share: [2, 3], allBelow: 9, floor: 41 }, each part optional. Spend = Resources x
+// share, rounded down, or all when Resources are below allBelow. floor caps spend at Resources - floor.
+// With share and floor, the smaller spend wins. A per-use cost is checked against the budget too.
+// A linked Special Activity pays from the full Resources. GMT: "for 2/3↓ of Res max, for all if
+// Res < 9" (A Distant Plain Government, Coalition, Taliban), "do not fall below 41 Res" (Warlords).
+const both = { tipperary: { pieces: { "ira.volunteer": { active: 1 }, "crown.army": { normal: 2 } } }, kerry: { pieces: { "ira.volunteer": { active: 1 }, "crown.army": { normal: 2 } } } };
+// Crackdown costs 1 per space; its table picks up to 2 spaces. Martial Law (2 per use) follows when Resources >= 3.
+const crack = (budget, res, edit = () => {}) => {
+  const g = tan(), bot = g.bots[0], n = bot.nodes.find((x) => x.id === "cw.crack");
+  if (budget) n.budget = budget;
+  edit(g, n);
+  return runCase(g, bot, applyPatch(deriveState(g, "crown"), { resources: { crown: res }, spaces: both, dice: [1, 1, 1] }), "fallback");
+};
+const spent = (r) => (r.path.includes("cw.crack") ? r.chosen.length : 0);
+
+test("budgetOf: share rounds down, allBelow spends all, floor keeps Resources back, the smaller wins", () => {
+  assert.equal(budgetOf({ share: [2, 3] }, 10), 6);
+  assert.equal(budgetOf({ share: [2, 3], allBelow: 9 }, 8), 8);
+  assert.equal(budgetOf({ share: [2, 3], allBelow: 9 }, 9), 6);
+  assert.equal(budgetOf({ floor: 41 }, 45), 4);
+  assert.equal(budgetOf({ floor: 41 }, 40), 0);
+  assert.equal(budgetOf({ share: [2, 3], floor: 41 }, 60), 19);
+  assert.equal(budgetOf({ share: [2, 3], floor: 41 }, 45), 4);
+});
+
+test("a share limits the spaces an Operation pays for", () => {
+  assert.equal(spent(crack(null, 2)), 2, "no budget: 2 Resources pay for 2 spaces");
+  assert.equal(spent(crack({ share: [1, 2] }, 2)), 1);
+  assert.ok(crack({ share: [1, 3] }, 2).path.includes("cw.crack:empty"), "1/3 of 2 is 0: the node is empty");
+  assert.equal(spent(crack({ share: [1, 3], allBelow: 3 }, 2)), 2, "below 3 Resources: spend all");
+});
+
+test("a floor keeps Resources back, and with a share the smaller spend wins", () => {
+  assert.equal(spent(crack({ floor: 2 }, 3)), 1);
+  assert.ok(crack({ floor: 3 }, 3).path.includes("cw.crack:empty"));
+  assert.equal(spent(crack({ share: [2, 3], floor: 2 }, 3)), 1);
+});
+
+test("the linked Special Activity pays from the full Resources", () => {
+  const r = crack({ share: [1, 5] }, 5); // spend 1 of 5; 4 left, so Martial Law (trigger: Resources >= 3) runs
+  assert.equal(spent(r), 1);
+  assert.notEqual(r.linked, "skipped");
+  assert.match(r.linked, /^crown\.martial-law:/);
+});
+
+test("a per-use cost is checked against the budget", () => {
+  const perUse = (g) => { g.actions.find((a) => a.id === "crown.crackdown").cost = { track: "res.crown", amount: 2, per: "use" }; };
+  assert.ok(crack({ floor: 2 }, 3, perUse).path.includes("cw.crack:empty"), "spend 1 cannot pay 2");
+  assert.equal(spent(crack({ floor: 1 }, 3, perUse)), 2, "spend 2 pays the one cost for both spaces");
+});
+
+test("a budget limits an action node with parts", () => {
+  const parts = (g, n) => { const a = g.actions.find((x) => x.id === "crown.crackdown"); n.parts = [{ text: "Crack down.", table: n.table, steps: a.steps }]; delete n.table; };
+  assert.equal(spent(crack(null, 2, parts)), 2);
+  assert.equal(spent(crack({ share: [1, 2] }, 2, parts)), 1);
+});
+
+test("a budget validates against the schema file and the validator", () => {
+  const check = new Ajv2020({ allErrors: true, strict: false }).compile(read("../schema/coin-game.schema.json"));
+  const g = tan(), n = g.bots[0].nodes.find((x) => x.id === "cw.crack");
+  n.budget = { share: [2, 3], allBelow: 9, floor: 41 };
+  assert.equal(check(g), true, JSON.stringify(check.errors?.slice(0, 3)));
+  assert.deepEqual(validate(g).errors.filter((e) => e.code === "bad-budget"), []);
+  for (const bad of [{}, { share: [0, 3] }, { share: [2] }, { floor: -1 }, { other: 1 }]) { n.budget = bad; assert.equal(check(g), false, JSON.stringify(bad)); }
+  n.budget = { share: [4, 3] };
+  assert.ok(validate(g).errors.some((e) => e.code === "bad-budget" && /share/.test(e.message)));
+  n.budget = { allBelow: 9 };
+  assert.ok(validate(g).errors.some((e) => e.code === "bad-budget" && /allBelow/.test(e.message)));
+  const cond = g.bots[0].nodes.find((x) => x.kind === "condition");
+  cond.budget = { floor: 1 };
+  assert.ok(validate(g).errors.some((e) => e.code === "bad-budget" && /action node/.test(e.message)));
+});
+
+test("a budget reads as plain English on the bot aid and the Non-Player sheet", () => {
+  const text = "Spend at most 2/3 of Resources (round down), or all if Resources are below 9. Keep at least 41 Resources.";
+  assert.equal(budgetText({ share: [2, 3], allBelow: 9, floor: 41 }), text);
+  assert.equal(budgetText({ floor: 41 }), "Keep at least 41 Resources.");
+  const g = tan(), bot = g.bots[0];
+  bot.nodes.find((x) => x.id === "cw.crack").budget = { share: [2, 3], allBelow: 9, floor: 41 };
+  assert.ok(toMarkdown(aidModel(g, bot)).includes(text));
+  assert.ok(nonPlayerSheetHtml(g, bot).includes(text));
 });

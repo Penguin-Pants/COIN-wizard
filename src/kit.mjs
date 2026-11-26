@@ -4,7 +4,7 @@ import { aidModel, toHtml, stepNumbers, tableLabels } from "./botaid.mjs";
 import { graphSvg } from "./graphsvg.mjs";
 import { linkedOf, cardLasting } from "./dryrun.mjs";
 import { choiceCounts } from "./effects.mjs";
-import { condText, stepText } from "./plain.mjs";
+import { condText, stepText, budgetText } from "./plain.mjs";
 import { toCond } from "./exprmodel.mjs";
 import { voronoi, FRAME } from "./mapplace.mjs";
 
@@ -285,7 +285,8 @@ export function nonPlayerSheetHtml(g, bot) {
     const body = n.parts
       ? `<div class="bt"><h3>${h(a?.name ?? n.action)}</h3></div>${where(a)}${target}${n.parts.map((pt, i) => `<div class="part"><p class="pt">${i + 1}. ${h(pt.text)} <small>(${labels[pt.table]}, max ${maxOf(pt)})</small></p>${prio(table(pt.table))}</div>`).join("")}<p class="pr">${a?.cost.per === "use" ? "Pay once, for the whole Operation." : "Pay once per space, over all parts."}</p>`
       : `${title(a?.name ?? n.action, t, a)}${where(a)}${target}${prio(t)}`;
-    return `<section class="box op">${body}${linked}${next}${arr("if none", n.onEmpty)}</section>`;
+    const budget = n.budget ? `<p class="pr">${h(budgetText(n.budget))}</p>` : "";
+    return `<section class="box op">${body}${budget}${linked}${next}${arr("if none", n.onEmpty)}</section>`;
   }).join("");
   const saBoxes = [...sas.values()].map(({ l, nexts, ends }) => {
     const a = act(l.action), t = table(l.table);

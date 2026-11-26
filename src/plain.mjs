@@ -113,3 +113,11 @@ export function fingerprint(steps) {
   return h.toString(36);
 }
 export const isStale = (holder) => holder.plainOf !== undefined && holder.plainOf !== fingerprint(holder.steps);
+
+// An action node's budget (schema 1.11.0), for the bot aid, the Non-Player sheet and the editor.
+export function budgetText(b) {
+  const out = [];
+  if (b.share) out.push(`Spend at most ${b.share[0]}/${b.share[1]} of Resources (round down)${b.allBelow !== undefined ? `, or all if Resources are below ${b.allBelow}` : ""}.`);
+  if (b.floor !== undefined) out.push(`Keep at least ${b.floor} Resources.`);
+  return out.join(" ");
+}

@@ -310,6 +310,14 @@ function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionByI
   const outcomes = new Set();
   bot.nodes.forEach((n, i) => {
     const np = `${p}/nodes/${i}`;
+    // budget (1.11.0): what an action node's Operation may spend.
+    const bg = n.budget, bp = `${np}/budget`;
+    if (bg && n.kind !== "action") err("bad-budget", bp, `Node ${n.id}: a budget works only on an action node`);
+    else if (bg) {
+      if (bg.share && bg.share[0] > bg.share[1]) err("bad-budget", bp, `Node ${n.id}: the share ${bg.share[0]}/${bg.share[1]} is more than all Resources`);
+      if (bg.allBelow !== undefined && !bg.share) err("bad-budget", bp, `Node ${n.id}: allBelow needs a share`);
+      if (actionById[n.action]?.cost.amount === 0) warn("bad-budget", bp, `Node ${n.id}: ${n.action} costs nothing, so the budget has no effect`);
+    }
     if (n.kind === "condition") {
       if (!n.test) err("incomplete-node", np, `Condition ${n.id} has no test`); else checkExpr(n.test, `${np}/test`);
       if (!n.yes || !n.no) err("incomplete-node", np, `Condition ${n.id} needs both a yes and a no branch`); else { ref(n.yes, np, "Yes branch"); ref(n.no, np, "No branch"); }
