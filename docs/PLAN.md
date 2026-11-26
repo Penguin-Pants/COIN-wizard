@@ -35,14 +35,16 @@ Owner: **Owner** (a person must act or decide) or **Claude** (code or docs, afte
 |---|---|---|---|
 | C1 | Card-driven bot mode (bot decks with draw and flip exits, shared priority tables, die cap): design questions, then its own version | Claude asks, Owner decides | R7 |
 | C2 | Import the research data: prototype deck into a sample game; claims with confidence and a contested flag | Claude | R8 |
-| C3 | Preset library from the 14-game tables (victory, pass gain, tracks, scoring phases) | Claude | R9 |
-| C4 | Initiative Track and Operation limits before scoring | Claude | R11 |
+| C3 | Preset library from the 14-game tables (victory, pass gain, tracks, scoring phases) | Claude | R9; `docs/research/coin-analysis/variation-matrix.md` |
+| C4 | Initiative Track and Operation limits before scoring | Claude | R11; `docs/research/coin-analysis/variation-matrix.md` lines 35-41 |
 | C5 | Scenarios, optional modules, playtest log, provenance tag | Claude | R12 |
 | C6 | Held cards (Pivotal), system-run factions, hidden hands | Claude | R13 |
 | C7 | A choice inside one Event card (General Offensive, Kill Zone); an Event that changes an Operation (Mono Jojoy); cost by space type | Owner decides | Earlier items C1 to C3 |
 | C8 | The card effect editor does not offer `$target` as a value | Claude | PR 33 |
 
 GMT material in this public repo stays as it is (owner decision R1, 2026-11-26).
+
+Research sources: the cross-game analysis is in `docs/research/coin-analysis/` (imported 2026-11-26). The rulebooks, the prototype design and its data stay in the private repo `Penguin-Pants/COIN_Research` (attach it with `add_repo` for C2 or rulebook lookups).
 
 ### D. Human checklist
 
