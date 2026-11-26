@@ -86,7 +86,7 @@ operations:
     keep_back: last troop from line or self base; lose no control
     priorities:
       1: { do: get up to 4 troops (more if needed) to add COIN control to highest 1+ pop spaces with no COIN base, sweep evenly from random sources, tiebreak: { a: lowest cost (1 resource per used line with an enemy) } }
-      2: { do: sweep in place where activating most pieces, tiebreak: { a: player, b: rival.insurgent, c: rival.criminal } }
+      2: { do: sweep in place, tiebreak: { a: most player pieces activated, b: most rival.insurgent pieces activated, c: most rival.criminal pieces activated } }
     with: transport
     onEmpty: train          # badge "Loop: Pass"
     gap: ['G1, G7, G9 route cost, G11, G13, G17']
