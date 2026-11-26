@@ -31,12 +31,12 @@ export function duplicateCard(game, id) {
   return c;
 }
 
-// Expressions that compare card.id with a literal name a card too.
+// Expressions that compare card.id or next.id (1.11.0) with a literal name a card too.
 function cardIdLiterals(game, visit) {
   const walk = (v, path) => {
     if (Array.isArray(v)) return v.forEach((x, i) => walk(x, `${path}/${i}`));
     if (!v || typeof v !== "object") return;
-    if (Array.isArray(v.args) && v.args.length === 2 && v.args.some((a) => a?.var === "card.id")) v.args.forEach((a, i) => { if (typeof a === "string") visit(v, i, path); });
+    if (Array.isArray(v.args) && v.args.length === 2 && v.args.some((a) => a?.var === "card.id" || a?.var === "next.id")) v.args.forEach((a, i) => { if (typeof a === "string") visit(v, i, path); });
     for (const [k, x] of Object.entries(v)) walk(x, `${path}/${k}`);
   };
   walk(game.bots, "/bots");
@@ -63,6 +63,7 @@ export function cardRefs(game, id) {
   game.bots.forEach((b, bi) => {
     b.eventPolicy.overrides.forEach((o, oi) => { if (o.cardId === id) out.push({ path: `/bots/${bi}/eventPolicy/overrides/${oi}`, label: `Bot ${b.id} Event exception` }); });
     b.dryRuns.forEach((d, di) => { if (d.patch?.card?.id === id) out.push({ path: `/bots/${bi}/dryRuns/${di}/patch/card`, label: `Bot ${b.id} dry run "${d.case}"` }); });
+    b.dryRuns.forEach((d, di) => { if (d.patch?.next?.id === id) out.push({ path: `/bots/${bi}/dryRuns/${di}/patch/next`, label: `Bot ${b.id} dry run "${d.case}" next card` }); });
   });
   cardIdLiterals(game, (e, i, path) => { if (e.args[i] === id) out.push({ path, label: "A bot condition on the card" }); });
   inPlayVars(game, (e, path) => { if (e.var === `inPlay.${id}`) out.push({ path, label: "An expression that reads the card in play" }); });
@@ -72,7 +73,8 @@ export function cardRefs(game, id) {
 
 // Removes the card and the references that can go with it. Returns each reference with fixed true or false.
 export function deleteCard(game, id) {
-  const refs = cardRefs(game, id).map((r) => ({ ...r, fixed: /\/events$|\/overrides\/\d+$|\/patch\/inPlay$/.test(r.path) }));
+  const refs = cardRefs(game, id).map((r) => ({ ...r, fixed: /\/events$|\/overrides\/\d+$|\/patch\/inPlay$|\/patch\/next$/.test(r.path) }));
+  for (const b of game.bots) for (const d of b.dryRuns) if (d.patch?.next?.id === id) delete d.patch.next;
   inPlayPatches(game, (pt) => { pt.inPlay = pt.inPlay.filter((c) => c !== id); if (!pt.inPlay.length) delete pt.inPlay; });
   game.deck.cards = game.deck.cards.filter((c) => c.id !== id);
   for (const p of game.deck.preparation.piles) p.events = p.events.filter((e) => e !== id);
@@ -88,6 +90,7 @@ export function renameCard(game, oldId, newId) {
   for (const b of g.bots) {
     for (const o of b.eventPolicy.overrides) if (o.cardId === oldId) o.cardId = newId;
     for (const d of b.dryRuns) if (d.patch?.card?.id === oldId) d.patch.card.id = newId;
+    for (const d of b.dryRuns) if (d.patch?.next?.id === oldId) d.patch.next.id = newId;
   }
   cardIdLiterals(g, (e, i) => { if (e.args[i] === oldId) e.args[i] = newId; });
   inPlayVars(g, (e) => { if (e.var === `inPlay.${oldId}`) e.var = `inPlay.${newId}`; });

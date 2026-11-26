@@ -532,3 +532,18 @@ test("cardCould and next validate, pass the schema file and read as plain Englis
   assert.equal(varText(g, "next.lasting"), "the next card's lasting type");
   assert.deepEqual(sideEffectsText(g, g.deck.cards.find((x) => x.id === "e01").sides[1].steps), [`place ${vn}`, `change ${g.factions[1].name} Resources`, `change ${g.tracks.find((t) => t.id === "res.ira").name}`, `change ${g.tracks.find((t) => t.id === "repression").name}`, "set curfew"]);
 });
+
+test("renaming or deleting a card updates next-card references (Codex review on PR 42)", () => {
+  const g = tan(), cond = g.bots[0].nodes.find((n) => n.id === "cw.low");
+  cond.test = { op: "eq", args: [{ var: "next.id" }, "e01"] };
+  g.bots[0].dryRuns[0].patch.next = { id: "e01" };
+  const refs = cardRefs(g, "e01").map((r) => r.path);
+  assert.ok(refs.includes("/bots/0/dryRuns/0/patch/next"), "the dry-run patch is a reference");
+  assert.ok(refs.some((p) => p.includes("/nodes/")), "the next.id compare is a reference");
+  const r = renameCard(g, "e01", "e99");
+  assert.deepEqual(r.bots[0].dryRuns[0].patch.next, { id: "e99" });
+  assert.deepEqual(r.bots[0].nodes.find((n) => n.id === "cw.low").test.args[1], "e99");
+  const d = structuredClone(g);
+  deleteCard(d, "e01");
+  assert.equal("next" in d.bots[0].dryRuns[0].patch, false, "delete removes the next card from the patch");
+});
