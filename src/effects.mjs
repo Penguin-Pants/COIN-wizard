@@ -279,6 +279,7 @@ export const costOf = (action, spaceIds) => (action.cost.amount > 0 && spaceIds.
 export function refundCost(game, state, action, chosenIds, keptIds) {
   const back = costOf(action, chosenIds) - costOf(action, keptIds);
   if (back) setTrack(game, state, action.cost.track, trackValue(game, state, action.cost.track) + back);
+  if (back && state.spend) state.spend.left += back;
 }
 
 // A read-only view of the state with the cost of these spaces added back to the cost track,
@@ -298,6 +299,8 @@ export function withoutCost(game, state, action, spaceIds) {
 export function payCost(game, state, action, spaceIds) {
   const total = costOf(action, spaceIds);
   if (total) setTrack(game, state, action.cost.track, trackValue(game, state, action.cost.track) - total);
+  // An action node's budget (schema 1.11.0, src/dryrun.mjs): the Operation's payments count against its share.
+  if (total && state.spend) state.spend.left -= total;
 }
 
 // The option of a choice that runs: the one for the action's target, else the first option.

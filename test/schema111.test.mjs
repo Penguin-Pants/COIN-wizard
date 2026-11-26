@@ -215,3 +215,16 @@ test("a budget reads as plain English on the bot aid and the Non-Player sheet", 
   assert.ok(toMarkdown(aidModel(g, bot)).includes(text));
   assert.ok(nonPlayerSheetHtml(g, bot).includes(text));
 });
+
+test("a share is fixed at the start: Resources gained during the Operation do not raise it; a floor reads the current balance", () => {
+  // Part A (Kerry) gains 2 Resources; part B (Tipperary) is a new space to pay for. Codex review on PR 39.
+  const gainParts = (g, n) => {
+    const a = g.actions.find((x) => x.id === "crown.crackdown"), bot = g.bots[0];
+    const only = (id, sid) => ({ id, scope: "space", select: "one", steps: [{ n: 1, text: "This space.", filter: { op: "eq", args: [{ var: "$space.id" }, sid] } }], tiebreak: [] });
+    bot.priorityTables.push(only("tk", "kerry"), only("tt", "tipperary"));
+    n.parts = [{ text: "A", table: "tk", steps: [...a.steps, { op: "gain", track: "res.crown", amount: 2 }] }, { text: "B", table: "tt", steps: a.steps }];
+    delete n.table;
+  };
+  assert.deepEqual(crack({ share: [1, 2] }, 2, gainParts).chosen, ["kerry"], "a share of 1 pays for 1 space");
+  assert.deepEqual(crack({ floor: 1 }, 2, gainParts).chosen, ["kerry", "tipperary"], "after the gain, 3 Resources keep 1 back and pay 1 more");
+});

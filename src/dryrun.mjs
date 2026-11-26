@@ -27,15 +27,16 @@ function cardFields(game, bot, state) {
 // Budget of one action node (schema 1.11.0): what its Operation may spend of res Resources.
 // share: res x num / den, rounded down, or all when res < allBelow. floor: spend at most res - floor.
 // With both, the smaller spend wins.
-export function budgetOf(budget, res) {
-  let spend = res;
-  if (budget.share) spend = budget.allBelow !== undefined && res < budget.allBelow ? res : Math.floor((res * budget.share[0]) / budget.share[1]);
-  if (budget.floor !== undefined) spend = Math.min(spend, res - budget.floor);
-  return Math.max(0, Math.min(res, spend));
-}
-// Resources the running Operation may still spend: state.reserve is what its node's budget keeps back.
-// A linked Special Activity runs with no reserve (runLinked).
-const have = (state) => state.resources[state.self] - (state.reserve ?? 0);
+const shareOf = (budget, res) => (!budget.share ? Infinity : budget.allBelow !== undefined && res < budget.allBelow ? res : Math.floor((res * budget.share[0]) / budget.share[1]));
+export const budgetOf = (budget, res) => Math.max(0, Math.min(res, shareOf(budget, res), res - (budget.floor ?? 0)));
+// Resources the running Operation may still spend. state.spend (set per action node): left is the share
+// fixed at the Operation's start less what the Operation paid (src/effects.mjs payCost); floor is
+// checked against the balance now, so gains during the Operation raise only the floor's room.
+// A linked Special Activity runs with no spend limit (runLinked).
+const have = (state) => {
+  const res = state.resources[state.self], sp = state.spend;
+  return sp ? Math.max(0, Math.min(res, sp.left, res - sp.floor)) : res;
+};
 
 function affordable(state, action) {
   return action.cost.amount === 0 || have(state) >= action.cost.amount;
@@ -165,8 +166,8 @@ function runEventNode(game, state, node, side, tables, result) {
 // Tries a node's linked Special Activities in order (first trigger that holds and finds a space runs).
 // A linked Special Activity pays from the full Resources: the Operation's budget does not apply to it.
 function runLinked(game, state, links, actions, tables, ctx, extra) {
-  const reserve = state.reserve;
-  state.reserve = 0;
+  const spend = state.spend;
+  state.spend = null;
   try {
     for (const L of links) {
       const sa = actions[L.action];
@@ -175,7 +176,7 @@ function runLinked(game, state, links, actions, tables, ctx, extra) {
       if (sel.length) { applyAction(game, state, sa, sel.map((s) => s.id), extra, { targetOf: sel.targetOf }); return `${sa.id}:${sel.map((s) => s.id).join(",")}`; }
     }
     return "skipped";
-  } finally { state.reserve = reserve; }
+  } finally { state.spend = spend; }
 }
 
 // Action node parts (docs/SCHEMA.md, "Action node parts", rules 1 to 8). Each part picks spaces with
@@ -245,6 +246,8 @@ export function runBot(game, bot, startState) {
     if (i === bot.maxSteps) throw new Error(`Bot ${bot.id} did not terminate within ${bot.maxSteps} steps`);
     const node = nodes[cur];
     if (!node) throw new Error(`Bot ${bot.id}: missing node ${cur}`);
+    // A budget limits only its own action node (schema 1.11.0).
+    if (node.kind !== "action") state.spend = null;
     if (node.kind === "condition") {
       result.path.push(node.id);
       cur = evalExpr(node.test, ctx) ? node.yes : node.no;
@@ -258,9 +261,8 @@ export function runBot(game, bot, startState) {
       const action = actions[node.action];
       // Each action node is a new Operation: no piece has moved yet (schema 1.9.0, "unmoved").
       startOperation(state);
-      // A budget (schema 1.11.0) keeps Resources back from this Operation, read at its start.
-      const res = state.resources[state.self];
-      state.reserve = node.budget ? res - budgetOf(node.budget, res) : 0;
+      // A budget (schema 1.11.0) limits what this Operation spends; the share is read at its start.
+      state.spend = node.budget ? { left: shareOf(node.budget, state.resources[state.self]), floor: node.budget.floor ?? 0 } : null;
       // An action with a target picks the enemy first. No enemy qualifies: the same as no space.
       const picked = node.target ? selectOpponentPick(game, state, tables[node.target]) : null;
       const target = picked?.faction ?? null;
