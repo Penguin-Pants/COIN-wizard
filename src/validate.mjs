@@ -117,7 +117,7 @@ export function validate(game) {
   const checkExpr = (e, path, scope = {}) => {
     const s = scanExpr(e);
     for (const v of s.vars) {
-      const fv = /^(resources|eligible|score|margin)\.(.+)$/.exec(v);
+      const fv = /^(resources|eligible|score|margin|player)\.(.+)$/.exec(v);
       if (!VAR_OK.test(v)) err("bad-var", path, `Unknown variable ${v}${v === "other.resources" ? ". It was removed in 1.3.0: use resources.<faction> or rivals.maxResources" : ""}`);
       else if (v.startsWith("track.") && !trackIds.has(v.slice(6))) err("missing-ref", path, `Unknown track in ${v}`);
       else if (fv && !factionIds.has(fv[2])) err("missing-ref", path, `Unknown faction in ${v}`);

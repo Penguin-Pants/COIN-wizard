@@ -26,9 +26,9 @@ export function varOptions(ctx) {
   const g = S.game;
   const names = ["eligible", "self.resources", ...g.tracks.map((t) => `track.${t.id}`), "card.id", "card.hasEffect", "card.raisesSelf", "card.lowersEnemy", "card.lasting", "card.position", "turn.position", "scoring.nextFinal",
     // Any faction's values, and the highest or lowest among the enemies, so 3 and 4 faction bots can compare.
-    ...g.factions.flatMap((f) => ["resources", "eligible", "score", "margin"].map((k) => `${k}.${f.id}`)),
+    ...g.factions.flatMap((f) => ["resources", "eligible", "score", "margin", "player"].map((k) => `${k}.${f.id}`)),
     ...["Margin", "Score", "Resources"].flatMap((k) => [`rivals.max${k}`, `rivals.min${k}`])];
-  for (const who of [["faction", ctx.faction], ["target", ctx.target]]) if (who[1]) names.unshift(...["margin", "score", "resources", "eligible", "type", "id"].map((k) => `$${who[0]}.${k}`));
+  for (const who of [["faction", ctx.faction], ["target", ctx.target]]) if (who[1]) names.unshift(...["margin", "score", "resources", "eligible", "player", "type", "id"].map((k) => `$${who[0]}.${k}`));
   if (ctx.move) names.push("move.count");
   if (ctx.space) names.push("$space.pop", "$space.opinion", "$space.type", "$space.name", "$space.id");
   for (const s of ctx.stores ?? []) names.push(`var.${s}`);

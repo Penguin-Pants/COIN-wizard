@@ -16,6 +16,8 @@ export function factionValue(fid, field, ctx) {
     case "eligible": return !!state.eligible[fid];
     case "score": { const v = state.victory?.[fid]; if (!v) throw new Error(`Faction ${fid} has no victory rule`); return num(evalExpr(v.formula, { state, links: ctx.links })); }
     case "margin": return factionValue(fid, "score", ctx) - state.victory[fid].threshold;
+    // Schema 1.11.0: a human plays this faction (default: no bot for it; a dry-run patch may set it).
+    case "player": return !!state.players?.[fid];
     default: throw new Error(`Unknown faction value ${field}`);
   }
 }
@@ -25,7 +27,7 @@ export function resolveVar(name, ctx) {
   const { state, $space } = ctx;
   if (name === "eligible") return !!state.eligible[state.self];
   if (name === "self.resources") return state.resources[state.self];
-  let m = /^(resources|eligible|score|margin)\.(.+)$/.exec(name);
+  let m = /^(resources|eligible|score|margin|player)\.(.+)$/.exec(name);
   if (m) return factionValue(m[2], m[1], ctx);
   m = /^rivals\.(max|min)(Resources|Score|Margin)$/.exec(name);
   if (m) {
@@ -162,4 +164,4 @@ export function scanExpr(e, out = { vars: [], pieces: [], ops: [] }) {
 }
 
 // Faction ids in resources.<id> and similar names are checked against the game by the validator.
-export const VAR_OK = /^(eligible|self\.resources|(resources|eligible|score|margin)\.[a-z0-9._-]+|rivals\.(max|min)(Resources|Score|Margin)|\$(faction|target)\.(id|name|type|resources|eligible|score|margin)|track\.[a-z0-9._-]+|card\.(id|hasEffect|raisesSelf|lowersEnemy|lasting|position)|turn\.position|scoring\.nextFinal|move\.count|var\.[a-z0-9_]+|\$space\.(id|name|type|pop|opinion))$/;
+export const VAR_OK = /^(eligible|self\.resources|(resources|eligible|score|margin|player)\.[a-z0-9._-]+|rivals\.(max|min)(Resources|Score|Margin)|\$(faction|target)\.(id|name|type|resources|eligible|score|margin|player)|track\.[a-z0-9._-]+|card\.(id|hasEffect|raisesSelf|lowersEnemy|lasting|position)|turn\.position|scoring\.nextFinal|move\.count|var\.[a-z0-9_]+|\$space\.(id|name|type|pop|opinion))$/;

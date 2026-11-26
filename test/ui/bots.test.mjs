@@ -267,3 +267,20 @@ test("an Event exception shows its target select after a table is picked, and Ne
   assert.equal("node" in o, false, "Never play keeps no node");
   assert.equal(await page.locator("#stepissues li.error").count(), 0);
 }));
+
+// Schema 1.11.0 part A: a dry run sets who plays a faction; conditions offer "has a human player".
+test("a dry run sets a faction to a human player and clears it", () => withApp(async ({ page, db }) => {
+  await botsTab(page);
+  await page.locator("details.act > summary", { hasText: "no-target" }).click(); await frames(page);
+  const sel = page.locator('details.act[open] select[data-dk="players.ira"]');
+  assert.match(await sel.locator("option").first().innerText(), /the bot/, "Tan War has a bot for the Republic");
+  await sel.selectOption("true"); await frames(page);
+  await page.waitForTimeout(1800);
+  let pt = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].dryRuns.find((d) => d.case === "no-target").patch;
+  assert.deepEqual(pt.players, { ira: true });
+  await page.locator('details.act[open] select[data-dk="players.ira"]').selectOption(""); await frames(page);
+  await page.waitForTimeout(1800);
+  pt = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].dryRuns.find((d) => d.case === "no-target").patch;
+  assert.equal("players" in pt, false, "as usual removes the key");
+  assert.equal(await page.locator("#stepissues li.error").count(), 0);
+}));

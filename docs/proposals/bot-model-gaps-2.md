@@ -43,7 +43,7 @@ Model today: `coin-game/1.10.0`.
 
 | Part | Decision |
 |---|---|
-| A Human player flag | Approved (review item R3) |
+| A Human player flag | Approved (review item R3). Done in 1.11.0 part A |
 | B `avail()` | Approved (R6) |
 | C Resource budget | Approved (R6) |
 | D Control | Approved (R5) |

@@ -121,6 +121,8 @@ function patchForm(b, bi, d, di) {
   const g = S.game, pt = d.patch, k = `${bi}/${di}`;
   const ctl = (key, kind, val, extra = "") => `data-dk="${esc(key)}" data-dt="${kind}" data-dry="${k}" data-path="/bots/${bi}/dryRuns/${di}/patch" ${extra}`;
   const elig = g.factions.map((f) => fld(`${esc(f.name)} Eligible`, `<select ${ctl(`eligible.${f.id}`, "bool3")}>${[["", "as in setup"], ["true", "yes"], ["false", "no"]].map(([v, l]) => `<option value="${v}" ${String(pt.eligible?.[f.id] ?? "") === v ? "selected" : ""}>${l}</option>`).join("")}</select>`)).join("");
+  // players (1.11.0): default is a player when the game has no bot for that faction.
+  const ply = g.factions.map((f) => { const dflt = !g.bots.some((x) => x.factionId === f.id); return fld(`${esc(f.name)} is played by`, `<select ${ctl(`players.${f.id}`, "bool3")}>${[["", `as usual (${dflt ? "a human" : "the bot"})`], ["true", "a human player"], ["false", "a Non-player bot"]].map(([v, l]) => `<option value="${v}" ${String(pt.players?.[f.id] ?? "") === v ? "selected" : ""}>${l}</option>`).join("")}</select>`); }).join("");
   const res = g.factions.map((f) => fld(`${esc(f.name)} Resources`, `<input type="number" placeholder="as in setup" ${ctl(`resources.${f.id}`, "num")} value="${pt.resources?.[f.id] ?? ""}">`)).join("");
   const tr = g.tracks.filter((t) => !g.factions.some((f) => f.resourceTrack === t.id)).map((t) => fld(esc(t.name), `<input type="number" placeholder="as in setup" ${ctl(`tracks.${t.id}`, "num")} value="${pt.tracks?.[t.id] ?? ""}">`)).join("");
   const card = fld("Current card", `<select ${ctl("card.id", "text", "", 'data-r="1"')}><option value="">default</option>${g.deck.cards.filter((c) => c.type === "event").map((c) => `<option value="${c.id}" ${pt.card?.id === c.id ? "selected" : ""}>${esc(c.title)}</option>`).join("")}</select>`)
@@ -137,7 +139,7 @@ function patchForm(b, bi, d, di) {
     return `<div class="opt"><div class="row"><b>${esc(name)}</b><label class="mini"><span>Opinion</span><input type="number" min="${-opinionMax(g)}" max="${opinionMax(g)}" placeholder="as in setup" ${ctl(`spaces.${sid}.opinion`, "num")} value="${sp.opinion ?? ""}"></label><select ${ctl(`spaces.${sid}.pieces`, "addpiece", "", 'aria-label="Set a piece count"')}><option value="">Set a piece count...</option>${pcs.map((x) => `<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select>${btn("dry-delspace", "Remove", { cls: "link", data: `data-dry="${k}" data-s="${esc(sid)}"` })}</div>${lines}</div>`;
   }).join("");
   const add = `<select ${ctl("spaces", "addspace")} aria-label="Change a space"><option value="">Change a space...</option>${g.board.spaces.filter((s) => !pt.spaces?.[s.id]).map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join("")}</select>`;
-  return `<div class="grid4">${elig}${res}${tr}</div><div class="row">${card}</div><div class="row">${turn}</div>${dice}${clear}<h4>Board changes</h4>${spaces}${add}`;
+  return `<div class="grid4">${elig}${ply}${res}${tr}</div><div class="row">${card}</div><div class="row">${turn}</div>${dice}${clear}<h4>Board changes</h4>${spaces}${add}`;
 }
 
 function dryRuns(b, bi) {

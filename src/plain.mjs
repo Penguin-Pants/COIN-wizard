@@ -17,15 +17,15 @@ const VARS = {
 };
 const CMP = { eq: "is", ne: "is not", gt: "is more than", gte: "is at least", lt: "is less than", lte: "is at most" };
 
-const FIELD = { id: "", name: " name", type: " type", resources: " Resources", eligible: " is Eligible", score: " victory score", margin: " victory margin" };
+const FIELD = { id: "", name: " name", type: " type", resources: " Resources", eligible: " is Eligible", score: " victory score", margin: " victory margin", player: " has a human player" };
 const factionName = (g, id) => g.factions.find((f) => f.id === id)?.name ?? id;
 export const whoText = (g, f) => (f === "$target" ? "the target" : f === "$faction" ? "that faction" : factionName(g, f));
 export function varText(g, name) {
   if (VARS[name]) return VARS[name];
-  let m = /^(resources|eligible|score|margin)\.(.+)$/.exec(name);
+  let m = /^(resources|eligible|score|margin|player)\.(.+)$/.exec(name);
   if (m) return `${factionName(g, m[2])}${FIELD[m[1]]}`;
   m = /^\$(faction|target)\.(.+)$/.exec(name);
-  if (m) return m[2] === "id" ? whoText(g, `$${m[1]}`) : `${m[1] === "target" ? "the target's" : "that faction's"}${FIELD[m[2]].replace(" is Eligible", " Eligibility")}`;
+  if (m) return m[2] === "id" ? whoText(g, `$${m[1]}`) : m[2] === "player" ? `${whoText(g, `$${m[1]}`)}${FIELD.player}` : `${m[1] === "target" ? "the target's" : "that faction's"}${FIELD[m[2]].replace(" is Eligible", " Eligibility")}`;
   if (name.startsWith("track.")) return trackName(g, name.slice(6));
   if (name.startsWith("var.")) return `the stored roll ${name.slice(4)}`;
   return name;

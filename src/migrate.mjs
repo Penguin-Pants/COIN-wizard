@@ -1,6 +1,6 @@
 // Lifts older coin-game documents to the latest schema version.
 // Each entry lifts one version. Never edit an old entry: add a new one.
-export const LATEST = "coin-game/1.10.0";
+export const LATEST = "coin-game/1.11.0";
 
 const STEPS = ["brief", "factions", "board", "rules", "review"];
 
@@ -68,6 +68,11 @@ const MIGRATIONS = {
   // An Event override may hold a node (gap 11): a table that runs the Event side. Nothing to rewrite.
   "coin-game/1.9.0": (g) => {
     g.meta.schemaVersion = "coin-game/1.10.0";
+  },
+  // Bot model gaps from the 7 GMT sheets (docs/proposals/bot-model-gaps-2.md), added in parts.
+  // Part A: player.<faction>, $faction.player, $target.player and the dry-run patch "players". Nothing to rewrite.
+  "coin-game/1.10.0": (g) => {
+    g.meta.schemaVersion = "coin-game/1.11.0";
   }
 };
 
