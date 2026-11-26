@@ -1,0 +1,114 @@
+# Normalized bot logic: Non-Player Cartels (Andean Abyss)
+# Source: source/andean-abyss-cartels.md. Archetype: criminal (profit-driven).
+# Same method as andean-abyss-farc.yaml. "gap:" marks logic the current model (1.10.0) cannot express.
+# Gap ids (G1 ...) are in README.md.
+
+archetype: criminal
+roles:
+  self: Cartels
+  state: Government
+  rival.insurgent: FARC
+  rival.paramilitary: AUC
+  piece.self.guerrilla: Cartels Guerrilla
+  piece.self.base: Cartels Base
+  piece.state.cube: Troops | Police
+  piece.state.police: Police
+  cargo.shipment: Shipment
+  space.city: City
+  space.province: Department
+  phase.scoring: Propaganda
+
+event:
+  play: shaded
+  when: card.hasEffect and (card.position == 1 or (turn.position == 2 and not card.icon["2"]))
+  gap: ['card.icon["2"] and the 8.1 footnote, as on the FARC sheet']
+
+decision:
+  - id: d1
+    if: avail(self.*) >= 10 or anySpace(canPlace(self.base, $space.id) and $space.type in [city, province] and count(self.guerrilla) - count(cargo.shipment) >= 2)
+    reading: '"Rally can place Base" = a Rally space where row 2 places one; canPlace alone checks only the pool and the limit per space. "Guerrillas without Shipment" = Guerrillas that carry no Shipment; a Shipment in the space is carried by one Guerrilla, so count(self.guerrilla) - count(cargo.shipment) (assumes the Shipments there are carried by self).'
+    yes: rally
+    no: d2
+    gap: ['G4 avail() has no expression']
+  - id: d2
+    if: avail(cargo.shipment) >= 1
+    yes: march
+    no: terror
+    gap: ['G4 avail() has no expression']
+
+operations:
+  rally:
+    mode: sequence
+    max: 3
+    where: $space.type in [city, province]
+    priorities:
+      1: flip self.guerrilla[active] -> underground where count(self.base) >= 1 and count(state.cube) >= 1 and count(self.guerrilla[underground]) == 0
+      2: place self.base where count(self.guerrilla) - count(cargo.shipment) >= 2
+      3: place self.guerrilla where count(self.base) >= 1 and count(self.guerrilla) == 0
+      4: if avail(self.guerrilla) == 0 for row 3, move 3 self.guerrilla to there from spaces without self.base, then flip underground
+      5: rally (placing guerrillas if possible) in 1 province so that self can then cultivate a base there
+    then: cultivate
+    onEmpty: pass
+    gap:
+      - G12 row 4 moves pieces inside Rally (an Operation runs another effect type as a fallback per space).
+      - G3 row 5 picks a space so that a later Special Activity becomes legal (look-ahead on the linked activity).
+
+  march:
+    max: 1
+    moving: all self.guerrilla that may move (every one except the kept-back ones)
+    keep_back: 1 self.guerrilla in each space with self.base
+    priorities:
+      1: to 1 province or city with count(*.base) < 2, adjacent to a space with count(self.guerrilla) >= 2
+    then: process
+    onEmpty: rally
+    gap: ['G1 keep_back']
+
+  terror:
+    max: 3
+    where: $space.pop >= 1 and count(self.guerrilla[underground]) >= 1
+    priorities:
+      1: if state is Non-player and rival.insurgent is player, at (1) opposition (2) support (3) neutral
+      2: otherwise at (1) support (2) opposition (3) neutral
+    then: bribe
+    onEmpty: march
+    gap: ['G5 player or Non-player per faction']
+
+special_activities:
+  cultivate:
+    max: 1
+    where: $space.pop > 0 and count(self.guerrilla) > count(state.police)
+    priorities:
+      1: place a self.base (in a province self just selected for rally)
+      2: move a self.base to a city or province without self.base, from a space with 2 self.base
+    linked_next: process          # "If none, Process": the next entry of the linked list (1.5.0)
+  process:
+    max: 2
+    priorities:
+      1: place 2 cargo.shipment in random space(s) with self.guerrilla and self.base
+      2: if none, remove 1 self.base (self resources +3) from a space with 2 self.base
+    skip: no Special Activity
+    gap: ['G11 random space as the selection']
+  bribe:
+    max: 3
+    where: count(self.*) >= 1 and an enemy piece
+    target:
+      order: [enemy players, Non-players]
+      within: { a: state, b: rival.insurgent, c: rival.paramilitary }
+    remove_order: [bases, police, troops, guerrillas]   # 8.1.2
+    skip: no Special Activity
+    gap: ['G5 player or Non-player per faction, G10 removal order']
+
+event_instructions:
+  ayahuasca_tourism: use the executing faction's guerrillas if possible, active first; else rival.insurgent, then rival.paramilitary, then self
+  drogas_la_rebaja_and_the_chess_player: select first among cities with the fewest cubes
+  general_serrano: randomly select spaces with police and self until 4 police are targeted; relocate them to a random city free of self pieces; if none, choose operations instead
+  narco_war: a Non-player faction always chooses operations instead of this event (exception to 8.1)
+  op_millenium: replace police in random cities, then provinces
+  poppies: place the executing faction's base if possible, else a shipment with that faction; if neither is possible in a mountain space, choose operations instead
+  riverines_and_fastboats: destination per the executing faction's march priorities, random origin with its underground guerrillas; if none, operations instead. Self free op is rally per self priorities, else terror
+  salcedo: relocate self.guerrilla to a random city with support and the fewest police, from random spaces with the most self.guerrilla, leaving at least 1 per space
+  sicarios: place guerrillas as evenly among spaces as possible
+  the_chess_player: if self is Non-player, use bribe priorities
+  gap:
+    - G6 executing faction; G11 random selection; G13 "as evenly as possible" spread.
+    - '"choose operations instead": an override with directive ignore under a condition (conditional with the negated test) covers it.'

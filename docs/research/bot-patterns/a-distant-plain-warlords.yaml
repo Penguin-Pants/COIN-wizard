@@ -1,0 +1,112 @@
+# Normalized bot logic: Non-Player Warlords (A Distant Plain)
+# Source: source/a-distant-plain-warlords.md. Archetype: criminal.
+# Same method as andean-abyss-farc.yaml. "gap:" marks logic the current model (1.10.0) cannot express.
+# Gap ids (G1 ...) are in README.md. "1(2)": 2 where 2 Warlord Bases if unshaded Find Fix Finish is in effect (a-distant-plain--rules.md:1645).
+
+archetype: criminal
+roles:
+  self: Warlords
+  state: Government
+  ally.state: Coalition
+  rival.insurgent: Taliban
+  piece.self.guerrilla: Warlord Guerrilla
+  piece.self.base: Warlord Base
+  space.line: LoC
+  phase.scoring: Campaign (Propaganda)
+
+event:
+  gate:
+    - if card is a momentum event (current) -> rule 8.1 Momentum
+    - if card is a capability (current) -> rule 8.1 Capability
+  play: shaded
+  when: the side will increase uncontrolled pop or self.resources, or place self.guerrilla on lines or self.base
+  pass_if: self.resources == 0
+  ifNone: d1
+  gap: ['G2 card effect categories, G7 control']
+
+decision:
+  - id: d1
+    if: rally would replace guerrillas with base(s)
+    yes: rally
+    no: d2
+    gap: ['G3']
+  - id: d2
+    if: margin of any player faction > 0
+    yes: d3
+    no: march
+    gap: ['G5 player faction']
+  - id: d3
+    if: terror could reduce player VPs
+    yes: terror
+    no: attack
+    gap: ['G3, G5']
+
+operations:
+  rally:
+    max: 3
+    priorities:
+      1: at 3+ self.guerrilla - (1) if no room for a base, suborn against a state base, then rally placing a base there; (2) replace 2 guerrillas with a base
+      2: at 1 highest 1+ pop space with 1 self.base and room - (1) if rally placing guerrillas enables cultivate, rally then cultivate; (2) cultivate then rally
+      3: { do: where self.base but no other self pieces, tiebreak: { a: highest pop, b: most bases } }
+      4: { do: at self.base (procedure *), tiebreak: { a: highest pop } }
+      5: where self.guerrilla but no self.base
+      6: at highest 1+ pop
+    procedure: place guerrillas until none available, then flip guerrillas underground where none such (only)
+    with: [cultivate, warlords_rich?]
+    note: 'the if-none arrow from march enters here, with the badge "Loop: Attack"'
+    gap:
+      - G12 rows 1 and 2 run a Special Activity inside one space of the Operation ("AND then"), in a set order.
+      - G17 loop state ("Loop: Attack", "if in loop", "unless in loop") is not a variable; the loop pattern (part B) has no flag.
+  march:
+    keep_back: 1(2) self.guerrilla at each self.base space (underground first), 2 on lines unless resources > 45 or last campaign; create no control
+    priorities:
+      1: get 1 underground guerrilla to each self.base without one (where able)
+      2: get exactly 2 guerrillas on each reachable line (active first), unless resources >= 45 or scoring.nextFinal
+      3: { do: unless scoring.nextFinal, get 3+ guerrillas (random sources if needed) into each reachable 1+ pop space with room for a base, tiebreak: { a: highest pop, b: no ally.state } }
+      4: { do: to remove most control, tiebreak: { a: by a player } }
+      5: if in loop - (1) to highest 1+ pop (2) pass
+    with: warlords_rich?
+    onEmpty: rally
+    gap: ['G1, G7, G11 random sources, G17']
+  terror:
+    max: 3 (spaces shifting to neutral)
+    keep_back: 1(2) self.guerrilla[underground] at each self.base
+    priorities: { 1: { do: to reduce player VPs, tiebreak: { a: highest pop } }, 2: in 1 space for greatest shift }
+    with: suborn
+    onEmpty: march
+    gap: ['G3 reduce VPs, G18 "greatest shift" ranks spaces by an action''s outcome']
+  attack:
+    where: count(self.guerrilla) >= 4
+    keep_back: 1(2) self.guerrilla[underground] at each self.base
+    priorities: { 1: { do: to try to reduce player VPs (remove control or bases), tiebreak: { a: highest pop } } }
+    with: suborn
+    onEmpty: terror
+
+special_activities:
+  warlords_rich?:                # diamond on the Special Activity side: the trigger of the first linked entry (1.5.0)
+    if: self.resources >= 43
+    yes: suborn
+    no: cultivate
+  cultivate:
+    max: 1
+    where: pop >= 1, self.guerrilla > state.police, selected for rally or march
+    priorities:
+      1: if scoring.nextFinal, unless in loop, skip to traffic
+      2: where self.base already
+      3: where no self.base
+      4: rally in 1 more space, then cultivate there
+    within_2_to_4: { a: highest pop }
+    ifNone: traffic
+  traffic:
+    where: self.base and no ally.state
+    priorities: { 1: at uncontrolled self.base spaces, 2: at all self.base, but award players no resources or patronage }
+    ifNone: suborn
+  suborn:
+    max: 3
+    budget: do not spend below 41 resources
+    priorities: { 1: to reduce up to 4 player VPs, 2: to remove any control at 1 highest pop space in Afghanistan }
+    ifNone: after terror or attack no SA; after rally or march, cultivate
+    gap: ['G16 budget floor, G3, G7']
+
+lasting:
+  find_fix_unshaded: get/keep 2 underground guerrillas per space with 2 self.base
