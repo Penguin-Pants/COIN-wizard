@@ -13,17 +13,17 @@ const check = new Ajv2020({ allErrors: true, strict: false }).compile(schema);
 const dir = new URL("../examples/", import.meta.url);
 const games = readdirSync(dir).filter((f) => f.endsWith(".game.json")).map((f) => [f, JSON.parse(readFileSync(new URL(f, dir), "utf8"))]);
 
-test("the schema is frozen at coin-game/1.10.0", () => {
-  assert.equal(schema.properties.meta.properties.schemaVersion.const, "coin-game/1.10.0");
+test("the schema is frozen at coin-game/1.11.0", () => {
+  assert.equal(schema.properties.meta.properties.schemaVersion.const, "coin-game/1.11.0");
   // Line endings are normalized: Git for Windows checks files out with CRLF by default.
   const hash = createHash("sha256").update(schemaText.replace(/\r\n/g, "\n")).digest("hex");
-  assert.equal(hash, "21a1f79378e7a8dee7cb03ffab09415a45a906d8cfe41cb3f4ec90b725f1595e", "The frozen schema changed. Add a new version with a migrate step instead.");
+  assert.equal(hash, "38c25e4020f585d86be99c6dc9d501802844b206113c6c8e252ab003a9469dcc", "The frozen schema changed. Add a new version with a migrate step instead.");
 });
 
 for (const [f, g] of games) {
   test(`${f} imports: it validates against the schema file alone`, () => {
     assert.equal(check(g), true, JSON.stringify(check.errors?.slice(0, 3)));
-    assert.equal(g.meta.schemaVersion, "coin-game/1.10.0");
+    assert.equal(g.meta.schemaVersion, "coin-game/1.11.0");
   });
   test(`${f} imports: every dry run gives its expected result`, () => {
     for (const b of g.bots) for (const d of b.dryRuns) {

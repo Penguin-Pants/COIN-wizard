@@ -15,12 +15,11 @@ const valleys = () => read("../examples/four-valleys.game.json");
 const cube = { op: "add", args: [{ op: "count", args: ["crown.army", { var: "$space.id" }, "*"] }, { op: "count", args: ["crown.police", { var: "$space.id" }, "*"] }] };
 const active = (id) => ({ op: "count", args: ["ira.volunteer", id, "active"] });
 
-test("the latest version is 1.10.0, and a frozen 1.9.0 file migrates with only its version changed", () => {
-  assert.equal(LATEST, "coin-game/1.10.0");
+test("a frozen 1.9.0 file migrates with only its version changed", () => {
   const old = read("./fixtures/tan-war.1.9.0.game.json");
   assert.equal(old.meta.schemaVersion, "coin-game/1.9.0");
   const m = migrate(old);
-  assert.equal(m.meta.schemaVersion, "coin-game/1.10.0");
+  assert.equal(m.meta.schemaVersion, LATEST);
   assert.deepEqual(validate(m).errors, []);
   m.meta.schemaVersion = old.meta.schemaVersion; assert.deepEqual(m, old);
 });

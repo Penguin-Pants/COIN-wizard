@@ -44,6 +44,8 @@ export function deriveState(game, selfFactionId) {
     turn: { position: 1 },
     // scoring.nextFinal (schema 1.9.0): the next scoring card is the last. A dry-run patch may set it.
     scoring: { nextFinal: false },
+    // players (schema 1.11.0): a faction has a human player unless the game has a bot for it.
+    players: Object.fromEntries(game.factions.map((f) => [f.id, !game.bots.some((b) => b.factionId === f.id)])),
     dice: [],
     vars: {},
     spaces
@@ -52,12 +54,17 @@ export function deriveState(game, selfFactionId) {
 
 // Patch rules:
 // - eligible, resources, tracks, card, turn, scoring: shallow merge
+// - players: faction id -> true (a human plays it) or false; an unknown faction is an error
 // - dice: replace
 // - clearPieces: remove these piece ids from every space
 // - spaces.<id>: opinion replaces; pieces.<pieceId> replaces that piece's state map
 export function applyPatch(state, patch = {}) {
   const s = structuredClone(state);
   for (const k of ["eligible", "resources", "tracks", "card", "turn", "scoring"]) if (patch[k]) Object.assign(s[k], patch[k]);
+  for (const [fid, v] of Object.entries(patch.players ?? {})) {
+    if (!(fid in s.players)) throw new Error(`Patch names unknown faction: ${fid}`);
+    s.players[fid] = !!v;
+  }
   if (patch.dice) s.dice = [...patch.dice];
   for (const pid of patch.clearPieces ?? []) for (const sp of Object.values(s.spaces)) delete sp.pieces[pid];
   for (const [sid, sp] of Object.entries(patch.spaces ?? {})) {
