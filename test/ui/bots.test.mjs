@@ -1,5 +1,6 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { launch, openApp, goStep, frames } from "./harness.mjs";
 
 let browser;
@@ -337,3 +338,27 @@ test("a designer sets a spending limit on an Operation node and clears it", () =
   assert.equal("budget" in (await nodeOf()), false, "empty fields remove the budget");
   assert.equal(await page.locator("#stepissues li.error").count(), 0);
 }));
+
+// Schema 1.11.0 part E: a dry run sets which lasting cards are in play (inPlay.<card>).
+test("a dry run sets a lasting card in play and clears it", async () => {
+  const g = JSON.parse(readFileSync("examples/tan-war.game.json", "utf8"));
+  const card = g.deck.cards.find((c) => c.type === "event"); card.sides[0].lasting = "capability";
+  const app = await openApp(browser, { example: false, saved: { "data/users/u1/draft": { json: JSON.stringify(g), savedAt: "2026-11-26T10:00:00Z" } } });
+  try {
+    const { page, db } = app;
+    await page.click('[data-a="resume"]'); await frames(page);
+    await botsTab(page);
+    await page.locator("details.act > summary", { hasText: "no-target" }).click(); await frames(page);
+    await page.locator("details.act[open] details > summary", { hasText: "Lasting cards in play" }).click(); await frames(page);
+    const box = page.locator(`details.act[open] input[data-dk="inPlay"][value="${card.id}"]`);
+    await box.check(); await frames(page);
+    await page.waitForTimeout(1800);
+    let pt = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].dryRuns.find((d) => d.case === "no-target").patch;
+    assert.deepEqual(pt.inPlay, [card.id]);
+    await page.locator(`details.act[open] input[data-dk="inPlay"][value="${card.id}"]`).uncheck(); await frames(page);
+    await page.waitForTimeout(1800);
+    pt = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].dryRuns.find((d) => d.case === "no-target").patch;
+    assert.equal("inPlay" in pt, false);
+    assert.deepEqual(app.errors, []);
+  } finally { await app.close(); }
+});

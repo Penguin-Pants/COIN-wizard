@@ -47,7 +47,7 @@ Model today: `coin-game/1.10.0`.
 | B `avail()` | Approved (R6). Done in 1.11.0 part B as `avail(piece)` and `factionAvail(faction)`, with the dry-run patch `pools.<piece>.available` (owner decisions 2026-11-26: no state argument, since pools hold none) |
 | C Resource budget | Approved (R6). Done in 1.11.0 part C: `budget: { share, allBelow, floor }`, parts combine (smaller spend wins), a per-use cost is checked too, a linked Special Activity pays from the full Resources (owner decisions 2026-11-26) |
 | D Control | Approved (R5). Done in 1.11.0 part D: `rules.control { sides, exclude, types }` and `$space.control`; editor panel and board preview (owner decisions 2026-11-26) |
-| E Keep-back | Approved (R4). The count is an expression; keep limits the count, not the legal spaces |
+| E Keep-back | Approved (R4). Done in 1.11.0 part E: `keep { count, if, prefer }` on move, remove and flip, and `inPlay.<card>` (G22) for "1(2)" (owner decisions 2026-11-26) |
 | F Card effect categories | Moved into the next version (R10) |
 | G, H Predicted outcome; Operation and SA in one space | No decision yet. Recommendation stays: defer to their own version |
 | I Next card (G14) | Moved into the next version (R10). The rest of part I stays deferred |

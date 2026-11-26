@@ -122,6 +122,8 @@ export function validate(game) {
       const fv = /^(resources|eligible|score|margin|player)\.(.+)$/.exec(v);
       if (!VAR_OK.test(v)) err("bad-var", path, `Unknown variable ${v}${v === "other.resources" ? ". It was removed in 1.3.0: use resources.<faction> or rivals.maxResources" : ""}`);
       else if (v.startsWith("track.") && !trackIds.has(v.slice(6))) err("missing-ref", path, `Unknown track in ${v}`);
+      else if (v.startsWith("inPlay.") && !cardById[v.slice(7)]) err("missing-ref", path, `Unknown card in ${v}`);
+      else if (v.startsWith("inPlay.") && !(cardById[v.slice(7)].sides ?? []).some((sd) => sd.lasting)) warn("not-lasting", path, `${v}: card ${v.slice(7)} has no lasting side, so it is never in play`);
       else if (fv && !factionIds.has(fv[2])) err("missing-ref", path, `Unknown faction in ${v}`);
       else if (v.startsWith("$faction.") && !scope.faction) err("bad-var", path, `${v} works only in an opponent table`);
       else if (v.startsWith("$target.") && !scope.target) err("bad-var", path, `${v} needs an action node with a target table`);
@@ -154,6 +156,11 @@ export function validate(game) {
       if (st.activate) {
         checkExpr(st.activate.if, `${p}/activate/if`, { ...scope, space: true });
         if (pc && !pc.states.includes(st.activate.to)) err("missing-ref", `${p}/activate`, `${pc.name} has no state ${st.activate.to}`);
+      }
+      // keep (1.11.0): count and if read the space the pieces leave; prefer is a state of the piece.
+      if (st.keep) {
+        for (const k of ["count", "if"]) if (st.keep[k] !== undefined && typeof st.keep[k] === "object") checkExpr(st.keep[k], `${p}/keep/${k}`, { ...scope, space: true });
+        if (pc && st.keep.prefer !== undefined && !pc.states.includes(st.keep.prefer)) err("missing-ref", `${p}/keep`, `${pc.name} has no state ${st.keep.prefer}`);
       }
       const inner = { ...scope, nested: true };
       if (st.then) checkSteps(st.then, `${p}/then`, inner);

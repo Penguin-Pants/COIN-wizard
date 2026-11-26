@@ -1377,6 +1377,32 @@
               },
               "filter": {
                 "$ref": "#/$defs/expr"
+              },
+              "keep": {
+                "type": "object",
+                "required": [
+                  "count"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "count": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      {
+                        "$ref": "#/$defs/expr"
+                      }
+                    ]
+                  },
+                  "if": {
+                    "$ref": "#/$defs/expr"
+                  },
+                  "prefer": {
+                    "$ref": "#/$defs/id"
+                  }
+                }
               }
             }
           }
@@ -1447,6 +1473,32 @@
               },
               "filter": {
                 "$ref": "#/$defs/expr"
+              },
+              "keep": {
+                "type": "object",
+                "required": [
+                  "count"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "count": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      {
+                        "$ref": "#/$defs/expr"
+                      }
+                    ]
+                  },
+                  "if": {
+                    "$ref": "#/$defs/expr"
+                  },
+                  "prefer": {
+                    "$ref": "#/$defs/id"
+                  }
+                }
               }
             }
           }
@@ -1542,6 +1594,32 @@
                     "$ref": "#/$defs/expr"
                   },
                   "to": {
+                    "$ref": "#/$defs/id"
+                  }
+                }
+              },
+              "keep": {
+                "type": "object",
+                "required": [
+                  "count"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "count": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      {
+                        "$ref": "#/$defs/expr"
+                      }
+                    ]
+                  },
+                  "if": {
+                    "$ref": "#/$defs/expr"
+                  },
+                  "prefer": {
                     "$ref": "#/$defs/id"
                   }
                 }

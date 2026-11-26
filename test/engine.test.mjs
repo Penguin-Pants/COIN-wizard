@@ -17,7 +17,7 @@ test("the schema is frozen at coin-game/1.11.0", () => {
   assert.equal(schema.properties.meta.properties.schemaVersion.const, "coin-game/1.11.0");
   // Line endings are normalized: Git for Windows checks files out with CRLF by default.
   const hash = createHash("sha256").update(schemaText.replace(/\r\n/g, "\n")).digest("hex");
-  assert.equal(hash, "2cb0189deb83322e0de8c45e66702f5d256095639a70074b8e205afdd6d8d679", "The frozen schema changed. Add a new version with a migrate step instead.");
+  assert.equal(hash, "4d887eafbbd921d0328e925265163802fc19b3b4496fbf9437631dd6610c12da", "The frozen schema changed. Add a new version with a migrate step instead.");
 });
 
 for (const [f, g] of games) {

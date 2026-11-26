@@ -141,6 +141,9 @@ function patchForm(b, bi, d, di) {
   const dice = fld("Die rolls, in order", `<input placeholder="for example 3, 5" ${ctl("dice", "dice")} value="${esc((pt.dice ?? []).join(", "))}">`);
   const pcs = g.factions.flatMap((f) => f.pieces);
   const clear = `<details><summary>Remove pieces from the whole map (${(pt.clearPieces ?? []).length})</summary>${pcs.map((x) => `<label class="chk"><input type="checkbox" ${ctl("clearPieces", "list", "", `value="${x.id}"`)} ${(pt.clearPieces ?? []).includes(x.id) ? "checked" : ""}> ${esc(x.name)}</label>`).join(" ")}</details>`;
+  // inPlay (1.11.0): lasting cards in play.
+  const lasting = g.deck.cards.filter((c) => (c.sides ?? []).some((sd) => sd.lasting));
+  const inPlay = lasting.length ? `<details ${pt.inPlay?.length ? "open" : ""}><summary>Lasting cards in play (${(pt.inPlay ?? []).length})</summary>${lasting.map((c) => `<label class="chk"><input type="checkbox" ${ctl("inPlay", "inplay", "", `value="${esc(c.id)}"`)} ${(pt.inPlay ?? []).includes(c.id) ? "checked" : ""}> ${esc(c.title)}</label>`).join(" ")}</details>` : "";
   // pools (1.11.0): the Available count of each piece. Out of Play stays as in setup. The list stays open while a count is set.
   const avail = `<details${pt.pools ? " open" : ""}><summary>Pieces Available (${Object.keys(pt.pools ?? {}).length} changed)</summary><div class="grid4">${pcs.map((x) => fld(`${esc(x.name)} Available`, `<input type="number" min="0" step="1" placeholder="as in setup (${g.setup.pools?.[x.id]?.available ?? 0})" ${ctl(`pools/${x.id}/available`, "num")} value="${pt.pools?.[x.id]?.available ?? ""}">`)).join("")}</div></details>`;
   const spaces = Object.entries(pt.spaces ?? {}).map(([sid, sp]) => {
@@ -149,7 +152,7 @@ function patchForm(b, bi, d, di) {
     return `<div class="opt"><div class="row"><b>${esc(name)}</b><label class="mini"><span>Opinion</span><input type="number" min="${-opinionMax(g)}" max="${opinionMax(g)}" placeholder="as in setup" ${ctl(`spaces/${sid}/opinion`, "num")} value="${sp.opinion ?? ""}"></label><select ${ctl(`spaces/${sid}/pieces`, "addpiece", "", 'aria-label="Set a piece count"')}><option value="">Set a piece count...</option>${pcs.map((x) => `<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select>${btn("dry-delspace", "Remove", { cls: "link", data: `data-dry="${k}" data-s="${esc(sid)}"` })}</div>${lines}</div>`;
   }).join("");
   const add = `<select ${ctl("spaces", "addspace")} aria-label="Change a space"><option value="">Change a space...</option>${g.board.spaces.filter((s) => !pt.spaces?.[s.id]).map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join("")}</select>`;
-  return `<div class="grid4">${elig}${ply}${res}${tr}</div><div class="row">${card}</div><div class="row">${turn}</div>${dice}${clear}${avail}<h4>Board changes</h4>${spaces}${add}`;
+  return `<div class="grid4">${elig}${ply}${res}${tr}</div><div class="row">${card}</div><div class="row">${turn}</div>${dice}${clear}${avail}${inPlay}<h4>Board changes</h4>${spaces}${add}`;
 }
 
 function dryRuns(b, bi) {
@@ -281,6 +284,7 @@ export function onBotChange(el) {
     else if (d.dt === "bool") setPatch(pt, d.dk, el.checked);
     else if (d.dt === "text") setPatch(pt, d.dk, v === "" ? undefined : v);
     else if (d.dt === "dice") { const n = v.split(/[ ,]+/).filter(Boolean).map(Number).filter((x) => x >= 1 && x <= 6); setPatch(pt, "dice", n.length ? n : undefined); }
+    else if (d.dt === "inplay") { const s = new Set(pt.inPlay ?? []); if (el.checked) s.add(el.value); else s.delete(el.value); setPatch(pt, "inPlay", s.size ? [...s] : undefined); }
     else if (d.dt === "list") { const s = new Set(pt.clearPieces ?? []); if (el.checked) s.add(el.value); else s.delete(el.value); setPatch(pt, "clearPieces", s.size ? [...s] : undefined); }
     else if (d.dt === "addspace" && v) setPatch(pt, `spaces/${v}/opinion`, S.game.setup.spaceAttributes?.[v]?.opinion ?? 0);
     else if (d.dt === "addpiece" && v) { const pc = S.game.factions.flatMap((f) => f.pieces).find((x) => x.id === v); setPatch(pt, `${d.dk}/${v}/${pc.states[0]}`, 0); }

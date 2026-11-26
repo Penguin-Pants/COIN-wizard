@@ -47,6 +47,8 @@ export function resolveVar(name, ctx) {
   // move.count (schema 1.9.0): pieces the move step moved, in its activate condition; 0 elsewhere.
   if (name === "move.count") return ctx.moveCount ?? 0;
   if (name.startsWith("card.")) return state.card[name.slice(5)];
+  // inPlay.<card> (schema 1.11.0): the lasting card is in play.
+  if (name.startsWith("inPlay.")) return (state.inPlay ?? []).includes(name.slice(7));
   if (name.startsWith("var.")) return state.vars?.[name.slice(4)];
   if (name.startsWith("$space.")) {
     if (!$space) throw new Error(`Variable ${name} used outside a space context`);
@@ -197,4 +199,4 @@ export function scanExpr(e, out = { vars: [], pieces: [], ops: [] }) {
 }
 
 // Faction ids in resources.<id> and similar names are checked against the game by the validator.
-export const VAR_OK = /^(eligible|self\.resources|(resources|eligible|score|margin|player)\.[a-z0-9._-]+|rivals\.(max|min)(Resources|Score|Margin)|\$(faction|target)\.(id|name|type|resources|eligible|score|margin|player)|track\.[a-z0-9._-]+|card\.(id|hasEffect|raisesSelf|lowersEnemy|lasting|position)|turn\.position|scoring\.nextFinal|move\.count|var\.[a-z0-9_]+|\$space\.(id|name|type|pop|opinion|control))$/;
+export const VAR_OK = /^(eligible|self\.resources|(resources|eligible|score|margin|player)\.[a-z0-9._-]+|rivals\.(max|min)(Resources|Score|Margin)|\$(faction|target)\.(id|name|type|resources|eligible|score|margin|player)|track\.[a-z0-9._-]+|card\.(id|hasEffect|raisesSelf|lowersEnemy|lasting|position)|turn\.position|inPlay\.[a-z0-9._-]+|scoring\.nextFinal|move\.count|var\.[a-z0-9_]+|\$space\.(id|name|type|pop|opinion|control))$/;
