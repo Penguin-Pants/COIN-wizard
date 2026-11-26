@@ -27,7 +27,7 @@ Owner: **Owner** (a person must act or decide) or **Claude** (code or docs, afte
 
 | # | Item | Owner | Source |
 |---|---|---|---|
-| C1 | Card-driven bot mode (bot decks with draw and flip exits, shared priority tables, die cap): design questions, then its own version | Claude asks, Owner decides | R7 |
+| C1 | Card-driven bot mode (bot decks with draw and flip exits, shared priority tables, die cap): design decided 2026-11-26 (Q1 to Q11); next: implement it as its own schema version, one part per PR | Claude | R7; `docs/proposals/card-bots.md` |
 | C2 | Import the research data: prototype deck into a sample game; claims with confidence and a contested flag | Claude | R8 |
 | C3 | Preset library from the 14-game tables (victory, pass gain, tracks, scoring phases) | Claude | R9; `docs/research/coin-analysis/variation-matrix.md` |
 | C4 | Initiative Track and Operation limits before scoring | Claude | R11; `docs/research/coin-analysis/variation-matrix.md` lines 35-41 |

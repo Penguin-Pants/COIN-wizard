@@ -51,6 +51,6 @@ Model today: `coin-game/1.10.0`.
 | F Card effect categories | Moved into the next version (R10). Done in 1.11.0 part F: `cardCould(which, verb, what)`, read from the sides' steps, no hand tags (owner decisions 2026-11-26) |
 | G, H Predicted outcome; Operation and SA in one space | No decision yet. Recommendation stays: defer to their own version |
 | I Next card (G14) | Moved into the next version (R10). Done in 1.11.0 part F: `next.id`, `next.lasting`, dry-run patch `next`. The rest of part I stays deferred |
-| New: card-driven bot mode | Approved for design (R7): 7 newer games use bot decks. Design questions first, then its own version |
+| New: card-driven bot mode | Approved for design (R7). Design decided 2026-11-26 (Q1 to Q11) in `docs/proposals/card-bots.md`. Next: its own version |
 
 Source of the review items R1 to R13: the COIN_Research review page (private artifact "COIN Research Review", 2026-11-26).
