@@ -65,6 +65,8 @@ function countPieces(state, pieceId, spaceId, stateId) {
   return total;
 }
 
+const availOf = (state, pieceId) => state.pools?.[pieceId]?.available ?? 0;
+
 export function neighbors(links, spaceId) {
   const out = [];
   for (const l of links) {
@@ -115,10 +117,16 @@ export function evalExpr(e, ctx) {
       const moved = (sid === "*" ? Object.keys(arr) : [sid]).reduce((t, id) => t + Object.entries(arr[id]?.[pid] ?? {}).filter(([s]) => st === "*" || s === st).reduce((u, [, n]) => u + n, 0), 0);
       return countPieces(ctx.state, pid, sid, st) - moved;
     }
+    // Pieces Available: one piece type, or every piece one faction owns (schema 1.11.0).
+    case "avail": return availOf(ctx.state, ev(a[0]));
+    case "factionAvail": {
+      const fid = ev(a[0]);
+      return Object.entries(ctx.state.owner ?? {}).filter(([, f]) => f === fid).reduce((s, [pid]) => s + availOf(ctx.state, pid), 0);
+    }
     // A piece is Available and has room under its limit per space, in the space or in any space ("*") (schema 1.8.0).
     case "canPlace": {
       const pid = ev(a[0]), sid = ev(a[1]), st = ctx.state;
-      if ((st.pools?.[pid]?.available ?? 0) < 1) return false;
+      if (availOf(st, pid) < 1) return false;
       const room = (sp) => st.maxPer?.[pid] === undefined || countPieces(st, pid, sp.id, "*") < st.maxPer[pid];
       return sid === "*" ? Object.values(st.spaces).some(room) : !!st.spaces[sid] && room(st.spaces[sid]);
     }
@@ -156,8 +164,8 @@ export function scanExpr(e, out = { vars: [], pieces: [], ops: [] }) {
   if ("var" in e) { out.vars.push(e.var); return out; }
   out.ops.push(e.op);
   if (["count", "adjCount"].includes(e.op) && typeof e.args[0] === "string") out.pieces.push(e.args[0]);
-  if (e.op === "factionCount" && typeof e.args[0] === "string") (out.factions ??= []).push(e.args[0]);
-  if ((e.op === "canPlace" || e.op === "unmoved") && typeof e.args[0] === "string") out.pieces.push(e.args[0]);
+  if ((e.op === "factionCount" || e.op === "factionAvail") && typeof e.args[0] === "string") (out.factions ??= []).push(e.args[0]);
+  if (["canPlace", "unmoved", "avail"].includes(e.op) && typeof e.args[0] === "string") out.pieces.push(e.args[0]);
   if (e.op === "canDo" && typeof e.args[0] === "string") (out.actions ??= []).push(e.args[0]);
   for (const x of e.args) scanExpr(x, out);
   return out;

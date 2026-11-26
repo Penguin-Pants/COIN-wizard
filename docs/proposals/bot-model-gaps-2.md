@@ -44,7 +44,7 @@ Model today: `coin-game/1.10.0`.
 | Part | Decision |
 |---|---|
 | A Human player flag | Approved (review item R3). Done in 1.11.0 part A |
-| B `avail()` | Approved (R6) |
+| B `avail()` | Approved (R6). Done in 1.11.0 part B as `avail(piece)` and `factionAvail(faction)`, with the dry-run patch `pools.<piece>.available` (owner decisions 2026-11-26: no state argument, since pools hold none) |
 | C Resource budget | Approved (R6) |
 | D Control | Approved (R5) |
 | E Keep-back | Approved (R4). The count is an expression; keep limits the count, not the legal spaces |
