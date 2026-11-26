@@ -288,9 +288,7 @@ export function validate(game) {
     } else err("card-order", p, `Card ${c.id} has no faction order`);
     if (c.type === "event") {
       if (c.sides?.length !== 2) err("card-sides", p, `Event ${c.id} needs unshaded and shaded sides`);
-      // A side reads $target (1.10.0) when every override node that runs it has a target table.
-      const runners = (sd) => game.bots.flatMap((b) => b.eventPolicy.overrides.filter((o) => o.cardId === c.id && o.node && o.directive !== "ignore" && (o.side ?? b.eventPolicy.side) === sd.id));
-      (c.sides ?? []).forEach((s, j) => { const r = runners(s); checkSteps(s.steps, `${p}/sides/${j}/steps`, { card: true, target: r.length > 0 && r.every((o) => o.node.target !== undefined) }); });
+      (c.sides ?? []).forEach((s, j) => checkSteps(s.steps, `${p}/sides/${j}/steps`, { card: true, target: sideReadsTarget(game, c.id, s.id) }));
     }
     for (const cl of c.claimIds ?? []) if (!claimIds.has(cl)) err("missing-ref", `${p}/claimIds`, `Unknown claim ${cl}`);
   });
@@ -504,6 +502,11 @@ function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionByI
 // What chooses with a table: nodes (as the node's table or a linked entry's table) and scoring
 // entries. A scoring entry has no target, so a table it uses may not read $target.
 // An Event override node (1.10.0) uses its table like an action node.
+// A card side reads $target (1.10.0) when every Event override node that runs it has a target table.
+export function sideReadsTarget(game, cardId, sideId) {
+  const r = game.bots.flatMap((b) => b.eventPolicy.overrides.filter((o) => o.cardId === cardId && o.node && o.directive !== "ignore" && (o.side ?? b.eventPolicy.side) === sideId));
+  return r.length > 0 && r.every((o) => o.node.target !== undefined);
+}
 export const tableUsers = (bot, id) => [...bot.nodes.filter((n) => n.table === id || linkedOf(n).some((L) => L.table === id) || (n.parts ?? []).some((pt) => pt.table === id)), ...(bot.scoring ?? []).filter((sc) => sc.table === id), ...bot.eventPolicy.overrides.filter((o) => o.node?.table === id).map((o) => o.node)];
 
 // True when an enemy choice sits below the top level of the steps (inside if, else or another
