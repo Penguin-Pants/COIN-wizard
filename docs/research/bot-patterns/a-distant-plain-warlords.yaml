@@ -1,7 +1,7 @@
 # Normalized bot logic: Non-Player Warlords (A Distant Plain)
 # Source: source/a-distant-plain-warlords.md. Archetype: criminal.
 # Same method as andean-abyss-farc.yaml. "gap:" marks logic the current model (1.10.0) cannot express.
-# Gap ids (G1 ...) are in README.md.
+# Gap ids (G1 ...) are in README.md. "1(2)": 2 where 2 Warlord Bases if unshaded Find Fix Finish is in effect (a-distant-plain--rules.md:1645).
 
 archetype: criminal
 roles:

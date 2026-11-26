@@ -1,7 +1,7 @@
 # Normalized bot logic: Non-Player Taliban (A Distant Plain)
 # Source: source/a-distant-plain-taliban.md. Archetype: guerrilla.
 # Same method as andean-abyss-farc.yaml. "gap:" marks logic the current model (1.10.0) cannot express.
-# Gap ids (G1 ...) are in README.md. "1(2)": the sheet prints 2 underlined; reading below.
+# Gap ids (G1 ...) are in README.md. "1(2)": 2 when unshaded Find Fix Finish is in effect (rules).
 
 archetype: guerrilla
 roles:
@@ -17,7 +17,7 @@ roles:
   attr.econ: Econ
   phase.scoring: Propaganda
 
-reading: '"1(2)" (keep 1 Underground Guerrilla, 2 underlined): read as a variant value (likely a 2-handed or difficulty option). The sheet does not say. Open question.'
+keep_back_count: '"1(2)" = 1, or 2 if unshaded Find Fix Finish is in effect (a-distant-plain--rules.md:1429).'
 
 event:
   gate:

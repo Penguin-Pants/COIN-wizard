@@ -9,7 +9,7 @@ This file lists the work still open. Finished work and its evidence are in `docs
 |---|---|---|
 | Phases 0 to 12 (wizard, kit, print) | Done | `docs/ACCEPTANCE.md`, "Results" |
 | Bot model gaps, items 13 to 21 (schemas 1.5.0 to 1.10.0) | Done | `docs/ACCEPTANCE.md`, rows 13 to 21 |
-| GMT sheet research | 7 of 7 sheets done; gaps compared; next version proposed | `docs/research/bot-patterns/README.md`, `docs/proposals/bot-model-gaps-2.md` |
+| GMT sheet research | 7 of 7 sheets done; 5 of 6 rule questions answered; 1.11.0 parts decided | `docs/research/bot-patterns/README.md`, `docs/proposals/bot-model-gaps-2.md` |
 | Live artifact | Build c7521d9, schema 1.10.0 (published 2026-11-25) | Artifact `8d21134e-1d1c-4dce-a1b5-57b010d5c92c` |
 
 ## Open work
@@ -22,24 +22,28 @@ Owner: **Owner** (a person must act or decide) or **Claude** (code or docs, afte
 |---|---|---|---|
 | A1 | Publish the next schema version after it merges: `npm run build`, then publish `dist/index.html` to the artifact | Claude | The owner says "publish" |
 
-### B. GMT sheet research
+### B. Next schema version (1.11.0)
 
 | # | Item | Owner | Start when |
 |---|---|---|---|
-| B1 | Decide parts A to I of `docs/proposals/bot-model-gaps-2.md` (next schema version, 1.11.0) | Owner | Now |
-| B2 | Answer the rulebook questions in `docs/research/bot-patterns/README.md`, "Open questions": Rule 8.1 footnote; the green circled "2"; Mono Jojoy "flip to Underground"; "1(2)"; 3 possible misprints on the A Distant Plain sheets | Owner | Any time. Needs the rulebooks |
-| B3 | Implement the approved parts of B1 as schema 1.11.0 | Claude | After B1 |
+| B1 | Answer design question 2 of part E (keep-back limits the count, or the legal spaces) | Owner | Now |
+| B2 | Implement 1.11.0: parts A (player flag), B (`avail`), C (budget), D (Control), E (keep-back), F (card effect categories), G14 (next card) | Claude | After B1. One part per PR |
+| B3 | Green circled "2" on the AA Event box: check the printed rulebook | Owner | Any time |
 
-### C. Bot model gaps still open
+### C. Later versions and imports (approved 2026-11-26, review items R7 to R13)
 
 | # | Item | Owner | Source |
 |---|---|---|---|
-| C1 | A choice inside one Event card (General Offensive, Kill Zone). Plain text only | Owner decides, then Claude | `docs/research/bot-patterns/andean-abyss-farc.yaml` |
-| C2 | An Event that changes an Operation (Mono Jojoy). Plain text only | Owner decides, then Claude | Same |
-| C3 | Cost by space type ("1 Resource per City/Dept, LoCs 0") | Owner decides, then Claude | `docs/SHEETS.md`, "Player faction sheets: the 4 photos not checked before" |
-| C4 | The card effect editor does not offer `$target` as a value (schema 1.10.0 allows it) | Claude | PR 33 |
+| C1 | Card-driven bot mode (bot decks with draw and flip exits, shared priority tables, die cap): design questions, then its own version | Claude asks, Owner decides | R7 |
+| C2 | Import the research data: prototype deck into a sample game; claims with confidence and a contested flag | Claude | R8 |
+| C3 | Preset library from the 14-game tables (victory, pass gain, tracks, scoring phases) | Claude | R9 |
+| C4 | Initiative Track and Operation limits before scoring | Claude | R11 |
+| C5 | Scenarios, optional modules, playtest log, provenance tag | Claude | R12 |
+| C6 | Held cards (Pivotal), system-run factions, hidden hands | Claude | R13 |
+| C7 | A choice inside one Event card (General Offensive, Kill Zone); an Event that changes an Operation (Mono Jojoy); cost by space type | Owner decides | Earlier items C1 to C3 |
+| C8 | The card effect editor does not offer `$target` as a value | Claude | PR 33 |
 
-C1 needs gap G3 (a predicted outcome) from the proposal. C2 and C3 are not in it. Decide them with B1.
+GMT material in this public repo stays as it is (owner decision R1, 2026-11-26).
 
 ### D. Human checklist
 

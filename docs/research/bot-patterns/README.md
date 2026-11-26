@@ -84,12 +84,18 @@ Proposal for the next schema version: `docs/proposals/bot-model-gaps-2.md`.
 | Sheet | Item | Question |
 |---|---|---|
 | AA FARC | Event box, green circled "2" | What does the symbol mean in "2nd Eligible and no (2)"? |
-| AA FARC | Event footnote "*" | What does rule 8.1 change for 2-player games or a Non-player Government? |
-| AA AUC, Cartels | Event box | Same green circled "2" and the same footnote as FARC. |
-| ADP Taliban, Warlords, Coalition | "1(2)" with the 2 underlined | Which game setting uses the underlined value (for example a 2-handed game)? |
+| AA AUC, Cartels | Event box | Same green circled "2" as FARC. |
 | ADP Warlords | Rally "with" arrows | Rally has 2 "with" arrows: one to Cultivate, one to the "Warlords at 43+ Res?" diamond. Which Rally case takes which? |
 | ADP Warlords | Traffic box | It prints "If no such Cultivate, Traffic." but its arrow goes to Suborn. Is the text a misprint for "If no such Traffic, Suborn"? |
 | ADP Coalition | Air Strike box | It prints "If no such Air Lift: …", the same text as the Air Lift box. Is it a misprint for "If no such Air Strike"? |
+
+Answered from the rulebooks (2026-11-26; Markdown conversions in the private research repo `Penguin-Pants/COIN_Research`, `research/rules/md/`):
+- AA Event footnote "*": rule 8.1 "Insurgent Discord". In a 2-player game with a player Government, the Government chooses Event or Operations for a 2nd Eligible Non-player Faction with at least 1 Resource. With a Non-player Government, Non-player Insurgents play an Event only if it meets 1 of 4 tests: the faction places or moves pieces, gains Resources or gets free Operations or SAs; AUC shifts toward Active Support or Terror in Opposition; FARC shifts toward Active Opposition or Terror in Support; or it harms a player Faction (`andean-abyss--rules.md:856-868`).
+- AA Mono Jojoy: flip to Underground. The shaded Event "flips up to 3 of its Guerrillas Underground" (`andean-abyss--playbook.md:1872`).
+- ADP "1(2)" with the 2 underlined: the value when a capability is in effect, not a game setting. Taliban and Warlords keep-back: 2 if unshaded Find Fix Finish is in effect (`a-distant-plain--rules.md:1429`, `:1645`). Coalition Civic Action: 2 spaces if unshaded PRTs is in effect (`a-distant-plain--rules.md:1173`, `:1177`, `:1181`).
+- ADP Support and Opposition totals are population-weighted ("Total Population in Support", `a-distant-plain--rules.md:229`, `:233`). The Taliban diamond reading in points stands (confidence medium: the bot sentence does not name the unit).
+- ADP "loop" is not defined in the rules. It appears only in the bot text, e.g. "if in a loop" (`a-distant-plain--rules.md:1145`, `:1663`).
+- Not found: the green circled "2" (the symbol is lost in the conversion, `andean-abyss--rules.md:854`). Check the printed rulebook.
 
 Answered by the owner:
 - AA FARC Kidnap: "selected or Terror" means "selected for Terror".

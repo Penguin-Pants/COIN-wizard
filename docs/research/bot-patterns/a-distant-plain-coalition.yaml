@@ -1,7 +1,7 @@
 # Normalized bot logic: Non-Player Coalition (A Distant Plain)
 # Source: source/a-distant-plain-coalition.md. Archetype: state (foreign counter-insurgent).
 # Same method as andean-abyss-farc.yaml. "gap:" marks logic the current model (1.10.0) cannot express.
-# Gap ids (G1 ...) are in README.md.
+# Gap ids (G1 ...) are in README.md. "1(2)": 2 spaces if unshaded PRTs is in effect (a-distant-plain--rules.md:1173-1181).
 
 archetype: state
 roles:

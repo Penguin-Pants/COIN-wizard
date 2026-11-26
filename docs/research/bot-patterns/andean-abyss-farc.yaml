@@ -29,9 +29,9 @@ roles:
 event:
   play: shaded
   when: card.hasEffect and (card.position == 1 or (turn.position == 2 and not card.icon["2"]))
-  footnote: '"*" on "Play Event (shaded)": in a 2-player game or with a Non-player state, see rule 8.1 (text not on the sheet).'
+  footnote: '"*" on "Play Event (shaded)": rule 8.1 "Insurgent Discord" (andean-abyss--rules.md:856-868). 2-player with a player state: the state player chooses Event or Operations for a 2nd Eligible Non-player with 1+ Resources. Non-player state: play the Event only if it places or moves self pieces, gains resources or free actions, shifts toward self opinion or terror as listed, or harms a player faction.'
   gap:
-    - The footnote's rule 8.1 is not on the sheet; the change it makes to "play shaded" is unknown until the rulebook is read.
+    - 'G5 player or Non-player per faction (the footnote depends on it); G2 effect categories (the 4 tests).'
     - card.icon["2"] [?] meaning of the green circled 2 not confirmed from the sheet (open question, README).
 
 decision:
@@ -174,4 +174,4 @@ event_instructions:              # eventPolicy.overrides; card names stay as ids
     mode: first
   gap:
     - Per-card logic (1.10.0) - an override node runs the card side with a space table (raul_reyes, airdropped_aks). Branches inside one card (general_offensive, kill_zone) and an Operation changed by a card (mono_jojoy) stay plain text.
-    - '"Flip Active Guerrillas" (Mono Jojoy): the sheet does not say to which state; read as to Underground.'
+    - '"Flip Active Guerrillas" (Mono Jojoy): to Underground. Confirmed by the card text (andean-abyss--playbook.md:1872).'

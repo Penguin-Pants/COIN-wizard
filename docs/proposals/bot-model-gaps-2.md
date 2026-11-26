@@ -1,6 +1,6 @@
 # Proposal: bot model gaps from 7 GMT sheets (next schema version)
 
-Status: proposal, waiting for owner decisions. Nothing is implemented.
+Status: decided by the owner on 2026-11-26 (see "Decisions"). Nothing is implemented yet.
 Source: `docs/research/bot-patterns/README.md`, "Gaps that repeat". The 7 Non-Player sheets are Andean Abyss FARC, AUC, Cartels and A Distant Plain Taliban, Warlords, Coalition, Government.
 Model today: `coin-game/1.10.0`.
 
@@ -26,7 +26,7 @@ Model today: `coin-game/1.10.0`.
 
 ## Design questions before E (keep-back)
 
-1. Does "1(2)" mean 1, or 2 in some game setting? It is an open rulebook question (README).
+1. Answered from the rulebooks: "1(2)" means 1, or 2 when a capability is in effect (Find Fix Finish, PRTs). So `keep.count` must be an expression that can read a lasting card in play (gap G22).
 2. Is "keep" a limit on the step's count (the step moves fewer pieces), or on the spaces the step may use (a space that would break the rule is not legal)?
 
 ## Cost per part
@@ -43,4 +43,14 @@ Model today: `coin-game/1.10.0`.
 
 | Part | Decision |
 |---|---|
-| A to I | Waiting |
+| A Human player flag | Approved (review item R3) |
+| B `avail()` | Approved (R6) |
+| C Resource budget | Approved (R6) |
+| D Control | Approved (R5) |
+| E Keep-back | Approved (R4). Design question 2 is still open; the count is an expression (question 1 answered) |
+| F Card effect categories | Moved into the next version (R10) |
+| G, H Predicted outcome; Operation and SA in one space | No decision yet. Recommendation stays: defer to their own version |
+| I Next card (G14) | Moved into the next version (R10). The rest of part I stays deferred |
+| New: card-driven bot mode | Approved for design (R7): 7 newer games use bot decks. Design questions first, then its own version |
+
+Source of the review items R1 to R13: the COIN_Research review page (private artifact "COIN Research Review", 2026-11-26).
