@@ -71,7 +71,8 @@ const MIGRATIONS = {
   },
   // Bot model gaps from the 7 GMT sheets (docs/proposals/bot-model-gaps-2.md), added in parts.
   // Part A: player.<faction>, $faction.player, $target.player and the dry-run patch "players".
-  // Part B: ops avail and factionAvail and the dry-run patch "pools". Nothing to rewrite.
+  // Part B: ops avail and factionAvail and the dry-run patch "pools".
+  // Part C: optional budget on an action node. Nothing to rewrite.
   "coin-game/1.10.0": (g) => {
     g.meta.schemaVersion = "coin-game/1.11.0";
   }

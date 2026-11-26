@@ -24,14 +24,26 @@ function cardFields(game, bot, state) {
   state.card.position ??= cardPosition(game, bot.factionId, state.card.id);
 }
 
-function affordable(state, action, game) {
-  const f = game.factions.find((x) => x.id === state.self);
-  const have = state.resources[f.id];
-  return action.cost.amount === 0 || have >= action.cost.amount;
+// Budget of one action node (schema 1.11.0): what its Operation may spend of res Resources.
+// share: res x num / den, rounded down, or all when res < allBelow. floor: spend at most res - floor.
+// With both, the smaller spend wins.
+const shareOf = (budget, res) => (!budget.share ? Infinity : budget.allBelow !== undefined && res < budget.allBelow ? res : Math.floor((res * budget.share[0]) / budget.share[1]));
+export const budgetOf = (budget, res) => Math.max(0, Math.min(res, shareOf(budget, res), res - (budget.floor ?? 0)));
+// Resources the running Operation may still spend. state.spend (set per action node): left is the share
+// fixed at the Operation's start less what the Operation paid (src/effects.mjs payCost); floor is
+// checked against the balance now, so gains during the Operation raise only the floor's room.
+// A linked Special Activity runs with no spend limit (runLinked).
+const have = (state) => {
+  const res = state.resources[state.self], sp = state.spend;
+  return sp ? Math.max(0, Math.min(res, sp.left, res - sp.floor)) : res;
+};
+
+function affordable(state, action) {
+  return action.cost.amount === 0 || have(state) >= action.cost.amount;
 }
 
 function legalSpaces(game, state, action, extra = {}) {
-  if (!affordable(state, action, game)) return [];
+  if (!affordable(state, action)) return [];
   const ctx = (sp) => ({ state, links: game.board.links, $space: sp, ...extra });
   const legal = legalityOf(action, extra);
   return Object.values(state.spaces).filter((sp) => !!evalExpr(legal, ctx(sp)));
@@ -92,13 +104,13 @@ export function selectByTable(game, state, table, legal, action, extra = {}, poo
   const itemsOf = (st) => {
     if (st.target && poolFor) return poolFor(st);
     if (!st.target || !action.steps) return legal;
-    if (!affordable(state, action, game)) return [];
+    if (!affordable(state, action)) return [];
     const lg = legalityOf(action, { ...extra, $target: st.target, $targetPiece: undefined });
     return Object.values(state.spaces).filter((sp) => !!evalExpr(lg, env(sp, st)));
   };
   const limitOf = (n) => {
     let limit = Math.min(table.limit ?? n, action.maxSpaces ?? Infinity);
-    if (action.cost.per === "space" && action.cost.amount > 0) limit = Math.min(limit, Math.floor(state.resources[state.self] / action.cost.amount));
+    if (action.cost.per === "space" && action.cost.amount > 0) limit = Math.min(limit, Math.floor(have(state) / action.cost.amount));
     return limit;
   };
   return pick(state, table, legal, env, (sp) => sp.name, limitOf, itemsOf);
@@ -152,14 +164,19 @@ function runEventNode(game, state, node, side, tables, result) {
 }
 
 // Tries a node's linked Special Activities in order (first trigger that holds and finds a space runs).
+// A linked Special Activity pays from the full Resources: the Operation's budget does not apply to it.
 function runLinked(game, state, links, actions, tables, ctx, extra) {
-  for (const L of links) {
-    const sa = actions[L.action];
-    if (!evalExpr(L.trigger, { ...ctx, ...extra })) continue;
-    const sel = selectByTable(game, state, tables[L.table], legalSpaces(game, state, sa, extra), sa, extra);
-    if (sel.length) { applyAction(game, state, sa, sel.map((s) => s.id), extra, { targetOf: sel.targetOf }); return `${sa.id}:${sel.map((s) => s.id).join(",")}`; }
-  }
-  return "skipped";
+  const spend = state.spend;
+  state.spend = null;
+  try {
+    for (const L of links) {
+      const sa = actions[L.action];
+      if (!evalExpr(L.trigger, { ...ctx, ...extra })) continue;
+      const sel = selectByTable(game, state, tables[L.table], legalSpaces(game, state, sa, extra), sa, extra);
+      if (sel.length) { applyAction(game, state, sa, sel.map((s) => s.id), extra, { targetOf: sel.targetOf }); return `${sa.id}:${sel.map((s) => s.id).join(",")}`; }
+    }
+    return "skipped";
+  } finally { state.spend = spend; }
 }
 
 // Action node parts (docs/SCHEMA.md, "Action node parts", rules 1 to 8). Each part picks spaces with
@@ -174,10 +191,10 @@ function runParts(game, state, node, action, tables, actions, extra, result) {
   const legalNow = (pt, ex = extra) => { const legal = legalityOf({ ...action, steps: pt.steps }, ex); return Object.values(state.spaces).filter((sp) => !!evalExpr(legal, { ...ctx, $space: sp, ...ex })); };
   // New spaces a part may still pay for. Spaces already paid for are free.
   const canNew = () => {
-    const have = state.resources[state.self];
+    const left = have(state);
     if (amount === 0) return Infinity;
-    if (per === "use") return paid.size || have >= amount ? Infinity : 0;
-    return Math.floor(have / amount);
+    if (per === "use") return paid.size || left >= amount ? Infinity : 0;
+    return Math.floor(left / amount);
   };
   const pool = (pt, ex = extra) => { const n = canNew(); return legalNow(pt, ex).filter((sp) => n > 0 || paid.has(sp.id)); };
   const exOf = (st) => (st.target ? { ...extra, $target: st.target, $targetPiece: undefined } : extra);
@@ -229,6 +246,8 @@ export function runBot(game, bot, startState) {
     if (i === bot.maxSteps) throw new Error(`Bot ${bot.id} did not terminate within ${bot.maxSteps} steps`);
     const node = nodes[cur];
     if (!node) throw new Error(`Bot ${bot.id}: missing node ${cur}`);
+    // A budget limits only its own action node (schema 1.11.0).
+    if (node.kind !== "action") state.spend = null;
     if (node.kind === "condition") {
       result.path.push(node.id);
       cur = evalExpr(node.test, ctx) ? node.yes : node.no;
@@ -242,6 +261,8 @@ export function runBot(game, bot, startState) {
       const action = actions[node.action];
       // Each action node is a new Operation: no piece has moved yet (schema 1.9.0, "unmoved").
       startOperation(state);
+      // A budget (schema 1.11.0) limits what this Operation spends; the share is read at its start.
+      state.spend = node.budget ? { left: shareOf(node.budget, state.resources[state.self]), floor: node.budget.floor ?? 0 } : null;
       // An action with a target picks the enemy first. No enemy qualifies: the same as no space.
       const picked = node.target ? selectOpponentPick(game, state, tables[node.target]) : null;
       const target = picked?.faction ?? null;

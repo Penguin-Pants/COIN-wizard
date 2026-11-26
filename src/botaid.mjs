@@ -2,6 +2,7 @@
 // Mermaid source, printable aid (Markdown and HTML), policy YAML, structured JSON.
 import YAML from "yaml";
 import { linkedOf } from "./dryrun.mjs";
+import { budgetText } from "./plain.mjs";
 
 const esc = (s) => String(s).replace(/"/g, "'").replace(/[<>]/g, "");
 const mid = (id) => id.replace(/[^a-z0-9]/gi, "_");
@@ -83,7 +84,7 @@ export function aidModel(game, bot) {
     const choose = n.parts
       ? `Do these parts in order, each in its own spaces: ${n.parts.map((pt, i) => `${i + 1}. ${pt.text} Choose ${select(tableById[pt.table])} with table ${labels[pt.table]}.`).join(" ")} ${a.cost.per === "use" ? "Pay the cost once, for the whole Operation." : "Pay the cost once for each space, over all parts."} If no part finds a legal or affordable space`
       : `Choose ${select(tableById[n.table])} with table ${labels[n.table]}. If no space is legal or affordable`;
-    let t = `${a.name} (cost ${costText(a)}). ${n.target ? `First choose the target: one enemy faction with table ${labels[n.target]}. If no enemy qualifies: ${goto(n.onEmpty)}. ` : ""}${choose}: ${goto(n.onEmpty)}. Otherwise resolve it, then ${goto(n.then)}.`;
+    let t = `${a.name} (cost ${costText(a)}). ${n.budget ? `${budgetText(n.budget)} ` : ""}${n.target ? `First choose the target: one enemy faction with table ${labels[n.target]}. If no enemy qualifies: ${goto(n.onEmpty)}. ` : ""}${choose}: ${goto(n.onEmpty)}. Otherwise resolve it, then ${goto(n.then)}.`;
     const links = linkedOf(n);
     const saText = (L) => `${actions[L.action].name} (cost ${costText(actions[L.action])}). ${L.skipText ?? "Skip it if it cannot be used."} Choose its space with table ${labels[L.table]}.`;
     if (links.length === 1) {
