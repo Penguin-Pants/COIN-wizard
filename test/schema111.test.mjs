@@ -547,3 +547,11 @@ test("renaming or deleting a card updates next-card references (Codex review on 
   deleteCard(d, "e01");
   assert.equal("next" in d.bots[0].dryRuns[0].patch, false, "delete removes the next card from the patch");
 });
+
+test("cardCould reads a shift's direction from toward and the amount's sign (Codex review on PR 42)", () => {
+  const g = tan(), c = g.deck.cards.find((x) => x.id === "e01");
+  c.sides[0].steps = [{ op: "shift", attr: "opinion", toward: "support", amount: -1, space: "kerry" }];
+  c.sides[1].steps = [{ op: "shift", attr: "opinion", toward: "opposition", amount: 0, space: "kerry" }];
+  assert.equal(could(g, "crown", "either", "shift", "opposition"), true, "a negative shift toward Support lowers opinion");
+  assert.equal(could(g, "crown", "either", "shift", "support"), false, "and a zero shift does nothing");
+});

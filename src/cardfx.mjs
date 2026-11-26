@@ -13,7 +13,8 @@ export function sideEffects(game, steps = []) {
   };
   const walk = (list) => {
     for (const s of list ?? []) {
-      if (s.op === "shift") add("shift", s.toward);
+      // A negative amount shifts the other way; a zero amount does nothing (src/effects.mjs).
+      if (s.op === "shift" && s.amount !== 0) add("shift", (s.amount > 0) === (s.toward === "support") ? "support" : "opposition");
       if (s.op === "place") add("place", s.piece);
       if (s.op === "remove") { add("remove", s.piece); if (s.fallbackPiece) add("remove", s.fallbackPiece); }
       if (s.op === "move" && POOLS.has(s.from) && !POOLS.has(s.to)) add("place", s.piece);
