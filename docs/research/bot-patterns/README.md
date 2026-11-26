@@ -50,6 +50,8 @@ The A Distant Plain card and space list (`A_Distant_Plain_Non-Player_Bot_Card_an
 | movement state | "stay Underground" and "yet to move" | Yes (1.9.0: move `activate`, `unmoved`) |
 | per-card event logic | structured actions for one card | Partly (1.10.0: override `node` runs the card side with a space table and an optional target table). Branches inside one card (General Offensive, Kill Zone) and Operations changed by a card (Mono Jojoy) stay plain text |
 
+Cross-game context (18 games, mechanic by game): `../coin-analysis/`.
+
 ## Gaps that repeat (7 sheets, schema 1.10.0)
 
 Each `gap:` line in the YAML files names one of these ids. G8 was dropped: `sumSpaces` already counts spaces. Count: sheets out of 7 that need it. FARC is counted from its pilot notes.
