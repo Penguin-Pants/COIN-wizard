@@ -1,6 +1,6 @@
 # Plan: COIN Wizard
 
-Date: 2026-11-26. `main`: 55102c8. Schema: `coin-game/1.11.0` (frozen).
+Date: 2026-11-26. `main`: 208116d. Schema: `coin-game/1.11.0` (frozen).
 This file lists the work still open. Finished work and its evidence are in `docs/ACCEPTANCE.md`.
 
 ## Status
@@ -11,17 +11,11 @@ This file lists the work still open. Finished work and its evidence are in `docs
 | Bot model gaps, items 13 to 21 (schemas 1.5.0 to 1.10.0) | Done | `docs/ACCEPTANCE.md`, rows 13 to 21 |
 | Schema 1.11.0, parts A to F | Done | `docs/ACCEPTANCE.md`, rows 24 to 29 |
 | GMT sheet research | 7 of 7 sheets done; 5 of 6 rule questions answered; 1.11.0 parts decided | `docs/research/bot-patterns/README.md`, `docs/proposals/bot-model-gaps-2.md` |
-| Live artifact | Build c7521d9, schema 1.10.0 (published 2026-11-25) | Artifact `8d21134e-1d1c-4dce-a1b5-57b010d5c92c` |
+| Live artifact | Build 208116d, schema 1.11.0 (published 2026-11-26) | Artifact `8d21134e-1d1c-4dce-a1b5-57b010d5c92c` |
 
 ## Open work
 
 Owner: **Owner** (a person must act or decide) or **Claude** (code or docs, after a go).
-
-### A. Release
-
-| # | Item | Owner | Start when |
-|---|---|---|---|
-| A1 | Publish the next schema version after it merges: `npm run build`, then publish `dist/index.html` to the artifact | Claude | The owner says "publish" |
 
 ### B. Schema 1.11.0 follow-up
 
