@@ -441,3 +441,12 @@ test("renaming or deleting a card updates inPlay references (Codex review on PR 
   assert.equal("inPlay" in d.bots[0].dryRuns[0].patch, false, "delete removes the card from the patch");
   assert.ok(out.some((x) => x.path.startsWith("/actions/") && !x.fixed), "an expression is reported, not fixed");
 });
+
+test("keep.prefer applies only where keep.if holds (Codex review on PR 41)", () => {
+  const g = tan(), keep = { count: 1, if: false, prefer: "underground" };
+  for (const step of [{ op: "move", piece: vol, count: 1, from: "$space", to: "kerry", keep }, { op: "remove", piece: vol, count: 1, to: "available", keep }]) {
+    const st = board(g, { tipperary: { pieces: { [vol]: { underground: 1, active: 1 } } } });
+    run(g, st, step, "tipperary");
+    assert.deepEqual(here(st, "tipperary"), { active: 1 }, `${step.op}: no keep here, so Underground goes first as usual`);
+  }
+});
