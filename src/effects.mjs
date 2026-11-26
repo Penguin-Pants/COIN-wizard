@@ -83,9 +83,11 @@ function addPieces(sp, pid, st, n) {
   sp.pieces[pid][st] = (sp.pieces[pid][st] ?? 0) + n;
 }
 // Takes up to n pieces from a space, in the piece's state order. Returns [[state, count], ...].
-function takePieces(game, sp, pid, st, n) {
+// prefer (keep, schema 1.11.0): with no state given, take that state last.
+function takePieces(game, sp, pid, st, n, prefer) {
   const out = [];
-  for (const s of st === undefined ? statesOf(game, pid) : [st]) {
+  const order = st !== undefined ? [st] : prefer === undefined ? statesOf(game, pid) : [...statesOf(game, pid).filter((x) => x !== prefer), prefer];
+  for (const s of order) {
     const have = sp.pieces[pid]?.[s] ?? 0;
     const k = Math.min(have, n);
     if (!k) continue;
@@ -96,6 +98,18 @@ function takePieces(game, sp, pid, st, n) {
   }
   return out;
 }
+// keep (schema 1.11.0): how many of the piece the step may take from a space, all states together
+// (a flip: in its from state). Without keep, or where keep.if does not hold: all of them.
+const keepOn = (s, ctx, sp) => !!s.keep && (s.keep.if === undefined || !!evalExpr(s.keep.if, { ...ctx, $space: sp }));
+// keep.prefer applies only where the keep rule holds.
+const preferIn = (s, ctx, sp) => (sp && keepOn(s, ctx, sp) ? s.keep.prefer : undefined);
+function takable(s, ctx, sp, pid) {
+  const have = onSpace(sp, pid, s.op === "flip" ? s.from : undefined);
+  if (!keepOn(s, ctx, sp)) return have;
+  return Math.max(0, have - Math.max(0, Number(evalExpr(s.keep.count, { ...ctx, $space: sp }))));
+}
+// Passes over states with keep.prefer last, so the kept pieces stay in that state (schema 1.11.0).
+const lastPrefer = (list, prefer, stateOf) => (prefer === undefined ? list : [...list.filter((x) => stateOf(x) !== prefer), ...list.filter((x) => stateOf(x) === prefer)]);
 const poolOf = (state, pid) => (state.pools[pid] ??= { available: 0, outOfPlay: 0 });
 const isPool = (w) => w === "available" || w === "outOfPlay";
 
@@ -172,9 +186,12 @@ function runStep(game, s, ctx) {
       const primary = onSpace(sp, s.piece, s.state) > 0 || !s.fallbackPiece;
       const pid = primary ? s.piece : s.fallbackPiece, st = primary ? s.state : undefined;
       // "moved" with no state removes the moved pieces in the states they moved in.
-      const parts = s.count === "moved" && st === undefined ? (ctx.moved?.piece === pid ? Object.keys(ctx.moved.byState) : []) : [st];
+      const prefer = preferIn(s, ctx, sp);
+      const parts = lastPrefer(s.count === "moved" && st === undefined ? (ctx.moved?.piece === pid ? Object.keys(ctx.moved.byState) : []) : [st], prefer, (x) => x);
+      let cap = takable(s, ctx, sp, pid);
       for (const ps of parts) {
-        const got = takePieces(game, sp, pid, ps, qty(s.count, ctx, onSpace(sp, pid, ps), pid, ps, sp.id));
+        const got = takePieces(game, sp, pid, ps, Math.min(cap, qty(s.count, ctx, Math.min(cap, onSpace(sp, pid, ps)), pid, ps, sp.id)), prefer);
+        cap -= got.reduce((t, [, c]) => t + c, 0);
         depart(state, sp, pid, got, s.count === "moved");
         poolOf(state, pid)[s.to] += got.reduce((t, [, c]) => t + c, 0);
         // Removed moved pieces leave the moved count.
@@ -184,7 +201,7 @@ function runStep(game, s, ctx) {
     }
     case "flip": {
       const sp = spaceOf(s, ctx, "space");
-      const n = qty(s.count, ctx, onSpace(sp, s.piece, s.from), s.piece, s.from, sp.id);
+      const n = qty(s.count, ctx, takable(s, ctx, sp, s.piece), s.piece, s.from, sp.id);
       const took = takePieces(game, sp, s.piece, s.from, n);
       // Moved pieces that flip are still moved, in their new state.
       for (const [, k] of depart(state, sp, s.piece, took, s.count === "moved")) arrive(state, sp.id, s.piece, s.to, k);
@@ -203,19 +220,22 @@ function runStep(game, s, ctx) {
       // "moved" moves only the pieces at the place they moved to.
       const ok = (sp) => (s.count !== "moved" || sp.id === ctx.moved?.at) && (s.filter === undefined || !!evalExpr(s.filter, { ...ctx, $space: sp }));
       const from = isPool(s.from) ? s.from : sources.find(ok)?.id;
-      const can = isPool(s.from) ? poolOf(state, s.piece)[s.from] : sources.filter(ok).reduce((t, sp) => t + onSpace(sp, s.piece, s.state), 0);
+      // keep (1.11.0): each source space may give only what its keep allows.
+      const cap = Object.fromEntries(sources.filter(ok).map((sp) => [sp.id, takable(s, ctx, sp, s.piece)]));
+      const can = isPool(s.from) ? poolOf(state, s.piece)[s.from] : sources.filter(ok).reduce((t, sp) => t + Math.min(onSpace(sp, s.piece, s.state), cap[sp.id]), 0);
       let left = Math.min(qty(s.count, ctx, can, s.piece, s.state, from), dest ? roomIn(game, dest, s.piece) : Infinity);
       const byState = {};
       const put = (st, k) => { if (dest) addPieces(dest, s.piece, st, k); else poolOf(state, s.piece)[s.to] += k; byState[st] = (byState[st] ?? 0) + k; };
       if (isPool(s.from)) { poolOf(state, s.piece)[s.from] -= left; put(s.state ?? defaultOf(game, s.piece), left); left = 0; }
       // "moved" with no state moves the moved pieces in their own states; otherwise one pass.
       const passes = s.count === "moved" && s.state === undefined && ctx.moved?.piece === s.piece
-        ? Object.entries(ctx.moved.byState).filter(([, n]) => n > 0) : [[s.state, left]];
+        ? lastPrefer(Object.entries(ctx.moved.byState).filter(([, n]) => n > 0), preferIn(s, ctx, sources.find(ok)), ([x]) => x) : [[s.state, left]];
       for (const [ps, want] of passes) {
         let need = Math.min(want, left);
         for (const sp of sources.filter(ok)) {
           if (!need) break;
-          const took = takePieces(game, sp, s.piece, ps, need);
+          const took = takePieces(game, sp, s.piece, ps, Math.min(need, cap[sp.id]), preferIn(s, ctx, sp));
+          cap[sp.id] -= took.reduce((t, [, k]) => t + k, 0);
           depart(state, sp, s.piece, took, s.count === "moved");
           for (const [st, k] of took) { put(st, k); left -= k; need -= k; }
         }

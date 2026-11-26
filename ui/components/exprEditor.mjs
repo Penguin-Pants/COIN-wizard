@@ -29,6 +29,8 @@ export function varOptions(ctx) {
     ...g.factions.flatMap((f) => ["resources", "eligible", "score", "margin", "player"].map((k) => `${k}.${f.id}`)),
     ...["Margin", "Score", "Resources"].flatMap((k) => [`rivals.max${k}`, `rivals.min${k}`])];
   for (const who of [["faction", ctx.faction], ["target", ctx.target]]) if (who[1]) names.unshift(...["margin", "score", "resources", "eligible", "player", "type", "id"].map((k) => `$${who[0]}.${k}`));
+  // inPlay (1.11.0): cards with a lasting side.
+  names.push(...g.deck.cards.filter((c) => (c.sides ?? []).some((sd) => sd.lasting)).map((c) => `inPlay.${c.id}`));
   if (ctx.move) names.push("move.count");
   if (ctx.space) names.push("$space.pop", "$space.opinion", "$space.type", "$space.name", "$space.id", ...(g.rules.control ? ["$space.control"] : []));
   for (const s of ctx.stores ?? []) names.push(`var.${s}`);

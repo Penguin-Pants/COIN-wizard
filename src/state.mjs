@@ -48,6 +48,8 @@ export function deriveState(game, selfFactionId) {
     scoring: { nextFinal: false },
     // players (schema 1.11.0): a faction has a human player unless the game has a bot for it.
     players: Object.fromEntries(game.factions.map((f) => [f.id, !game.bots.some((b) => b.factionId === f.id)])),
+    // inPlay (schema 1.11.0): lasting cards in play. A dry-run patch may set them.
+    inPlay: [],
     dice: [],
     vars: {},
     spaces
@@ -59,6 +61,7 @@ export function deriveState(game, selfFactionId) {
 // - players: faction id -> true (a human plays it) or false; an unknown faction is an error
 // - pools.<pieceId>.available (1.11.0): a whole number >= 0 replaces the Available count; Out of Play stays.
 //   An unknown piece or another key is an error.
+// - inPlay (1.11.0): card ids in play; replaces. An unknown card is an error.
 // - dice: replace
 // - clearPieces: remove these piece ids from every space
 // - spaces.<id>: opinion replaces; pieces.<pieceId> replaces that piece's state map
@@ -74,6 +77,10 @@ export function applyPatch(state, patch = {}) {
     if (Object.keys(pool).some((k) => k !== "available")) throw new Error(`Patch pools.${pid} may set only available`);
     if (!Number.isInteger(pool.available) || pool.available < 0) throw new Error(`Patch pools.${pid}.available must be a whole number, 0 or more`);
     s.pools[pid] = { outOfPlay: 0, ...s.pools[pid], available: pool.available };
+  }
+  if (patch.inPlay) {
+    for (const id of patch.inPlay) if (!(id in s.cardOrder)) throw new Error(`Patch names unknown card: ${id}`);
+    s.inPlay = [...patch.inPlay];
   }
   if (patch.dice) s.dice = [...patch.dice];
   for (const pid of patch.clearPieces ?? []) for (const sp of Object.values(s.spaces)) delete sp.pieces[pid];

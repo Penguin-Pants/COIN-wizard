@@ -27,6 +27,7 @@ export function varText(g, name) {
   m = /^\$(faction|target)\.(.+)$/.exec(name);
   if (m) return m[2] === "id" ? whoText(g, `$${m[1]}`) : m[2] === "player" ? `${whoText(g, `$${m[1]}`)}${FIELD.player}` : `${m[1] === "target" ? "the target's" : "that faction's"}${FIELD[m[2]].replace(" is Eligible", " Eligibility")}`;
   if (name.startsWith("track.")) return trackName(g, name.slice(6));
+  if (name.startsWith("inPlay.")) return `${g.deck.cards.find((c) => c.id === name.slice(7))?.title ?? name.slice(7)} is in play`;
   if (name.startsWith("var.")) return `the stored roll ${name.slice(4)}`;
   return name;
 }
@@ -76,6 +77,16 @@ export function condText(m, g) {
   return m.not ? `not (${t})` : t;
 }
 
+// keep (schema 1.11.0): " Leave at least 1 Guerrillas in each space they leave where ..., underground first."
+function keepText(g, s) {
+  const k = s.keep;
+  if (!k) return "";
+  const n = typeof k.count === "number" ? String(k.count) : valueText(toValue(k.count), g);
+  const what = `${s.op === "flip" ? `${s.from} ` : ""}${pieceName(g, s.piece)}`;
+  const at = s.op === "move" ? " in each space they leave" : " there";
+  return ` Leave at least ${n} ${what}${at}${k.if !== undefined ? `${s.op === "move" ? " where" : " if"} ${condText(toCond(k.if), g)}` : ""}${k.prefer ? `, ${k.prefer} first` : ""}.`;
+}
+
 // A count is a word before the piece name. A formula count goes after the sentence as "(as many as ...)".
 const qty = (n) => (n === "all" ? "all" : n === "any" ? "any number of" : n === "moved" ? "the moved" : typeof n === "number" ? String(n) : "");
 const many = (g, n) => (n !== null && typeof n === "object" ? ` (as many as ${valueText(toValue(n), g)})` : "");
@@ -95,9 +106,9 @@ export function stepText(s, g) {
   const p = pieceName(g, s.piece);
   switch (s.op) {
     case "place": return `${lead("Place", s.count)}${state(s.state)}${p} from ${POOL[s.from]}${target(g, s)}${many(g, s.count)}.`;
-    case "remove": return `${lead("Remove", s.count)}${state(s.state)}${p}${target(g, s)} to ${POOL[s.to]}${many(g, s.count)}${s.fallbackPiece ? `, or ${pieceName(g, s.fallbackPiece)} if there is no ${p}` : ""}.`;
-    case "flip": return `${lead("Flip", s.count)}${p} from ${cap(s.from)} to ${cap(s.to)}${target(g, s)}${many(g, s.count)}.`;
-    case "move": return `${lead("Move", s.count)}${state(s.state)}${p} from ${loc(g, s.from)} to ${loc(g, s.to)}${s.filter !== undefined ? ` where ${condText(toCond(s.filter), g)}` : ""}${many(g, s.count)}.${s.activate ? ` If ${condText(toCond(s.activate.if), g)} there, the moved pieces become ${s.activate.to}.` : ""}`;
+    case "remove": return `${lead("Remove", s.count)}${state(s.state)}${p}${target(g, s)} to ${POOL[s.to]}${many(g, s.count)}${s.fallbackPiece ? `, or ${pieceName(g, s.fallbackPiece)} if there is no ${p}` : ""}.${keepText(g, s)}`;
+    case "flip": return `${lead("Flip", s.count)}${p} from ${cap(s.from)} to ${cap(s.to)}${target(g, s)}${many(g, s.count)}.${keepText(g, s)}`;
+    case "move": return `${lead("Move", s.count)}${state(s.state)}${p} from ${loc(g, s.from)} to ${loc(g, s.to)}${s.filter !== undefined ? ` where ${condText(toCond(s.filter), g)}` : ""}${many(g, s.count)}.${s.activate ? ` If ${condText(toCond(s.activate.if), g)} there, the moved pieces become ${s.activate.to}.` : ""}${keepText(g, s)}`;
     case "shift": return `Shift ${s.attr} ${s.amount} step${s.amount === 1 ? "" : "s"} toward ${cap(s.toward)}${target(g, s)}.`;
     case "track": return `${s.delta < 0 ? "Lower" : "Raise"} ${trackName(g, s.id)} by ${Math.abs(s.delta)}.`;
     case "gain": return typeof s.amount === "number" && s.amount < 0 ? `${cap(trackName(g, s.track))} loses ${-s.amount}.` : `${cap(trackName(g, s.track))} gains ${amount(g, s.amount)}.`;

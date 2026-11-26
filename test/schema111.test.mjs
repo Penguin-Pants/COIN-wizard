@@ -8,7 +8,9 @@ import { deriveState, applyPatch } from "../src/state.mjs";
 import { varText, valueText } from "../src/plain.mjs";
 import { toValue, fromValue, toCond } from "../src/exprmodel.mjs";
 import { runCase, budgetOf } from "../src/dryrun.mjs";
-import { budgetText, condText } from "../src/plain.mjs";
+import { budgetText, condText, stepText } from "../src/plain.mjs";
+import { applyAction } from "../src/effects.mjs";
+import { cardRefs, renameCard, deleteCard } from "../src/deck.mjs";
 import { nonPlayerSheetHtml, boardSvg } from "../src/kit.mjs";
 import { setupControl } from "../src/expr.mjs";
 import { aidModel, toMarkdown } from "../src/botaid.mjs";
@@ -323,4 +325,128 @@ test("Control reads as plain English, and the editor board preview shows it at s
   assert.ok(!boardSvg(t).includes("Control:"), "the printed board shows no Control");
   delete t.rules.control;
   assert.ok(!boardSvg(t, { fixed: true, control: true }).includes("Control:"), "no rules: no labels");
+});
+
+// Part E (gap G1 and G22, owner decisions 2026-11-26): keep-back. Optional keep on move, remove and flip:
+// { count, if, prefer }. In each space the pieces leave, the step leaves at least count pieces of its type
+// (a flip: in its from state). count is an expression; if (read on that space) limits the rule to some
+// spaces; prefer: the state the kept pieces should be in. It limits the count, not the legal spaces.
+// New variable inPlay.<card> (a lasting card in play) and dry-run patch inPlay: [card ids].
+// GMT: "Leave min 1(2) Guerrilla at each Taliban Base (Underground first)", "without exposing last 1(2)
+// Underground Guerrilla at Base"; 1(2) is 2 with Find Fix Finish in play.
+const vol = "ira.volunteer";
+const board = (g, spaces) => applyPatch(deriveState(g, "ira"), { clearPieces: [vol, "ira.hq", "crown.army", "crown.police", "crown.barracks"], spaces });
+const run = (g, st, step, at) => applyAction(g, st, { cost: { amount: 0 }, steps: [step] }, [at], {}, { pay: false });
+const here = (st, sid, pid = vol) => st.spaces[sid].pieces[pid] ?? {};
+const total = (by) => Object.values(by).reduce((a, b) => a + b, 0);
+
+test("keep on a move leaves pieces in the space they leave", () => {
+  const g = tan(), st = board(g, { tipperary: { pieces: { [vol]: { underground: 2, active: 1 } } } });
+  run(g, st, { op: "move", piece: vol, count: "all", from: "$space", to: "kerry", keep: { count: 1 } }, "tipperary");
+  assert.equal(total(here(st, "tipperary")), 1);
+  assert.equal(total(here(st, "kerry")), 2);
+});
+
+test("keep.prefer keeps pieces in that state; without it the step takes its usual order", () => {
+  const g = tan(), step = { op: "move", piece: vol, count: "all", from: "$space", to: "kerry", keep: { count: 1 } };
+  let st = board(g, { tipperary: { pieces: { [vol]: { underground: 1, active: 1 } } } });
+  run(g, st, step, "tipperary");
+  assert.deepEqual(here(st, "tipperary"), { active: 1 }, "Underground moves first by default");
+  st = board(g, { tipperary: { pieces: { [vol]: { underground: 1, active: 1 } } } });
+  run(g, st, { ...step, keep: { count: 1, prefer: "underground" } }, "tipperary");
+  assert.deepEqual(here(st, "tipperary"), { underground: 1 }, "Underground first: the kept one is Underground");
+});
+
+test("keep.if limits the rule to some spaces, and keep applies to each adjacent source", () => {
+  const g = tan(), hasHq = { op: "gte", args: [{ op: "count", args: ["ira.hq", { var: "$space.id" }, "*"] }, 1] };
+  const step = { op: "move", piece: vol, count: "all", from: "adjacent", to: "$space", keep: { count: 1, if: hasHq } };
+  const st = board(g, { limerick: { pieces: { [vol]: { underground: 2 }, "ira.hq": { normal: 1 } } }, "cork-county": { pieces: { [vol]: { underground: 2 } } } });
+  run(g, st, step, "kerry");
+  assert.equal(total(here(st, "limerick")), 1, "a space with an HQ keeps 1");
+  assert.equal(total(here(st, "cork-county")), 0, "no HQ: no keep");
+  assert.equal(total(here(st, "kerry")), 3);
+});
+
+test("keep on remove and on flip", () => {
+  const g = tan();
+  let st = board(g, { kerry: { pieces: { "crown.army": { normal: 3 } } } });
+  run(g, st, { op: "remove", piece: "crown.army", count: "all", to: "available", keep: { count: 1 } }, "kerry");
+  assert.equal(total(here(st, "kerry", "crown.army")), 1);
+  st = board(g, { kerry: { pieces: { [vol]: { underground: 3 } } } });
+  run(g, st, { op: "flip", piece: vol, from: "underground", to: "active", count: "all", keep: { count: 1 } }, "kerry");
+  assert.deepEqual(here(st, "kerry"), { underground: 1, active: 2 }, "without exposing the last Underground");
+  st = board(g, { kerry: { pieces: { [vol]: { underground: 1, active: 2 } } } });
+  run(g, st, { op: "flip", piece: vol, from: "underground", to: "active", count: "all", keep: { count: 1 } }, "kerry");
+  assert.deepEqual(here(st, "kerry"), { underground: 1, active: 2 }, "a flip keeps pieces in its from state");
+});
+
+test("inPlay.<card> reads a lasting card in play; keep.count reads it (1, or 2 with the card)", () => {
+  const g = tan(), card = g.deck.cards.find((c) => c.type === "event");
+  card.sides[0].lasting = "capability";
+  const inPlay = { var: `inPlay.${card.id}` };
+  assert.equal(evalExpr(inPlay, { state: deriveState(g, "ira"), links: g.board.links }), false);
+  assert.equal(evalExpr(inPlay, { state: applyPatch(deriveState(g, "ira"), { inPlay: [card.id] }), links: g.board.links }), true);
+  assert.throws(() => applyPatch(deriveState(g, "ira"), { inPlay: ["nothing"] }), /unknown card/i);
+  const step = { op: "move", piece: vol, count: "all", from: "$space", to: "kerry", keep: { count: { op: "add", args: [1, inPlay] } } };
+  for (const [patch, kept] of [[{}, 1], [{ inPlay: [card.id] }, 2]]) {
+    const st = applyPatch(board(g, { tipperary: { pieces: { [vol]: { underground: 3 } } } }), patch);
+    run(g, st, step, "tipperary");
+    assert.equal(total(here(st, "tipperary")), kept);
+  }
+});
+
+test("keep and inPlay validate, and read as plain English", () => {
+  const check = new Ajv2020({ allErrors: true, strict: false }).compile(read("../schema/coin-game.schema.json"));
+  const g = tan(), card = g.deck.cards.find((c) => c.type === "event"), a = g.actions.find((x) => x.id === "ira.march");
+  card.sides[0].lasting = "capability";
+  const step = { op: "move", piece: vol, count: "all", from: "adjacent", to: "$space", keep: { count: { op: "add", args: [1, { var: `inPlay.${card.id}` }] }, if: { op: "gte", args: [{ var: "$space.pop" }, 1] }, prefer: "underground" } };
+  a.steps = [step];
+  assert.equal(check(g), true, JSON.stringify(check.errors?.slice(0, 3)));
+  assert.deepEqual(validate(g).errors.filter((e) => e.path.startsWith("/actions")), []);
+  for (const bad of [{ count: 1, other: 1 }, { if: true }]) { a.steps = [{ ...step, keep: bad }]; assert.equal(check(g), false, JSON.stringify(bad)); }
+  a.steps = [{ op: "place", piece: vol, count: 1, from: "available", to: "$space", keep: { count: 1 } }];
+  assert.equal(check(g), false, "place has no keep");
+  a.steps = [{ ...step, keep: { count: 1, prefer: "asleep" } }];
+  assert.ok(validate(g).errors.some((e) => /asleep/.test(e.message)));
+  a.steps = [{ ...step, keep: { count: { var: "inPlay.nothing" } } }];
+  assert.ok(validate(g).errors.some((e) => e.code === "missing-ref" && /nothing/.test(e.message)));
+  a.steps = [step];
+  const vn = g.factions[1].pieces[0].name;
+  assert.match(stepText(step, g), new RegExp(`Leave at least 1 plus ${card.title} is in play ${vn} in each space they leave where Pop is at least 1, underground first\\.`));
+  assert.match(stepText({ op: "flip", piece: vol, from: "underground", to: "active", count: "all", keep: { count: 1 } }, g), new RegExp(`Leave at least 1 underground ${vn} there\\.`));
+  assert.equal(varText(g, `inPlay.${card.id}`), `${card.title} is in play`);
+});
+
+test("keep.prefer holds when the count is the moved pieces (Codex review on PR 41)", () => {
+  const g = tan(), keep = { count: 1, prefer: "underground" };
+  for (const second of [{ op: "move", piece: vol, count: "moved", from: "$space", to: "limerick", keep }, { op: "remove", piece: vol, count: "moved", to: "available", keep }]) {
+    const st = board(g, { tipperary: { pieces: { [vol]: { active: 1, underground: 1 } } } });
+    applyAction(g, st, { cost: { amount: 0 }, steps: [{ op: "move", piece: vol, count: "all", from: "tipperary", to: "$space" }, second] }, ["kerry"], {}, { pay: false });
+    assert.deepEqual(here(st, "kerry"), { underground: 1 }, `${second.op}: the kept piece is Underground`);
+  }
+});
+
+test("renaming or deleting a card updates inPlay references (Codex review on PR 41)", () => {
+  const g = tan(), card = g.deck.cards.find((c) => c.type === "event"), a = g.actions.find((x) => x.id === "ira.march");
+  card.sides[0].lasting = "capability";
+  a.steps = [{ op: "move", piece: vol, count: "all", from: "adjacent", to: "$space", keep: { count: { op: "add", args: [1, { var: `inPlay.${card.id}` }] } } }];
+  g.bots[0].dryRuns[0].patch.inPlay = [card.id];
+  const refs = cardRefs(g, card.id).map((r) => r.path);
+  assert.ok(refs.some((p) => p.startsWith("/actions/")), "the expression is a reference");
+  assert.ok(refs.includes("/bots/0/dryRuns/0/patch/inPlay"), "the dry-run patch is a reference");
+  const r = renameCard(g, card.id, "e99");
+  assert.deepEqual(r.actions.find((x) => x.id === "ira.march").steps[0].keep.count.args[1], { var: "inPlay.e99" });
+  assert.deepEqual(r.bots[0].dryRuns[0].patch.inPlay, ["e99"]);
+  const d = structuredClone(g), out = deleteCard(d, card.id);
+  assert.equal("inPlay" in d.bots[0].dryRuns[0].patch, false, "delete removes the card from the patch");
+  assert.ok(out.some((x) => x.path.startsWith("/actions/") && !x.fixed), "an expression is reported, not fixed");
+});
+
+test("keep.prefer applies only where keep.if holds (Codex review on PR 41)", () => {
+  const g = tan(), keep = { count: 1, if: false, prefer: "underground" };
+  for (const step of [{ op: "move", piece: vol, count: 1, from: "$space", to: "kerry", keep }, { op: "remove", piece: vol, count: 1, to: "available", keep }]) {
+    const st = board(g, { tipperary: { pieces: { [vol]: { underground: 1, active: 1 } } } });
+    run(g, st, step, "tipperary");
+    assert.deepEqual(here(st, "tipperary"), { active: 1 }, `${step.op}: no keep here, so Underground goes first as usual`);
+  }
 });

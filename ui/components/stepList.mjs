@@ -10,7 +10,7 @@ import { defineList, moveButton, removeButton, addButton } from "./listEditor.mj
 import { condEditor, valueEditor } from "./exprEditor.mjs";
 
 const LABEL = {
-  activate: "Activate the moved pieces", piece: "Piece", count: "How many", from: "From", to: "To", state: "State", space: "Where", spaces: "Up to spaces", filter: "Only where",
+  activate: "Activate the moved pieces", keep: "Keep back", piece: "Piece", count: "How many", from: "From", to: "To", state: "State", space: "Where", spaces: "Up to spaces", filter: "Only where",
   fallbackPiece: "If none, use", attr: "Attribute", toward: "Toward", amount: "Amount", id: "Track", delta: "Change", track: "Track",
   die: "Die", store: "Store result as", marker: "Marker", value: "Value", test: "If", then: "Then", else: "Otherwise", options: "Options"
 };
@@ -58,13 +58,21 @@ function field(st, p, k, kind, ctx) {
     case "cond": return condEditor(`${p}/${k}`, v, k === "filter" ? { ...ctx, space: true } : ctx);
     // activate (1.9.0): the condition reads the destination and move.count; the moved pieces flip to "to".
     case "activate": return `<label class="mini"><span>Moved pieces become</span><select data-sf="${esc(p)}/activate/to" data-sk="state" data-path="/${esc(p)}/activate/to" aria-label="Moved pieces become">${opts(keep((pc?.states ?? []).map((x) => [x, x]), v.to), v.to)}</select></label><span class="sl">when, at the destination,</span>${condEditor(`${p}/activate/if`, v.if, { ...ctx, space: true, move: true })}`;
+    // keep (1.11.0): pieces left in each space the step takes from; optional space condition and kept state.
+    case "keep": {
+      const kp = `${p}/keep`, mode = typeof v.count === "number" ? "num" : "formula";
+      const cnt = `<select data-sq="${esc(kp)}/count" data-path="/${esc(kp)}/count" aria-label="Keep count mode">${opts([["num", "a number"], ["formula", "a formula"]], mode)}</select>${mode === "num" ? `<input type="number" min="0" ${ctl(kp, "count", "int")} value="${esc(v.count)}">` : valueEditor(`${kp}/count`, v.count, { ...ctx, space: true })}`;
+      const pref = st.op === "flip" ? "" : `<label class="mini"><span>Kept pieces</span><select data-keepprefer="${esc(kp)}" data-path="/${esc(kp)}/prefer" aria-label="Kept pieces">${opts([["", "in any state"], ...keep((pc?.states ?? []).map((x) => [x, `${x} first`]), v.prefer)], v.prefer ?? "")}</select></label>`;
+      const where = v.if !== undefined ? `<div class="sblock"><span class="sl">Only in spaces where</span>${btn("step-unset", "Remove", { cls: "link", data: `data-p="${esc(kp)}" data-k="if"` })}${condEditor(`${kp}/if`, v.if, { ...ctx, space: true })}</div>` : btn("keep-if", "Only in some spaces", { cls: "link", data: `data-p="${esc(kp)}"` });
+      return `<span class="row"><span>Leave at least</span>${cnt}<span>${st.op === "flip" ? `${esc(st.from)} ` : ""}in each space</span>${pref}</span>${where}`;
+    }
     case "steps": return `<ol class="steps">${stepList(v, `${p}/${k}`, ctx)}</ol>${addButton("steps", "Add effect", { cls: "link", data: `data-p="${esc(p)}/${k}"` })}`;
     case "options": return `<div class="opts">${v.map((o, i) => `<div class="opt"><label class="mini"><span>Option ${i + 1}</span><input data-sf="${esc(p)}/options/${i}/label" data-sk="text" data-path="/${esc(p)}/options/${i}/label" value="${esc(o.label)}"></label>${o.faction ? optPiece(o, `${p}/options/${i}`) : ""}${v.length > 1 ? removeButton("options", { i, label: "Remove option", data: `data-p="${esc(p)}/options"` }) : ""}<ol class="steps">${stepList(o.steps, `${p}/options/${i}/steps`, ctx)}</ol>${addButton("steps", "Add effect", { cls: "link", data: `data-p="${esc(p)}/options/${i}/steps"` })}</div>`).join("")}${addButton("options", "Add option", { cls: "link", data: `data-p="${esc(p)}/options"` })}</div>`;
     default: return `<input ${ctl(p, k, "text")} value="${esc(v)}">`;
   }
 }
 
-const BLOCK = new Set(["cond", "steps", "options", "activate"]);
+const BLOCK = new Set(["cond", "steps", "options", "activate", "keep"]);
 function form(st, p, ctx) {
   const spec = OPS[st.op], all = fieldsOf(st.op);
   const shown = Object.keys(all).filter((k) => k in st);
@@ -103,6 +111,7 @@ function optDefault(st, k) {
     case "steps": return [defaultStep("track", S.game)];
     // A new activation: the piece's last state (such as "active") when 3 or more moved.
     case "activate": return { if: { op: "gte", args: [{ var: "move.count" }, 3] }, to: pc?.states.at(-1) };
+    case "keep": return { count: 1 };
     default: return undefined;
   }
 }
@@ -113,6 +122,7 @@ const parse = (kind, v) => (kind === "int" || kind === "spaces" ? (v === "" ? 0 
 // Returns true when the change belonged to a step form.
 export function onStepChange(el) {
   const d = el.dataset ?? {};
+  if (d.keepprefer) { const k = getP(S.game, d.keepprefer); if (el.value) k.prefer = el.value; else delete k.prefer; touch(); render(); return true; }
   if (d.optpiece) { const o = getP(S.game, d.optpiece); if (el.value) o.piece = el.value; else delete o.piece; touch(); render(); return true; }
   if (d.sf) {
     setP(S.game, d.sf, parse(d.sk, el.value));
@@ -120,6 +130,7 @@ export function onStepChange(el) {
       const st = getP(S.game, d.sf.slice(0, d.sf.lastIndexOf("/")));
       const pc = pieces().find((x) => x.id === st.piece);
       for (const k of ["state", ...(st.op === "flip" ? ["from", "to"] : [])]) if (st[k] !== undefined && !pc?.states.includes(st[k])) st[k] = pc?.states[k === "to" ? Math.min(1, pc.states.length - 1) : 0];
+      if (st.keep?.prefer !== undefined && !pc?.states.includes(st.keep.prefer)) delete st.keep.prefer;
     }
     touch(); if (d.r || d.sk === "piece") render(); return true;
   }
@@ -163,5 +174,6 @@ defineList("options", {
   remove: (d) => { const arr = getP(S.game, d.p); if (arr.length > 1) arr.splice(Number(d.i), 1); touch(); render(); }
 });
 export const stepActions = {
-  "step-unset": (d) => { delete getP(S.game, d.p)[d.k]; touch(); render(); }
+  "step-unset": (d) => { delete getP(S.game, d.p)[d.k]; touch(); render(); },
+  "keep-if": (d) => { getP(S.game, d.p).if = true; touch(); render(); }
 };
