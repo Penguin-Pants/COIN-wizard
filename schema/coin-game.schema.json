@@ -636,6 +636,56 @@
           "additionalProperties": {
             "type": "string"
           }
+        },
+        "control": {
+          "type": "object",
+          "description": "Control (1.11.0). A faction or side controls a space when its pieces there outnumber all other pieces. $space.control reads the side id, the faction id or none.",
+          "additionalProperties": false,
+          "properties": {
+            "sides": {
+              "type": "array",
+              "description": "Factions that control together, such as COIN = US + ARVN. A faction in no side controls alone.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "name",
+                  "factions"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "factions": {
+                    "type": "array",
+                    "minItems": 2,
+                    "items": {
+                      "$ref": "#/$defs/id"
+                    }
+                  }
+                }
+              }
+            },
+            "exclude": {
+              "type": "array",
+              "description": "Pieces that do not count toward Control.",
+              "items": {
+                "$ref": "#/$defs/id"
+              }
+            },
+            "types": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Space types that can be controlled. Left out: every space.",
+              "items": {
+                "$ref": "#/$defs/space/properties/type"
+              }
+            }
+          }
         }
       }
     },

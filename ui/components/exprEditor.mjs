@@ -30,7 +30,7 @@ export function varOptions(ctx) {
     ...["Margin", "Score", "Resources"].flatMap((k) => [`rivals.max${k}`, `rivals.min${k}`])];
   for (const who of [["faction", ctx.faction], ["target", ctx.target]]) if (who[1]) names.unshift(...["margin", "score", "resources", "eligible", "player", "type", "id"].map((k) => `$${who[0]}.${k}`));
   if (ctx.move) names.push("move.count");
-  if (ctx.space) names.push("$space.pop", "$space.opinion", "$space.type", "$space.name", "$space.id");
+  if (ctx.space) names.push("$space.pop", "$space.opinion", "$space.type", "$space.name", "$space.id", ...(g.rules.control ? ["$space.control"] : []));
   for (const s of ctx.stores ?? []) names.push(`var.${s}`);
   return names.filter((n) => VAR_OK.test(n)).map((n) => [n, varText(g, n)]);
 }

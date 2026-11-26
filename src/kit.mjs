@@ -4,7 +4,8 @@ import { aidModel, toHtml, stepNumbers, tableLabels } from "./botaid.mjs";
 import { graphSvg } from "./graphsvg.mjs";
 import { linkedOf, cardLasting } from "./dryrun.mjs";
 import { choiceCounts } from "./effects.mjs";
-import { condText, stepText, budgetText } from "./plain.mjs";
+import { condText, stepText, budgetText, controllerName } from "./plain.mjs";
+import { setupControl } from "./expr.mjs";
 import { toCond } from "./exprmodel.mjs";
 import { voronoi, FRAME } from "./mapplace.mjs";
 
@@ -29,7 +30,8 @@ function nameLines(name) {
 // are the legal connections. Region tint shows starting opinion. With a map image the board keeps the
 // editor frame, so each space stays on its place on the image.
 const OPINION_FILL = { 2: "#c4d8ee", 1: "#dbe7f3", 0: "#efeadb", "-1": "#f3dcd8", "-2": "#ecc4bd" };
-export function boardSvg(g, { fixed = false } = {}) {
+// control: label each space with its controller at setup (the editor preview; schema 1.11.0).
+export function boardSvg(g, { fixed = false, control = false } = {}) {
   const pos = g.board.presentation.positions;
   const bg = g.board.presentation.background;
   const frame = fixed || bg?.href;
@@ -43,7 +45,9 @@ export function boardSvg(g, { fixed = false } = {}) {
   const cells = voronoi(Object.fromEntries(placed.filter(isRegion).map((s) => [s.id, pos[s.id]])), { x: minX, y: minY, w, h: hgt }, { reach: 0.85 });
   const opinion = (s) => OPINION_FILL[g.setup.spaceAttributes?.[s.id]?.opinion ?? 0] ?? OPINION_FILL[0];
   const label = 'font-family="sans-serif" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3" stroke-linejoin="round"';
-  const text = (s, x, y) => { const lines = nameLines(s.name), top = y - (lines.length > 1 ? 12 : 5); return `${lines.map((t, i) => `<text x="${x}" y="${top + i * 13}" font-size="12" font-weight="700" ${label}>${h(t)}</text>`).join("")}<text x="${x}" y="${top + lines.length * 13 + 2}" font-size="10.5" ${label}>${s.type}, Pop ${s.attrs.pop}</text>`; };
+  const ctl = control && g.rules.control ? setupControl(g) : {};
+  const ctlText = (s, x, y) => (ctl[s.id] && ctl[s.id] !== "none" ? `<text x="${x}" y="${y}" font-size="10.5" font-style="italic" ${label}>Control: ${h(controllerName(g, ctl[s.id]))}</text>` : "");
+  const text = (s, x, y) => { const lines = nameLines(s.name), top = y - (lines.length > 1 ? 12 : 5); return `${lines.map((t, i) => `<text x="${x}" y="${top + i * 13}" font-size="12" font-weight="700" ${label}>${h(t)}</text>`).join("")}<text x="${x}" y="${top + lines.length * 13 + 2}" font-size="10.5" ${label}>${s.type}, Pop ${s.attrs.pop}</text>${ctlText(s, x, top + lines.length * 13 + 15)}`; };
   const grp = (s, body) => `<g data-space="${h(s.id)}" tabindex="0" style="cursor:grab"><title>${h(s.name)}: drag to move, arrow keys nudge</title>${body}</g>`;
   const regions = placed.filter(isRegion).map((s) => grp(s, `<polygon points="${cells[s.id].map(([x, y]) => `${Math.round(x * 10) / 10},${Math.round(y * 10) / 10}`).join(" ")}" fill="${opinion(s)}" fill-opacity="${bg?.href ? 0.45 : 1}" stroke="#555" stroke-width="1.5" stroke-dasharray="${s.type === "province" ? "0" : "6 3"}"/>${text(s, pos[s.id].x, pos[s.id].y)}`)).join("");
   const line = g.board.links.filter((l) => pos[l.from] && pos[l.to]).map((l) => `<line x1="${pos[l.from].x}" y1="${pos[l.from].y}" x2="${pos[l.to].x}" y2="${pos[l.to].y}" stroke="#333" stroke-width="2" stroke-opacity="0.55" stroke-linecap="round"/>`).join("");

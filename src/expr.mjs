@@ -1,6 +1,7 @@
 // Expression evaluator for the coin-game expression language.
 // ctx = { state, links, $space }
 import { legalityOf } from "./effects.mjs";
+import { deriveState } from "./state.mjs";
 
 const num = (x) => (typeof x === "boolean" ? (x ? 1 : 0) : x);
 
@@ -49,6 +50,7 @@ export function resolveVar(name, ctx) {
   if (name.startsWith("var.")) return state.vars?.[name.slice(4)];
   if (name.startsWith("$space.")) {
     if (!$space) throw new Error(`Variable ${name} used outside a space context`);
+    if (name === "$space.control") return controlOf(state, $space);
     return $space[name.slice(7)];
   }
   throw new Error(`Unknown variable: ${name}`);
@@ -63,6 +65,29 @@ function countPieces(state, pieceId, spaceId, stateId) {
     for (const [st, n] of Object.entries(byState)) if (stateId === "*" || stateId === st) total += n;
   }
   return total;
+}
+
+// Who controls a space (schema 1.11.0, rules.control): the side or faction whose pieces there outnumber
+// all other pieces, else "none". A faction in no side counts alone. Excluded pieces do not count; a
+// space whose type is not listed (when types are listed) is never controlled.
+export function controlOf(state, sp) {
+  const rules = state.control;
+  if (!rules || (rules.types && !rules.types.includes(sp.type))) return "none";
+  const unit = Object.fromEntries((rules.sides ?? []).flatMap((s) => s.factions.map((f) => [f, s.id])));
+  const by = {};
+  let total = 0;
+  for (const [pid, byState] of Object.entries(sp.pieces ?? {})) {
+    if (rules.exclude?.includes(pid) || !state.owner[pid]) continue;
+    const n = Object.values(byState).reduce((a, b) => a + b, 0), u = unit[state.owner[pid]] ?? state.owner[pid];
+    by[u] = (by[u] ?? 0) + n; total += n;
+  }
+  return Object.entries(by).find(([, n]) => n > total - n)?.[0] ?? "none";
+}
+
+// Who controls each space at setup: space id -> side id, faction id or "none".
+export function setupControl(game) {
+  const st = deriveState(game, game.factions[0]?.id);
+  return Object.fromEntries(Object.values(st.spaces).map((sp) => [sp.id, controlOf(st, sp)]));
 }
 
 const availOf = (state, pieceId) => state.pools?.[pieceId]?.available ?? 0;
@@ -172,4 +197,4 @@ export function scanExpr(e, out = { vars: [], pieces: [], ops: [] }) {
 }
 
 // Faction ids in resources.<id> and similar names are checked against the game by the validator.
-export const VAR_OK = /^(eligible|self\.resources|(resources|eligible|score|margin|player)\.[a-z0-9._-]+|rivals\.(max|min)(Resources|Score|Margin)|\$(faction|target)\.(id|name|type|resources|eligible|score|margin|player)|track\.[a-z0-9._-]+|card\.(id|hasEffect|raisesSelf|lowersEnemy|lasting|position)|turn\.position|scoring\.nextFinal|move\.count|var\.[a-z0-9_]+|\$space\.(id|name|type|pop|opinion))$/;
+export const VAR_OK = /^(eligible|self\.resources|(resources|eligible|score|margin|player)\.[a-z0-9._-]+|rivals\.(max|min)(Resources|Score|Margin)|\$(faction|target)\.(id|name|type|resources|eligible|score|margin|player)|track\.[a-z0-9._-]+|card\.(id|hasEffect|raisesSelf|lowersEnemy|lasting|position)|turn\.position|scoring\.nextFinal|move\.count|var\.[a-z0-9_]+|\$space\.(id|name|type|pop|opinion|control))$/;
