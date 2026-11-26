@@ -62,11 +62,25 @@ test("a dry-run board change is made with dropdowns and inputs", () => withApp(a
   await page.locator("details.act > summary", { hasText: "no-target" }).click(); await frames(page);
   const open = page.locator("details.act[open]");
   await open.locator('select[data-dt="addspace"]').selectOption("kerry"); await frames(page);
-  await page.locator('details.act[open] input[data-dk="spaces.kerry.opinion"]').fill("-1");
-  await page.locator('details.act[open] input[data-dk="spaces.kerry.opinion"]').dispatchEvent("change"); await frames(page);
+  await page.locator('details.act[open] input[data-dk="spaces/kerry/opinion"]').fill("-1");
+  await page.locator('details.act[open] input[data-dk="spaces/kerry/opinion"]').dispatchEvent("change"); await frames(page);
   await page.waitForTimeout(1800);
   const g = JSON.parse((await db())["data/users/u1/draft"].json);
   assert.equal(g.bots[0].dryRuns.find((d) => d.case === "no-target").patch.spaces.kerry.opinion, -1);
+}));
+
+// Piece ids hold dots (ira.volunteer). A piece count in a dry run keeps the whole id as one key.
+test("a dry-run piece count keeps a piece id that holds a dot", () => withApp(async ({ page, db }) => {
+  await botsTab(page);
+  await page.locator("details.act > summary", { hasText: "no-target" }).click(); await frames(page);
+  await page.locator('details.act[open] select[data-dt="addspace"]').selectOption("kerry"); await frames(page);
+  await page.locator('details.act[open] select[data-dk="spaces/kerry/pieces"]').selectOption("ira.volunteer"); await frames(page);
+  const cnt = page.locator('details.act[open] input[data-dk^="spaces/kerry/pieces/ira.volunteer/"]').first();
+  await cnt.fill("2"); await cnt.dispatchEvent("change"); await frames(page);
+  await page.waitForTimeout(1800);
+  const pieces = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].dryRuns.find((d) => d.case === "no-target").patch.spaces.kerry.pieces;
+  assert.deepEqual(Object.keys(pieces), ["ira.volunteer"]);
+  assert.equal(Object.values(pieces["ira.volunteer"])[0], 2);
 }));
 
 // Schema 1.5.0 part A: a node's linked Special Activity may be a list, tried in order.
@@ -208,8 +222,8 @@ test("a designer sets a step's target and uses Can place in its filter", () => w
 test("a dry run sets 2nd Eligible and a final next scoring card", () => withApp(async ({ page, db }) => {
   await botsTab(page);
   await page.locator("details.act > summary", { hasText: "no-target" }).click(); await frames(page);
-  await page.locator('details.act[open] select[data-dk="turn.position"]').selectOption("2"); await frames(page);
-  await page.locator('details.act[open] input[data-dk="scoring.nextFinal"]').check(); await frames(page);
+  await page.locator('details.act[open] select[data-dk="turn/position"]').selectOption("2"); await frames(page);
+  await page.locator('details.act[open] input[data-dk="scoring/nextFinal"]').check(); await frames(page);
   await page.waitForTimeout(1800);
   const pt = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].dryRuns.find((d) => d.case === "no-target").patch;
   assert.deepEqual(pt.turn, { position: 2 });
@@ -272,15 +286,33 @@ test("an Event exception shows its target select after a table is picked, and Ne
 test("a dry run sets a faction to a human player and clears it", () => withApp(async ({ page, db }) => {
   await botsTab(page);
   await page.locator("details.act > summary", { hasText: "no-target" }).click(); await frames(page);
-  const sel = page.locator('details.act[open] select[data-dk="players.ira"]');
+  const sel = page.locator('details.act[open] select[data-dk="players/ira"]');
   assert.match(await sel.locator("option").first().innerText(), /the bot/, "Tan War has a bot for the Republic");
   await sel.selectOption("true"); await frames(page);
   await page.waitForTimeout(1800);
   let pt = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].dryRuns.find((d) => d.case === "no-target").patch;
   assert.deepEqual(pt.players, { ira: true });
-  await page.locator('details.act[open] select[data-dk="players.ira"]').selectOption(""); await frames(page);
+  await page.locator('details.act[open] select[data-dk="players/ira"]').selectOption(""); await frames(page);
   await page.waitForTimeout(1800);
   pt = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].dryRuns.find((d) => d.case === "no-target").patch;
   assert.equal("players" in pt, false, "as usual removes the key");
+  assert.equal(await page.locator("#stepissues li.error").count(), 0);
+}));
+
+// Schema 1.11.0 part B: a dry run sets the Available count of a piece; values offer pieces Available.
+test("a dry run sets a piece's Available count and clears it", () => withApp(async ({ page, db }) => {
+  await botsTab(page);
+  await page.locator("details.act > summary", { hasText: "no-target" }).click(); await frames(page);
+  await page.locator("details.act[open] details > summary", { hasText: "Pieces Available" }).click(); await frames(page);
+  const key = 'details.act[open] input[data-dk="pools/ira.volunteer/available"]';
+  assert.match(await page.locator(key).getAttribute("placeholder"), /as in setup \(5\)/);
+  await page.locator(key).fill("9"); await page.locator(key).dispatchEvent("change"); await frames(page);
+  await page.waitForTimeout(1800);
+  let pt = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].dryRuns.find((d) => d.case === "no-target").patch;
+  assert.deepEqual(pt.pools, { "ira.volunteer": { available: 9 } });
+  await page.locator(key).fill(""); await page.locator(key).dispatchEvent("change"); await frames(page);
+  await page.waitForTimeout(1800);
+  pt = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].dryRuns.find((d) => d.case === "no-target").patch;
+  assert.equal("pools" in pt, false, "an empty field removes the key");
   assert.equal(await page.locator("#stepissues li.error").count(), 0);
 }));

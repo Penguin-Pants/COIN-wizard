@@ -120,26 +120,28 @@ function eventRules(b, bi) {
 function patchForm(b, bi, d, di) {
   const g = S.game, pt = d.patch, k = `${bi}/${di}`;
   const ctl = (key, kind, val, extra = "") => `data-dk="${esc(key)}" data-dt="${kind}" data-dry="${k}" data-path="/bots/${bi}/dryRuns/${di}/patch" ${extra}`;
-  const elig = g.factions.map((f) => fld(`${esc(f.name)} Eligible`, `<select ${ctl(`eligible.${f.id}`, "bool3")}>${[["", "as in setup"], ["true", "yes"], ["false", "no"]].map(([v, l]) => `<option value="${v}" ${String(pt.eligible?.[f.id] ?? "") === v ? "selected" : ""}>${l}</option>`).join("")}</select>`)).join("");
+  const elig = g.factions.map((f) => fld(`${esc(f.name)} Eligible`, `<select ${ctl(`eligible/${f.id}`, "bool3")}>${[["", "as in setup"], ["true", "yes"], ["false", "no"]].map(([v, l]) => `<option value="${v}" ${String(pt.eligible?.[f.id] ?? "") === v ? "selected" : ""}>${l}</option>`).join("")}</select>`)).join("");
   // players (1.11.0): default is a player when the game has no bot for that faction.
-  const ply = g.factions.map((f) => { const dflt = !g.bots.some((x) => x.factionId === f.id); return fld(`${esc(f.name)} is played by`, `<select ${ctl(`players.${f.id}`, "bool3")}>${[["", `as usual (${dflt ? "a human" : "the bot"})`], ["true", "a human player"], ["false", "a Non-player bot"]].map(([v, l]) => `<option value="${v}" ${String(pt.players?.[f.id] ?? "") === v ? "selected" : ""}>${l}</option>`).join("")}</select>`); }).join("");
-  const res = g.factions.map((f) => fld(`${esc(f.name)} Resources`, `<input type="number" placeholder="as in setup" ${ctl(`resources.${f.id}`, "num")} value="${pt.resources?.[f.id] ?? ""}">`)).join("");
-  const tr = g.tracks.filter((t) => !g.factions.some((f) => f.resourceTrack === t.id)).map((t) => fld(esc(t.name), `<input type="number" placeholder="as in setup" ${ctl(`tracks.${t.id}`, "num")} value="${pt.tracks?.[t.id] ?? ""}">`)).join("");
-  const card = fld("Current card", `<select ${ctl("card.id", "text", "", 'data-r="1"')}><option value="">default</option>${g.deck.cards.filter((c) => c.type === "event").map((c) => `<option value="${c.id}" ${pt.card?.id === c.id ? "selected" : ""}>${esc(c.title)}</option>`).join("")}</select>`)
-    + (pt.card ? ["hasEffect", "raisesSelf", "lowersEnemy"].map((x) => `<label class="chk"><input type="checkbox" ${ctl(`card.${x}`, "bool")} ${pt.card[x] ? "checked" : ""}> ${{ hasEffect: "has an effect", raisesSelf: "helps this faction", lowersEnemy: "hurts the enemy" }[x]}</label>`).join("") : "");
+  const ply = g.factions.map((f) => { const dflt = !g.bots.some((x) => x.factionId === f.id); return fld(`${esc(f.name)} is played by`, `<select ${ctl(`players/${f.id}`, "bool3")}>${[["", `as usual (${dflt ? "a human" : "the bot"})`], ["true", "a human player"], ["false", "a Non-player bot"]].map(([v, l]) => `<option value="${v}" ${String(pt.players?.[f.id] ?? "") === v ? "selected" : ""}>${l}</option>`).join("")}</select>`); }).join("");
+  const res = g.factions.map((f) => fld(`${esc(f.name)} Resources`, `<input type="number" placeholder="as in setup" ${ctl(`resources/${f.id}`, "num")} value="${pt.resources?.[f.id] ?? ""}">`)).join("");
+  const tr = g.tracks.filter((t) => !g.factions.some((f) => f.resourceTrack === t.id)).map((t) => fld(esc(t.name), `<input type="number" placeholder="as in setup" ${ctl(`tracks/${t.id}`, "num")} value="${pt.tracks?.[t.id] ?? ""}">`)).join("");
+  const card = fld("Current card", `<select ${ctl("card/id", "text", "", 'data-r="1"')}><option value="">default</option>${g.deck.cards.filter((c) => c.type === "event").map((c) => `<option value="${c.id}" ${pt.card?.id === c.id ? "selected" : ""}>${esc(c.title)}</option>`).join("")}</select>`)
+    + (pt.card ? ["hasEffect", "raisesSelf", "lowersEnemy"].map((x) => `<label class="chk"><input type="checkbox" ${ctl(`card/${x}`, "bool")} ${pt.card[x] ? "checked" : ""}> ${{ hasEffect: "has an effect", raisesSelf: "helps this faction", lowersEnemy: "hurts the enemy" }[x]}</label>`).join("") : "");
   // turn.position (1.8.0) and scoring.nextFinal (1.9.0).
-  const turn = fld("This faction acts", `<select ${ctl("turn.position", "num")}>${[["", "1st Eligible (default)"], ["2", "2nd Eligible"]].map(([v, l]) => `<option value="${v}" ${String(pt.turn?.position ?? "") === v ? "selected" : ""}>${l}</option>`).join("")}</select>`)
-    + `<label class="chk"><input type="checkbox" ${ctl("scoring.nextFinal", "bool")} ${pt.scoring?.nextFinal ? "checked" : ""}> the next scoring card is the final one</label>`;
+  const turn = fld("This faction acts", `<select ${ctl("turn/position", "num")}>${[["", "1st Eligible (default)"], ["2", "2nd Eligible"]].map(([v, l]) => `<option value="${v}" ${String(pt.turn?.position ?? "") === v ? "selected" : ""}>${l}</option>`).join("")}</select>`)
+    + `<label class="chk"><input type="checkbox" ${ctl("scoring/nextFinal", "bool")} ${pt.scoring?.nextFinal ? "checked" : ""}> the next scoring card is the final one</label>`;
   const dice = fld("Die rolls, in order", `<input placeholder="for example 3, 5" ${ctl("dice", "dice")} value="${esc((pt.dice ?? []).join(", "))}">`);
   const pcs = g.factions.flatMap((f) => f.pieces);
   const clear = `<details><summary>Remove pieces from the whole map (${(pt.clearPieces ?? []).length})</summary>${pcs.map((x) => `<label class="chk"><input type="checkbox" ${ctl("clearPieces", "list", "", `value="${x.id}"`)} ${(pt.clearPieces ?? []).includes(x.id) ? "checked" : ""}> ${esc(x.name)}</label>`).join(" ")}</details>`;
+  // pools (1.11.0): the Available count of each piece. Out of Play stays as in setup. The list stays open while a count is set.
+  const avail = `<details${pt.pools ? " open" : ""}><summary>Pieces Available (${Object.keys(pt.pools ?? {}).length} changed)</summary><div class="grid4">${pcs.map((x) => fld(`${esc(x.name)} Available`, `<input type="number" min="0" step="1" placeholder="as in setup (${g.setup.pools?.[x.id]?.available ?? 0})" ${ctl(`pools/${x.id}/available`, "num")} value="${pt.pools?.[x.id]?.available ?? ""}">`)).join("")}</div></details>`;
   const spaces = Object.entries(pt.spaces ?? {}).map(([sid, sp]) => {
     const name = g.board.spaces.find((s) => s.id === sid)?.name ?? sid;
-    const lines = Object.entries(sp.pieces ?? {}).map(([pid, by]) => { const pc = pcs.find((x) => x.id === pid); return `<div class="row"><b>${esc(pc?.name ?? pid)}</b>${(pc?.states ?? Object.keys(by)).map((st) => `<label class="mini"><span>${esc(st)}</span><input type="number" min="0" ${ctl(`spaces.${sid}.pieces.${pid}.${st}`, "num")} value="${by[st] ?? ""}"></label>`).join("")}</div>`; }).join("");
-    return `<div class="opt"><div class="row"><b>${esc(name)}</b><label class="mini"><span>Opinion</span><input type="number" min="${-opinionMax(g)}" max="${opinionMax(g)}" placeholder="as in setup" ${ctl(`spaces.${sid}.opinion`, "num")} value="${sp.opinion ?? ""}"></label><select ${ctl(`spaces.${sid}.pieces`, "addpiece", "", 'aria-label="Set a piece count"')}><option value="">Set a piece count...</option>${pcs.map((x) => `<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select>${btn("dry-delspace", "Remove", { cls: "link", data: `data-dry="${k}" data-s="${esc(sid)}"` })}</div>${lines}</div>`;
+    const lines = Object.entries(sp.pieces ?? {}).map(([pid, by]) => { const pc = pcs.find((x) => x.id === pid); return `<div class="row"><b>${esc(pc?.name ?? pid)}</b>${(pc?.states ?? Object.keys(by)).map((st) => `<label class="mini"><span>${esc(st)}</span><input type="number" min="0" ${ctl(`spaces/${sid}/pieces/${pid}/${st}`, "num")} value="${by[st] ?? ""}"></label>`).join("")}</div>`; }).join("");
+    return `<div class="opt"><div class="row"><b>${esc(name)}</b><label class="mini"><span>Opinion</span><input type="number" min="${-opinionMax(g)}" max="${opinionMax(g)}" placeholder="as in setup" ${ctl(`spaces/${sid}/opinion`, "num")} value="${sp.opinion ?? ""}"></label><select ${ctl(`spaces/${sid}/pieces`, "addpiece", "", 'aria-label="Set a piece count"')}><option value="">Set a piece count...</option>${pcs.map((x) => `<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select>${btn("dry-delspace", "Remove", { cls: "link", data: `data-dry="${k}" data-s="${esc(sid)}"` })}</div>${lines}</div>`;
   }).join("");
   const add = `<select ${ctl("spaces", "addspace")} aria-label="Change a space"><option value="">Change a space...</option>${g.board.spaces.filter((s) => !pt.spaces?.[s.id]).map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join("")}</select>`;
-  return `<div class="grid4">${elig}${ply}${res}${tr}</div><div class="row">${card}</div><div class="row">${turn}</div>${dice}${clear}<h4>Board changes</h4>${spaces}${add}`;
+  return `<div class="grid4">${elig}${ply}${res}${tr}</div><div class="row">${card}</div><div class="row">${turn}</div>${dice}${clear}${avail}<h4>Board changes</h4>${spaces}${add}`;
 }
 
 function dryRuns(b, bi) {
@@ -253,9 +255,9 @@ export const botActions = {
   "dry-delspace": (d) => { const [bi, di] = d.dry.split("/").map(Number); const pt = S.game.bots[bi].dryRuns[di].patch; delete pt.spaces[d.s]; if (!Object.keys(pt.spaces).length) delete pt.spaces; done(); }
 };
 
-// Sets a dotted key in a patch. An empty value removes the key and any object it leaves empty.
+// Sets a key in a patch. Parts are joined with "/", since ids may hold dots. An empty value removes the key and any object it leaves empty.
 function setPatch(pt, key, v) {
-  const ks = key.split("."), last = ks.pop(), chain = [pt];
+  const ks = key.split("/"), last = ks.pop(), chain = [pt];
   for (const k of ks) chain.push(chain.at(-1)[k] ??= {});
   if (v === undefined) delete chain.at(-1)[last]; else chain.at(-1)[last] = v;
   for (let i = ks.length - 1; i >= 0; i--) if (!Object.keys(chain[i + 1]).length) delete chain[i][ks[i]];
@@ -272,9 +274,9 @@ export function onBotChange(el) {
     else if (d.dt === "text") setPatch(pt, d.dk, v === "" ? undefined : v);
     else if (d.dt === "dice") { const n = v.split(/[ ,]+/).filter(Boolean).map(Number).filter((x) => x >= 1 && x <= 6); setPatch(pt, "dice", n.length ? n : undefined); }
     else if (d.dt === "list") { const s = new Set(pt.clearPieces ?? []); if (el.checked) s.add(el.value); else s.delete(el.value); setPatch(pt, "clearPieces", s.size ? [...s] : undefined); }
-    else if (d.dt === "addspace" && v) setPatch(pt, `spaces.${v}.opinion`, S.game.setup.spaceAttributes?.[v]?.opinion ?? 0);
-    else if (d.dt === "addpiece" && v) { const pc = S.game.factions.flatMap((f) => f.pieces).find((x) => x.id === v); setPatch(pt, `${d.dk}.${v}.${pc.states[0]}`, 0); }
-    if (d.dk.startsWith("card.id") && pt.card && pt.card.hasEffect === undefined) pt.card.hasEffect = true;
+    else if (d.dt === "addspace" && v) setPatch(pt, `spaces/${v}/opinion`, S.game.setup.spaceAttributes?.[v]?.opinion ?? 0);
+    else if (d.dt === "addpiece" && v) { const pc = S.game.factions.flatMap((f) => f.pieces).find((x) => x.id === v); setPatch(pt, `${d.dk}/${v}/${pc.states[0]}`, 0); }
+    if (d.dk.startsWith("card/id") && pt.card && pt.card.hasEffect === undefined) pt.card.hasEffect = true;
     done(); return true;
   }
   // A step's own target (schema 1.8.0): an enemy faction, or none.

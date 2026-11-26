@@ -38,6 +38,8 @@ export function valueText(m, g) {
     case "var": return varText(g, m.name);
     case "count": return `${m.state !== "*" ? cap(m.state) + " " : ""}${pieceName(g, m.piece)} ${where(g, m.at)}`;
     case "fcount": return `${m.state !== "*" ? cap(m.state) + " " : ""}${whoText(g, m.faction)} pieces ${where(g, m.at)}`;
+    case "avail": return `Available ${pieceName(g, m.piece)}`;
+    case "favail": return `Available pieces of ${whoText(g, m.faction)}`;
     case "unmoved": return `${m.state !== "*" ? cap(m.state) + " " : ""}${pieceName(g, m.piece)} not yet moved ${where(g, m.at)}`;
     case "adj": return `${m.state !== "*" ? cap(m.state) + " " : ""}${pieceName(g, m.piece)} in adjacent spaces`;
     case "sum": return m.items.map((x) => valueText(x, g)).join(" plus ");

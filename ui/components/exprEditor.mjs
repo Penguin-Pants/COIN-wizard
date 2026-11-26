@@ -11,7 +11,7 @@ import { btn } from "./fields.mjs";
 
 const CMP_LABEL = { eq: "is", ne: "is not", gt: "more than", gte: "at least", lt: "less than", lte: "at most" };
 const COND_KINDS = [["cmp", "Compare"], ["all", "All of"], ["any", "Any of"], ["anySpace", "Some space has"], ["canPlace", "Can place"], ["canDo", "Can do"], ["truthy", "Is true"], ["always", "Always"], ["never", "Never"]];
-const VALUE_KINDS = [["lit", "Number or text"], ["var", "Variable"], ["count", "Pieces in a space"], ["fcount", "All pieces of a faction"], ["adj", "Pieces in adjacent spaces"], ["unmoved", "Pieces not yet moved"], ["sum", "Sum"], ["diff", "Difference"], ["sumWhere", "Total over spaces where"], ["countWhere", "Number of spaces where"], ["attr", "Space attribute"]];
+const VALUE_KINDS = [["lit", "Number or text"], ["var", "Variable"], ["count", "Pieces in a space"], ["fcount", "All pieces of a faction"], ["adj", "Pieces in adjacent spaces"], ["unmoved", "Pieces not yet moved"], ["avail", "Pieces Available"], ["favail", "Available pieces of a faction"], ["sum", "Sum"], ["diff", "Difference"], ["sumWhere", "Total over spaces where"], ["countWhere", "Number of spaces where"], ["attr", "Space attribute"]];
 
 const opts = (list, cur) => list.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(cur) ? "selected" : ""}>${esc(l)}</option>`).join("");
 // Every control of one expression shares its data-path, so an issue on the expression lists under the editor.
@@ -43,6 +43,8 @@ function newValue(k, ctx) {
     case "var": return { k, name: varOptions(ctx)[0][0] };
     case "count": case "adj": case "unmoved": return { k, piece: pc, at: ctx.space ? "$space" : "*", state: "*" };
     case "fcount": return { k, faction: ctx.target ? "$target" : ctx.faction ? "$faction" : S.game.factions[0].id, at: ctx.space ? "$space" : "*", state: "*" };
+    case "avail": return { k, piece: pc };
+    case "favail": return { k, faction: ctx.target ? "$target" : ctx.faction ? "$faction" : S.game.factions[0].id };
     case "sum": return { k, items: [{ k: "lit", value: 0 }, { k: "lit", value: 0 }] };
     case "diff": return { k, a: { k: "lit", value: 0 }, b: { k: "lit", value: 0 } };
     case "sumWhere": return { k, cond: newCond("cmp", { ...ctx, space: true }), v: { k: "var", name: "$space.pop" } };
@@ -66,6 +68,8 @@ function newCond(k, ctx) {
 }
 
 // ---------- rendering
+// Factions a value can name: the target and the faction in context first, then every faction by name.
+const whoList = (ctx, cur) => keepAt([...(ctx.target ? [["$target", "the target"]] : []), ...(ctx.faction ? [["$faction", "that faction"]] : []), ...S.game.factions.map((f) => [f.id, f.name])], cur);
 function rawBox(c, mp, expr, kind) {
   return `<span class="xraw"><small>This part cannot be shown as rows. Edit it as data.</small><textarea rows="2" ${attrs(c, mp, `data-xraw="${kind}"`)}>${esc(JSON.stringify(expr))}</textarea></span>`;
 }
@@ -90,9 +94,10 @@ function valueHtml(m, mp, c, ctx) {
         ${m.k !== "adj" ? `<span>in</span><select aria-label="Where" ${attrs(c, f("at"))}>${opts(at, m.at)}</select>` : `<span>next to</span><select aria-label="Where" ${attrs(c, f("at"))}>${opts(at.filter(([v]) => v !== "*"), m.at)}</select>`}`;
       break;
     }
+    case "avail": body = `<select aria-label="Piece" ${attrs(c, f("piece"))}>${opts(keepAt(pieces().map((p) => [p.id, p.name]), m.piece), m.piece)}</select>`; break;
+    case "favail": body = `<select aria-label="Faction" ${attrs(c, f("faction"))}>${opts(whoList(ctx, m.faction), m.faction)}</select>`; break;
     case "fcount": {
-      const who = [...(ctx.target ? [["$target", "the target"]] : []), ...(ctx.faction ? [["$faction", "that faction"]] : []), ...g.factions.map((f) => [f.id, f.name])];
-      if (!who.some(([v]) => v === m.faction)) who.push([m.faction, `${m.faction} (not valid here)`]);
+      const who = whoList(ctx, m.faction);
       const at = [...(ctx.space ? [["$space", "this space"]] : []), ["*", "the map"], ...g.board.spaces.map((s) => [s.id, s.name])];
       const states = [...new Set(g.factions.flatMap((f) => f.pieces.flatMap((p) => p.states)))];
       body = `<select aria-label="Faction" ${attrs(c, f("faction"))}>${opts(who, m.faction)}</select><select aria-label="State" ${attrs(c, f("state"))}>${opts([["*", "any state"], ...states.map((x) => [x, x])], m.state)}</select><span>in</span><select aria-label="Where" ${attrs(c, f("at"))}>${opts(keepAt(at, m.at), m.at)}</select>`;

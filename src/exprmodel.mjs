@@ -18,6 +18,8 @@
 //   { k: "count" | "adj" | "unmoved", piece, at, state }   at: "$space", "*" or a space id. state: "*" or a state.
 //                                              unmoved (1.9.0): pieces that have not moved in this Operation.
 //   { k: "fcount", faction, at, state }        all pieces of a faction. faction: an id, "$target" or "$faction".
+//   { k: "avail", piece }                      pieces Available (1.11.0)
+//   { k: "favail", faction }                   Available pieces of a faction (1.11.0). faction: as for fcount.
 //   { k: "sum", items: [value] }               add
 //   { k: "diff", a, b }                        sub
 //   { k: "sumWhere", cond, v }                 sum of v over spaces where cond holds
@@ -80,6 +82,8 @@ export function toValue(e) {
     return { k: e.op === "count" ? "count" : e.op === "unmoved" ? "unmoved" : "adj", piece: a[0], at: AT(a[1]), state: a[2] };
   }
   if (e.op === "factionCount" && a.length === 3 && FAC(a[0]) !== null && AT(a[1]) !== null && typeof a[2] === "string") return { k: "fcount", faction: FAC(a[0]), at: AT(a[1]), state: a[2] };
+  if (e.op === "avail" && a.length === 1 && typeof a[0] === "string") return { k: "avail", piece: a[0] };
+  if (e.op === "factionAvail" && a.length === 1 && FAC(a[0]) !== null) return { k: "favail", faction: FAC(a[0]) };
   if (e.op === "add" && a.length >= 1) return { k: "sum", items: a.map(toValue) };
   if (e.op === "sub" && a.length === 2) return { k: "diff", a: toValue(a[0]), b: toValue(a[1]) };
   if (e.op === "sumSpaces" && a.length === 1) {
@@ -92,12 +96,15 @@ export function toValue(e) {
 }
 
 const atExpr = (at) => (at === "$space" ? { var: "$space.id" } : at);
+const facExpr = (f) => (f.startsWith("$") ? { var: `${f}.id` } : f);
 export function fromValue(m) {
   switch (m.k) {
     case "lit": return m.value;
     case "var": return { var: m.name };
     case "count": case "adj": case "unmoved": return { op: m.k === "count" ? "count" : m.k === "unmoved" ? "unmoved" : "adjCount", args: [m.piece, atExpr(m.at), m.state] };
-    case "fcount": return { op: "factionCount", args: [m.faction.startsWith("$") ? { var: `${m.faction}.id` } : m.faction, atExpr(m.at), m.state] };
+    case "fcount": return { op: "factionCount", args: [facExpr(m.faction), atExpr(m.at), m.state] };
+    case "avail": return { op: "avail", args: [m.piece] };
+    case "favail": return { op: "factionAvail", args: [facExpr(m.faction)] };
     case "sum": return { op: "add", args: m.items.map(fromValue) };
     case "diff": return { op: "sub", args: [fromValue(m.a), fromValue(m.b)] };
     case "sumWhere": return { op: "sumSpaces", args: [{ op: "mul", args: [fromCond(m.cond), fromValue(m.v)] }] };
