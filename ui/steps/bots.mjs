@@ -21,7 +21,7 @@ const ID_OK = /^[a-z0-9][a-z0-9._-]*$/;
 const KINDS = [["condition", "Check (yes or no)"], ["event-check", "Event check"], ["action", "Action"], ["end", "End"]];
 const OUTCOMES = ["none", "event", "operation", "operationSpecial", "pass"];
 const CASE_HELP = { ineligible: "The bot is not Eligible.", "event-override": "A card with an Event exception is current.", "no-target": "The first action finds no legal space.", tie: "Two spaces tie after the tie-breaks.", "linked-sa": "The Operation runs with its linked Special Activity.", fallback: "An action finds no space and the bot falls back.", scoring: "Optional. A scoring round: the bot picks spaces in its scoring phases." };
-const isCond = (e) => typeof e === "boolean" || (isExpr(e) && ["and", "or", "not", "anySpace", "canPlace", "canDo", "eq", "ne", "gt", "gte", "lt", "lte"].includes(e.op));
+const isCond = (e) => typeof e === "boolean" || (isExpr(e) && ["and", "or", "not", "anySpace", "canPlace", "canDo", "cardCould", "eq", "ne", "gt", "gte", "lt", "lte"].includes(e.op));
 
 const fname = (id) => S.game.factions.find((f) => f.id === id)?.name ?? id;
 const cur = () => { const n = S.game.bots.length; S.bot = Math.min(S.bot ?? 0, Math.max(0, n - 1)); return S.bot; };
@@ -141,6 +141,8 @@ function patchForm(b, bi, d, di) {
   const dice = fld("Die rolls, in order", `<input placeholder="for example 3, 5" ${ctl("dice", "dice")} value="${esc((pt.dice ?? []).join(", "))}">`);
   const pcs = g.factions.flatMap((f) => f.pieces);
   const clear = `<details><summary>Remove pieces from the whole map (${(pt.clearPieces ?? []).length})</summary>${pcs.map((x) => `<label class="chk"><input type="checkbox" ${ctl("clearPieces", "list", "", `value="${x.id}"`)} ${(pt.clearPieces ?? []).includes(x.id) ? "checked" : ""}> ${esc(x.name)}</label>`).join(" ")}</details>`;
+  // next (1.11.0): the next card, for next.id and next.lasting.
+  const next = fld("Next card", `<select ${ctl("next/id", "text")}><option value="">none</option>${g.deck.cards.map((c) => `<option value="${esc(c.id)}" ${pt.next?.id === c.id ? "selected" : ""}>${esc(c.title)}</option>`).join("")}</select>`);
   // inPlay (1.11.0): lasting cards in play.
   const lasting = g.deck.cards.filter((c) => (c.sides ?? []).some((sd) => sd.lasting));
   const inPlay = lasting.length ? `<details ${pt.inPlay?.length ? "open" : ""}><summary>Lasting cards in play (${(pt.inPlay ?? []).length})</summary>${lasting.map((c) => `<label class="chk"><input type="checkbox" ${ctl("inPlay", "inplay", "", `value="${esc(c.id)}"`)} ${(pt.inPlay ?? []).includes(c.id) ? "checked" : ""}> ${esc(c.title)}</label>`).join(" ")}</details>` : "";
@@ -152,7 +154,7 @@ function patchForm(b, bi, d, di) {
     return `<div class="opt"><div class="row"><b>${esc(name)}</b><label class="mini"><span>Opinion</span><input type="number" min="${-opinionMax(g)}" max="${opinionMax(g)}" placeholder="as in setup" ${ctl(`spaces/${sid}/opinion`, "num")} value="${sp.opinion ?? ""}"></label><select ${ctl(`spaces/${sid}/pieces`, "addpiece", "", 'aria-label="Set a piece count"')}><option value="">Set a piece count...</option>${pcs.map((x) => `<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select>${btn("dry-delspace", "Remove", { cls: "link", data: `data-dry="${k}" data-s="${esc(sid)}"` })}</div>${lines}</div>`;
   }).join("");
   const add = `<select ${ctl("spaces", "addspace")} aria-label="Change a space"><option value="">Change a space...</option>${g.board.spaces.filter((s) => !pt.spaces?.[s.id]).map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join("")}</select>`;
-  return `<div class="grid4">${elig}${ply}${res}${tr}</div><div class="row">${card}</div><div class="row">${turn}</div>${dice}${clear}${avail}${inPlay}<h4>Board changes</h4>${spaces}${add}`;
+  return `<div class="grid4">${elig}${ply}${res}${tr}</div><div class="row">${card}</div><div class="row">${turn}</div><div class="row">${next}</div>${dice}${clear}${avail}${inPlay}<h4>Board changes</h4>${spaces}${add}`;
 }
 
 function dryRuns(b, bi) {

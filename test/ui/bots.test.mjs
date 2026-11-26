@@ -362,3 +362,23 @@ test("a dry run sets a lasting card in play and clears it", async () => {
     assert.deepEqual(app.errors, []);
   } finally { await app.close(); }
 });
+
+// Schema 1.11.0 part F: conditions offer "The card could"; a dry run sets the next card; cards show what bots read.
+test("a designer tests what the card could do, sets the next card and sees what each side could do", () => withApp(async ({ page, db }) => {
+  await botsTab(page);
+  await page.click('[data-a="bot-node"][data-id="cw.low"]'); await frames(page);
+  const x = 'data-x="bots/0/nodes/4/test"';
+  await page.locator(`select.xkind[${x}][data-xm=""]`).selectOption("cardCould"); await frames(page);
+  await page.locator(`select[aria-label="Effect"][${x}]`).selectOption("shift"); await frames(page);
+  await page.waitForTimeout(1800);
+  let g = JSON.parse((await db())["data/users/u1/draft"].json);
+  assert.deepEqual(g.bots[0].nodes[4].test, { op: "cardCould", args: ["either", "shift", "support"] }, "a new effect starts with a fitting what");
+  await page.locator("details.act > summary", { hasText: "no-target" }).click(); await frames(page);
+  await page.locator('details.act[open] select[data-dk="next/id"]').selectOption("e02"); await frames(page);
+  await page.waitForTimeout(1800);
+  g = JSON.parse((await db())["data/users/u1/draft"].json);
+  assert.deepEqual(g.bots[0].dryRuns.find((d) => d.case === "no-target").patch.next, { id: "e02" });
+  await page.click('[data-a="tab"][data-tab="deck"]'); await frames(page);
+  await page.locator('details.card[data-k="card-e01"] > summary').click(); await frames(page);
+  assert.match(await page.innerText('details.card[data-k="card-e01"]'), /Bots read: this side could remove/);
+}));

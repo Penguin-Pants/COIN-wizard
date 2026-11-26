@@ -8,6 +8,7 @@
 //   { k: "anySpace", cond }                    some space meets cond
 //   { k: "canPlace", piece, at }               a piece is Available and has room (1.8.0). at: "$space", "*" or a space id.
 //   { k: "canDo", action, at }                 an action is legal and affordable (1.8.0). at: as for canPlace.
+//   { k: "cardCould", which, verb, what }      what the current card could do (1.11.0). which: played or either.
 //   { k: "truthy", v: value }                  a value used as a condition, such as eligible
 //   { k: "bool", value }                       always true or always false
 //   { k: "raw", expr }
@@ -28,7 +29,7 @@
 //   { k: "raw", expr }
 
 export const CMPS = ["eq", "ne", "gt", "gte", "lt", "lte"];
-const COND_OPS = new Set(["and", "or", "not", "anySpace", "canPlace", "canDo", ...CMPS]);
+const COND_OPS = new Set(["and", "or", "not", "anySpace", "canPlace", "canDo", "cardCould", ...CMPS]);
 
 export const isExpr = (v) => v !== null && typeof v === "object" && !Array.isArray(v) &&
   (("var" in v && Object.keys(v).length === 1 && typeof v.var === "string") || (typeof v.op === "string" && Array.isArray(v.args) && Object.keys(v).length === 2));
@@ -49,6 +50,7 @@ export function toCond(e) {
   if (CMPS.includes(e.op) && a.length === 2) return { k: "cmp", cmp: e.op, a: toValue(a[0]), b: toValue(a[1]) };
   if (e.op === "anySpace" && a.length === 1) return { k: "anySpace", cond: toCond(a[0]) };
   if ((e.op === "canPlace" || e.op === "canDo") && a.length === 2 && typeof a[0] === "string" && AT(a[1]) !== null) return e.op === "canPlace" ? { k: "canPlace", piece: a[0], at: AT(a[1]) } : { k: "canDo", action: a[0], at: AT(a[1]) };
+  if (e.op === "cardCould" && a.length === 3 && typeof a[0] === "string" && typeof a[1] === "string" && FAC(a[2]) !== null) return { k: "cardCould", which: a[0], verb: a[1], what: FAC(a[2]) };
   return { k: "raw", expr: e };
 }
 
@@ -63,6 +65,7 @@ export function fromCond(m) {
     case "anySpace": e = { op: "anySpace", args: [fromCond(c.cond)] }; break;
     case "canPlace": e = { op: "canPlace", args: [c.piece, atExpr(c.at)] }; break;
     case "canDo": e = { op: "canDo", args: [c.action, atExpr(c.at)] }; break;
+    case "cardCould": e = { op: "cardCould", args: [c.which, c.verb, facExpr(c.what)] }; break;
     case "raw": e = c.expr; break;
     default: throw new Error(`Unknown condition kind ${c.k}`);
   }

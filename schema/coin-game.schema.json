@@ -1127,7 +1127,7 @@
       }
     },
     "expr": {
-      "description": "Small expression language: literals, {var}, {op,args}. Ops: and or not eq ne gt gte lt lte add sub mul min max count adjCount sumSpaces anySpace attr factionCount canPlace canDo unmoved avail factionAvail.",
+      "description": "Small expression language: literals, {var}, {op,args}. Ops: and or not eq ne gt gte lt lte add sub mul min max count adjCount sumSpaces anySpace attr factionCount canPlace canDo unmoved avail factionAvail cardCould.",
       "oneOf": [
         {
           "type": [
@@ -1182,7 +1182,8 @@
                 "canDo",
                 "unmoved",
                 "avail",
-                "factionAvail"
+                "factionAvail",
+                "cardCould"
               ]
             },
             "args": {

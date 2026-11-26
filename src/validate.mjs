@@ -131,6 +131,17 @@ export function validate(game) {
     for (const p of s.pieces) if (!pieceById[p]) err("missing-ref", path, `Unknown piece ${p}`);
     for (const f of s.factions ?? []) if (!factionIds.has(f)) err("missing-ref", path, `Unknown faction ${f}`);
     for (const a of s.actions ?? []) if (!game.actions.some((x) => x.id === a)) err("missing-ref", path, `Unknown action ${a}`);
+    // cardCould (1.11.0): which, verb and what must fit together.
+    for (const [which, verb, what] of cardCouldArgs(e)) {
+      if (typeof which === "string" && !["played", "either"].includes(which)) err("bad-card-could", path, `cardCould: ${which} must be played or either`);
+      if (typeof verb !== "string") continue;
+      if (!CARD_VERBS.includes(verb)) { err("bad-card-could", path, `cardCould: unknown effect ${verb}. Use ${CARD_VERBS.join(", ")}`); continue; }
+      if (typeof what !== "string") continue;
+      if (verb === "shift" && !["support", "opposition"].includes(what)) err("bad-card-could", path, `cardCould shift: ${what} must be support or opposition`);
+      if ((verb === "place" || verb === "remove") && what !== "*" && !pieceById[what] && !factionIds.has(what)) err("bad-card-could", path, `cardCould ${verb}: unknown piece or faction ${what}`);
+      if (verb === "resources" && !factionIds.has(what)) err("bad-card-could", path, `cardCould resources: ${what} must be a faction`);
+      if (verb === "track" && !trackIds.has(what)) err("bad-card-could", path, `cardCould track: unknown track ${what}`);
+    }
     // $space.control (1.11.0) needs rules.control; a compare must name a side, a faction or "none".
     if (s.vars.includes("$space.control")) {
       if (!ctl) err("bad-control", path, "$space.control needs Control rules (rules.control)");
@@ -522,6 +533,15 @@ export function renameId(game, oldId, newId) {
     return x;
   };
   return walk(game);
+}
+
+const CARD_VERBS = ["shift", "place", "remove", "resources", "track", "marker"];
+// The arguments of each cardCould in an expression.
+function cardCouldArgs(e, out = []) {
+  if (e === null || typeof e !== "object" || "var" in e) return out;
+  if (e.op === "cardCould") out.push(e.args);
+  for (const x of e.args) cardCouldArgs(x, out);
+  return out;
 }
 
 // Text values compared with $space.control (eq or ne) in an expression.

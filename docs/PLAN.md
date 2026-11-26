@@ -26,7 +26,7 @@ Owner: **Owner** (a person must act or decide) or **Claude** (code or docs, afte
 
 | # | Item | Owner | Start when |
 |---|---|---|---|
-| B1 | Implement 1.11.0 (part A done, ACCEPTANCE row 24; part B done, row 25; part C done, row 26; part D done, row 27; part E done, row 28): parts F (card effect categories), G14 (next card) | Claude | After PR 35 merges. One part per PR |
+| B1 | Implement 1.11.0 (part A done, ACCEPTANCE row 24; part B done, row 25; part C done, row 26; part D done, row 27; part E done, row 28; part F with G14 done, row 29): all parts done | Claude | After PR 35 merges. One part per PR |
 | B2 | Green circled "2" on the AA Event box: check the printed rulebook | Owner | Any time |
 
 ### C. Later versions and imports (approved 2026-11-26, review items R7 to R13)

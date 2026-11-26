@@ -2,6 +2,7 @@
 // ctx = { state, links, $space }
 import { legalityOf } from "./effects.mjs";
 import { deriveState } from "./state.mjs";
+import { effectMatches } from "./cardfx.mjs";
 
 const num = (x) => (typeof x === "boolean" ? (x ? 1 : 0) : x);
 
@@ -47,6 +48,9 @@ export function resolveVar(name, ctx) {
   // move.count (schema 1.9.0): pieces the move step moved, in its activate condition; 0 elsewhere.
   if (name === "move.count") return ctx.moveCount ?? 0;
   if (name.startsWith("card.")) return state.card[name.slice(5)];
+  // next.id and next.lasting (schema 1.11.0): the next card, "none" by default.
+  if (name === "next.id") return state.next?.id ?? "none";
+  if (name === "next.lasting") return state.cardLast?.[state.next?.id] ?? "none";
   // inPlay.<card> (schema 1.11.0): the lasting card is in play.
   if (name.startsWith("inPlay.")) return (state.inPlay ?? []).includes(name.slice(7));
   if (name.startsWith("var.")) return state.vars?.[name.slice(4)];
@@ -144,6 +148,14 @@ export function evalExpr(e, ctx) {
       const moved = (sid === "*" ? Object.keys(arr) : [sid]).reduce((t, id) => t + Object.entries(arr[id]?.[pid] ?? {}).filter(([s]) => st === "*" || s === st).reduce((u, [, n]) => u + n, 0), 0);
       return countPieces(ctx.state, pid, sid, st) - moved;
     }
+    // What the current card could do (schema 1.11.0): the side this faction plays, or either side.
+    case "cardCould": {
+      const which = ev(a[0]), verb = ev(a[1]), what = ev(a[2]), st = ctx.state, cid = st.card?.id;
+      const sides = st.cardFx?.[cid] ?? {};
+      const so = st.sideOf?.[st.self], played = so ? so.overrides[cid] ?? so.side : undefined;
+      const list = which === "played" ? [sides[played] ?? []] : Object.values(sides);
+      return list.some((fx) => effectMatches(fx, verb, what, st.owner ?? {}));
+    }
     // Pieces Available: one piece type, or every piece one faction owns (schema 1.11.0).
     case "avail": return availOf(ctx.state, ev(a[0]));
     case "factionAvail": {
@@ -199,4 +211,4 @@ export function scanExpr(e, out = { vars: [], pieces: [], ops: [] }) {
 }
 
 // Faction ids in resources.<id> and similar names are checked against the game by the validator.
-export const VAR_OK = /^(eligible|self\.resources|(resources|eligible|score|margin|player)\.[a-z0-9._-]+|rivals\.(max|min)(Resources|Score|Margin)|\$(faction|target)\.(id|name|type|resources|eligible|score|margin|player)|track\.[a-z0-9._-]+|card\.(id|hasEffect|raisesSelf|lowersEnemy|lasting|position)|turn\.position|inPlay\.[a-z0-9._-]+|scoring\.nextFinal|move\.count|var\.[a-z0-9_]+|\$space\.(id|name|type|pop|opinion|control))$/;
+export const VAR_OK = /^(eligible|self\.resources|(resources|eligible|score|margin|player)\.[a-z0-9._-]+|rivals\.(max|min)(Resources|Score|Margin)|\$(faction|target)\.(id|name|type|resources|eligible|score|margin|player)|track\.[a-z0-9._-]+|card\.(id|hasEffect|raisesSelf|lowersEnemy|lasting|position)|turn\.position|next\.(id|lasting)|inPlay\.[a-z0-9._-]+|scoring\.nextFinal|move\.count|var\.[a-z0-9_]+|\$space\.(id|name|type|pop|opinion|control))$/;

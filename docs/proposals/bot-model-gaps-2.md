@@ -48,9 +48,9 @@ Model today: `coin-game/1.10.0`.
 | C Resource budget | Approved (R6). Done in 1.11.0 part C: `budget: { share, allBelow, floor }`, parts combine (smaller spend wins), a per-use cost is checked too, a linked Special Activity pays from the full Resources (owner decisions 2026-11-26) |
 | D Control | Approved (R5). Done in 1.11.0 part D: `rules.control { sides, exclude, types }` and `$space.control`; editor panel and board preview (owner decisions 2026-11-26) |
 | E Keep-back | Approved (R4). Done in 1.11.0 part E: `keep { count, if, prefer }` on move, remove and flip, and `inPlay.<card>` (G22) for "1(2)" (owner decisions 2026-11-26) |
-| F Card effect categories | Moved into the next version (R10) |
+| F Card effect categories | Moved into the next version (R10). Done in 1.11.0 part F: `cardCould(which, verb, what)`, read from the sides' steps, no hand tags (owner decisions 2026-11-26) |
 | G, H Predicted outcome; Operation and SA in one space | No decision yet. Recommendation stays: defer to their own version |
-| I Next card (G14) | Moved into the next version (R10). The rest of part I stays deferred |
+| I Next card (G14) | Moved into the next version (R10). Done in 1.11.0 part F: `next.id`, `next.lasting`, dry-run patch `next`. The rest of part I stays deferred |
 | New: card-driven bot mode | Approved for design (R7): 7 newer games use bot decks. Design questions first, then its own version |
 
 Source of the review items R1 to R13: the COIN_Research review page (private artifact "COIN Research Review", 2026-11-26).

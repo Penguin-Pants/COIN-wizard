@@ -1,5 +1,6 @@
 // Plain English for effect steps and conditions. One sentence per step.
 import { toCond, toValue } from "./exprmodel.mjs";
+import { sideEffects } from "./cardfx.mjs";
 
 const cap = (s) => String(s).charAt(0).toUpperCase() + String(s).slice(1);
 const pieceName = (g, id) => g.factions.flatMap((f) => f.pieces).find((p) => p.id === id)?.name ?? id;
@@ -13,6 +14,7 @@ const VARS = {
   "rivals.maxMargin": "the highest enemy victory margin", "rivals.minMargin": "the lowest enemy victory margin",
   "card.id": "the card", "card.hasEffect": "the card has an effect for this faction", "card.raisesSelf": "the card helps this faction", "card.lowersEnemy": "the card hurts the enemy", "card.lasting": "the card's lasting type",
   "card.position": "this faction's place in the card's faction order (1 is first, 0 is not listed)", "turn.position": "this faction's place this turn (1st or 2nd Eligible)", "scoring.nextFinal": "the next scoring card is the final one", "move.count": "the number of pieces moved",
+  "next.id": "the next card", "next.lasting": "the next card's lasting type",
   "$space.id": "this space", "$space.name": "space name", "$space.type": "space type", "$space.pop": "Pop", "$space.opinion": "opinion", "$space.control": "the controller of this space"
 };
 const CMP = { eq: "is", ne: "is not", gt: "is more than", gte: "is at least", lt: "is less than", lte: "is at most" };
@@ -61,6 +63,20 @@ function controlCmp(m, g) {
   return `${controllerName(g, m.b.value)} ${yes ? "controls" : "does not control"} this space`;
 }
 
+// One card effect (schema 1.11.0, src/cardfx.mjs) in plain English.
+function effectText(g, { verb, what }) {
+  const who = (x) => (x === "*" ? "any piece" : g.factions.some((f) => f.id === x) ? `${whoText(g, x)} pieces` : x.startsWith("$") ? `${whoText(g, x)} pieces` : pieceName(g, x));
+  switch (verb) {
+    case "shift": return `shift toward ${what === "support" ? "Support" : "Opposition"}`;
+    case "place": case "remove": return `${verb} ${who(what)}`;
+    case "resources": return `change ${whoText(g, what)} Resources`;
+    case "track": return `change ${trackName(g, what)}`;
+    case "marker": return `set ${what}`;
+    default: return `${verb} ${what}`;
+  }
+}
+export const sideEffectsText = (g, steps) => sideEffects(g, steps).map((e) => effectText(g, e));
+
 export function condText(m, g) {
   let t;
   switch (m.k) {
@@ -71,6 +87,7 @@ export function condText(m, g) {
     case "cmp": t = controlCmp(m, g) ?? `${valueText(m.a, g)} ${CMP[m.cmp]} ${valueText(m.b, g)}`; break;
     case "anySpace": t = `some space has ${condText(m.cond, g)}`; break;
     case "canPlace": t = `a ${pieceName(g, m.piece)} can be placed ${m.at === "*" ? "in some space" : where(g, m.at)}`; break;
+    case "cardCould": t = `${m.which === "played" ? "the side this faction plays" : "the card (either side)"} could ${effectText(g, { verb: m.verb, what: m.what })}`; break;
     case "canDo": t = `${g.actions.find((x) => x.id === m.action)?.name ?? m.action} is possible ${m.at === "*" ? "in some space" : where(g, m.at)}`; break;
     default: t = "a formula holds";
   }
