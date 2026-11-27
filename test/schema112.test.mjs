@@ -309,3 +309,27 @@ test("the bot aid prints the Activation Number of a side and the nodes that skip
   assert.match(md, /Crackdown \(cost [^)]*\)\. Do not roll for the Activation Number\./);
   assert.equal(/Activation Number/.test(toMarkdown(aidModel(cardGame(), cardGame().bots[0]))), false);
 });
+
+// Codex review on PR 47 (two findings, each reproduced before the fix).
+// Part 1 raises Repression in each of its spaces; part 2 is Crackdown. The roll after Dublin ends the
+// Operation in part 1, so part 2 does not run, even in Dublin, which part 1 already paid for. The
+// Active Volunteer in Dublin stays: the check after the Operation answers yes.
+test("a roll that ends the Operation also ends its later parts", () => {
+  const g = withAN(6), side = g.bots[0].deck.cards[0].sides[0], n = side.nodes[1];
+  const crack = structuredClone(g.actions.find((a) => a.id === "crown.crackdown").steps);
+  n.parts = [{ text: "Repression.", table: n.table, steps: [{ op: "track", id: "repression", delta: 1 }] }, { text: "Crackdown.", table: n.table, steps: crack }];
+  delete n.table;
+  n.then = "k1.a.vol";
+  side.nodes.push({ id: "k1.a.vol", kind: "condition", text: "Active Volunteer in Dublin?", test: { op: "gte", args: [{ op: "count", args: ["ira.volunteer", "dublin", "active"] }, 1] }, yes: "k1.a.done", no: "k1.a.none" }, { id: "k1.a.none", kind: "end", text: "Done.", outcome: "operation" });
+  const r = run(g, twoCrack);
+  assert.deepEqual(r.chosen, ["dublin"]);
+  assert.equal(r.path.at(-1), "k1.a.done", "part 2 did not remove the Volunteer");
+});
+
+test("step targets list only the spaces the Operation takes", () => {
+  const g = withAN(6);
+  for (const st of g.bots[0].priorityTables.find((t) => t.id === "cw.t.crack").steps) st.target = "ira";
+  const r = run(g, twoCrack);
+  assert.deepEqual(r.chosen, ["dublin"]);
+  assert.deepEqual(r.targets, { dublin: "ira" });
+});

@@ -20,7 +20,7 @@ function activationGate(side, node, ctx, roll, rolls) {
   if (!side || side.activation === undefined || node.noActivation || !side.nodes.includes(node)) return null;
   const n = Number(evalExpr(side.activation, ctx));
   let taken = 0, stopped = false;
-  return { take: () => { if (stopped) return false; if (taken++ === 0) return true; const r = roll(); rolls.push(r); if (r <= n) { stopped = true; return false; } return true; } };
+  return { take: () => { if (stopped) return false; if (taken++ === 0) return true; const r = roll(); rolls.push(r); if (r <= n) { stopped = true; return false; } return true; }, get stopped() { return stopped; } };
 }
 
 // The bot deck for one turn (schema 1.12.0): the dry-run patch "botDeck" sets the order (top card first)
@@ -237,6 +237,8 @@ function runParts(game, state, node, action, tables, actions, extra, result, gat
   }
   const chosen = [], targets = {};
   for (const pt of node.parts) {
+    // A roll that ended the Operation (part B) also ends its later parts.
+    if (gate?.stopped) break;
     const t = tables[pt.table], p = pool(pt);
     // The table ranks the pool; then new spaces stop at what is left to pay.
     // A step with a target ranks the spaces legal against that target, under the same payment rules.
@@ -245,6 +247,7 @@ function runParts(game, state, node, action, tables, actions, extra, result, gat
     const picked = [];
     for (const sp of ranked) {
       if (t.select === "all" && picked.length >= t.limit) break;
+      if (gate?.stopped) break;
       if (!paid.has(sp.id)) { if (room <= 0 || (gate && !gate.take())) continue; room--; if (per === "space" || !paid.size) payCost(game, state, action, [sp.id]); paid.add(sp.id); }
       picked.push(sp.id);
     }
@@ -330,7 +333,9 @@ export function runBot(game, bot, startState) {
       const legal = legalSpaces(game, state, action, extra);
       const ranked = selectByTable(game, state, tables[node.table], legal, action, extra);
       // The Activation Number ends the Operation early; the rest of the ranked spaces are not taken.
-      const chosen = gate ? Object.assign(ranked.filter(() => gate.take()), { targetOf: ranked.targetOf }) : ranked;
+      // Step targets stay only for the spaces the Operation takes.
+      const kept = gate ? ranked.filter(() => gate.take()) : ranked;
+      const chosen = gate ? Object.assign(kept, { targetOf: ranked.targetOf && new Map([...ranked.targetOf].filter(([id]) => kept.some((sp) => sp.id === id))) }) : ranked;
       if (!chosen.length) { result.path.push(`${node.id}:empty`); cur = node.onEmpty; continue; }
       result.path.push(node.id);
       result.chosen = chosen.map((s) => s.id);
