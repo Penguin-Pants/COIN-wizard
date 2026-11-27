@@ -2,7 +2,8 @@
 // Mermaid source, printable aid (Markdown and HTML), policy YAML, structured JSON.
 import YAML from "yaml";
 import { linkedOf, botNodes, EXIT_TEXT } from "./dryrun.mjs";
-import { budgetText } from "./plain.mjs";
+import { budgetText, valueText } from "./plain.mjs";
+import { toValue } from "./exprmodel.mjs";
 
 const esc = (s) => String(s).replace(/"/g, "'").replace(/[<>]/g, "");
 const mid = (id) => (id.startsWith("$") ? `x_${id.slice(1)}` : id.replace(/[^a-z0-9]/gi, "_"));
@@ -90,7 +91,7 @@ export function aidModel(game, bot) {
     const choose = n.parts
       ? `Do these parts in order, each in its own spaces: ${n.parts.map((pt, i) => `${i + 1}. ${pt.text} Choose ${select(tableById[pt.table])} with table ${labels[pt.table]}.`).join(" ")} ${a.cost.per === "use" ? "Pay the cost once, for the whole Operation." : "Pay the cost once for each space, over all parts."} If no part finds a legal or affordable space`
       : `Choose ${select(tableById[n.table])} with table ${labels[n.table]}. If no space is legal or affordable`;
-    let t = `${a.name} (cost ${costText(a)}). ${n.budget ? `${budgetText(n.budget)} ` : ""}${n.target ? `First choose the target: one enemy faction with table ${labels[n.target]}. If no enemy qualifies: ${goto(n.onEmpty)}. ` : ""}${choose}: ${goto(n.onEmpty)}. Otherwise resolve it, then ${goto(n.then)}.`;
+    let t = `${a.name} (cost ${costText(a)}). ${n.noActivation ? "Do not roll for the Activation Number. " : ""}${n.budget ? `${budgetText(n.budget)} ` : ""}${n.target ? `First choose the target: one enemy faction with table ${labels[n.target]}. If no enemy qualifies: ${goto(n.onEmpty)}. ` : ""}${choose}: ${goto(n.onEmpty)}. Otherwise resolve it, then ${goto(n.then)}.`;
     const links = linkedOf(n);
     const saText = (L) => `${actions[L.action].name} (cost ${costText(actions[L.action])}). ${L.skipText ?? "Skip it if it cannot be used."} Choose its space with table ${labels[L.table]}.`;
     if (links.length === 1) {
@@ -102,7 +103,9 @@ export function aidModel(game, bot) {
     return { n: num[n.id], text: t };
   };
   const steps = stepsOf(bot);
-  const cards = (bot.mode === "cards" ? bot.deck.cards : []).flatMap((c) => c.sides.map((sd) => ({ title: `${c.title}, side ${sd.label}`, steps: stepsOf(sd) })));
+  // The Activation Number (part B) prints under the side's title.
+  const anText = (sd) => (sd.activation === undefined ? undefined : `Activation Number: ${valueText(toValue(sd.activation), game)}. Before each space after the first, roll 1d6. At or under the number, the Operation ends.`);
+  const cards = (bot.mode === "cards" ? bot.deck.cards : []).flatMap((c) => c.sides.map((sd) => ({ title: `${c.title}, side ${sd.label}`, activation: anText(sd), steps: stepsOf(sd) })));
   return {
     title: `${faction.name} bot aid (${faction.symbol})`,
     game: game.meta.title, revision: game.meta.revision, status: game.meta.status,
@@ -132,7 +135,7 @@ export function aidModel(game, bot) {
 }
 
 // Bot cards (1.12.0): the steps of each card side, in deck order.
-const cardsMd = (m) => (m.cards.length ? ["## Bot cards", "When a step says to draw the next bot card, draw it and follow its face-up side.", ...m.cards.flatMap((c) => ["", `### ${c.title}`, ...c.steps.map((s) => `${s.n}. ${s.text}`)]), ""] : []);
+const cardsMd = (m) => (m.cards.length ? ["## Bot cards", "When a step says to draw the next bot card, draw it and follow its face-up side.", ...m.cards.flatMap((c) => ["", `### ${c.title}`, ...(c.activation ? [c.activation] : []), ...c.steps.map((s) => `${s.n}. ${s.text}`)]), ""] : []);
 
 export function toMarkdown(m) {
   const L = [`# ${m.title}`, `${m.game}, revision ${m.revision}${m.status === "draft" ? " (DRAFT)" : ""}`, "", `**Goal.** ${m.objective}`, "", "## Before you act", ...m.before.map((b) => `- ${b}`), "", "## Terms", ...m.measures.map(([a, b]) => `- **${a}.** ${b}`), "", "## Events", m.eventRule, "", "### Event exceptions", ...(m.exceptions.length ? m.exceptions.map(([a, b]) => `- **${a}.** ${b}`) : ["- None."]), "", "## Steps (follow in order)", ...m.steps.map((s) => `${s.n}. ${s.text}`), "", ...cardsMd(m), "## Priority tables"];
@@ -152,7 +155,7 @@ export function toHtml(m) {
 <h2>Before you act</h2><ul>${m.before.map((b) => `<li>${h(b)}</li>`).join("")}</ul>
 <h2>Terms</h2><ul>${m.measures.map(([a, b]) => `<li><b>${h(a)}.</b> ${h(b)}</li>`).join("")}</ul>
 <h2>Events</h2><p>${h(m.eventRule)}</p><h3>Event exceptions</h3><ul>${(m.exceptions.length ? m.exceptions : [["None", ""]]).map(([a, b]) => `<li><b>${h(a)}.</b> ${h(b)}</li>`).join("")}</ul>
-<h2>Steps (follow in order)</h2><ol>${m.steps.map((s) => `<li value="${s.n}">${h(s.text)}</li>`).join("")}</ol>${m.cards.length ? `<h2>Bot cards</h2>${m.cards.map((c) => `<h3>${h(c.title)}</h3><ol>${c.steps.map((s) => `<li value="${s.n}">${h(s.text)}</li>`).join("")}</ol>`).join("")}` : ""}
+<h2>Steps (follow in order)</h2><ol>${m.steps.map((s) => `<li value="${s.n}">${h(s.text)}</li>`).join("")}</ol>${m.cards.length ? `<h2>Bot cards</h2>${m.cards.map((c) => `<h3>${h(c.title)}</h3>${c.activation ? `<p>${h(c.activation)}</p>` : ""}<ol>${c.steps.map((s) => `<li value="${s.n}">${h(s.text)}</li>`).join("")}</ol>`).join("")}` : ""}
 <h2>Priority tables</h2>${m.tables.map((t) => `<h3>Table ${h(t.label)} (choose ${h(t.select)})</h3><table><tr><th>Step</th><th>${h(t.what)}</th></tr>${t.rows.map(([a, b]) => `<tr><td>${a}</td><td>${h(b)}</td></tr>`).join("")}</table><p>${h(t.how)}</p><p>Tie-breaks, in order:</p><ul>${t.ties.map(([a, b]) => `<li>${a}. ${h(b)}</li>`).join("")}</ul>`).join("")}
 <h2>Ties and dice</h2><p>${h(m.tieRandom)}</p><h2>Fallback</h2><p>${h(m.fallback)}</p><h2>Scoring rounds</h2><p>${h(m.scoring)}</p><h2>Counting the turn</h2><p>${h(m.outcome)}</p></body></html>`;
 }

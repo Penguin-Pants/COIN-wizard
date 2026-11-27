@@ -10,6 +10,7 @@ import { addNode, setCardMode, addBotCard, deleteBotCard, addBack, deleteBack } 
 import { aidModel, toMarkdown, toMermaid } from "../src/botaid.mjs";
 import { nonPlayerSheetHtml } from "../src/kit.mjs";
 import { graphSvg } from "../src/graphsvg.mjs";
+import { seededRandom } from "../src/deck.mjs";
 
 // Schema 1.12.0, card-driven bots (docs/proposals/card-bots.md), added in parts.
 // Part A (owner decisions Q1, Q2, Q8, Q10 on 2026-11-26, turn start and empty deck on 2026-11-27):
@@ -229,4 +230,106 @@ test("removing the bot deck drops the dry-run deck patches, so a new deck starts
 test("a two-sided card with a missing start is an error, not a validator crash", () => {
   const g = cardGame(); g.bots[0].deck.cards[0].sides[0].start = "nope";
   assert.ok(validate(g).errors.some((e) => e.code === "missing-ref" && e.path === "/bots/0/deck/cards/0/sides/0/start"));
+});
+
+// Part B (owner decisions Q3 and Q9, 2026-11-26; seed default, Operation only and node flag, 2026-11-27):
+// the Activation Number of a card side. Before each space after the first, the Operation rolls 1d6 from
+// the dry run's seed (default 1); a roll at or under the number ends it. Linked Special Activities do not roll.
+// Board: Dublin and Cork City each hold an Active Volunteer and a Crown Police cube, so Crackdown
+// (table CW-1, all, limit 2) ranks both: Dublin, then Cork City.
+const twoCrack = { spaces: { dublin: { pieces: { "ira.volunteer": { active: 1 }, "crown.police": { normal: 1 } } }, "cork-city": { pieces: { "ira.volunteer": { active: 1 }, "crown.police": { normal: 1 } } } } };
+const withAN = (an, extra = {}) => { const g = cardGame(); Object.assign(g.bots[0].deck.cards[0].sides[0], { activation: an }); Object.assign(g.bots[0].deck.cards[0].sides[0].nodes[1], extra); return g; };
+const d6 = (seed, n) => { const r = seededRandom(seed); return Array.from({ length: n }, () => 1 + Math.floor(r() * 6)); };
+
+test("no Activation Number: the Operation takes spaces up to its table's limit and rolls nothing", () => {
+  const r = run(cardGame(), twoCrack);
+  assert.deepEqual(r.chosen, ["dublin", "cork-city"]);
+  assert.equal(r.rolls, undefined);
+});
+
+test("an Activation Number of 6 always ends the Operation after its first space; 0 never does", () => {
+  const six = run(withAN(6), twoCrack);
+  assert.deepEqual(six.chosen, ["dublin"], "every roll is at or under 6");
+  assert.equal(six.rolls.length, 1, "one roll, before the second space");
+  const zero = run(withAN(0), twoCrack);
+  assert.deepEqual(zero.chosen, ["dublin", "cork-city"], "no roll is at or under 0");
+  assert.equal(zero.rolls.length, 1, "no roll after the last space");
+});
+
+test("the dry-run seed sets the rolls, and no seed means seed 1", () => {
+  const [first] = d6(1, 1);
+  assert.deepEqual(run(withAN(3), twoCrack).rolls, [first]);
+  assert.deepEqual(run(withAN(3), { ...twoCrack, seed: 1 }).rolls, [first], "seed 1 is the default");
+  // A seed whose first roll stops at 3 and one whose first roll goes on.
+  const stop = [...Array(50).keys()].find((sd) => d6(sd, 1)[0] <= 3), go = [...Array(50).keys()].find((sd) => d6(sd, 1)[0] > 3);
+  assert.deepEqual(run(withAN(3), { ...twoCrack, seed: stop }).chosen, ["dublin"]);
+  assert.deepEqual(run(withAN(3), { ...twoCrack, seed: go }).chosen, ["dublin", "cork-city"]);
+  assert.throws(() => run(cardGame(), { seed: -1 }), /seed must be a whole number, 0 or more/);
+});
+
+// Tan War's Repression track runs 0 to 5. Seed 1 rolls a 4 first: at or under 5, above 0.
+test("the Activation Number can be a formula, such as a track value", () => {
+  assert.equal(d6(1, 1)[0], 4);
+  const g = withAN({ var: "track.repression" });
+  const at = (v) => run(g, { ...twoCrack, tracks: { repression: v } }).chosen.length;
+  assert.equal(at(5), 1);
+  assert.equal(at(0), 2);
+});
+
+test("an action node that skips the roll takes spaces up to its table's limit", () => {
+  const r = run(withAN(6, { noActivation: true }), twoCrack);
+  assert.deepEqual(r.chosen, ["dublin", "cork-city"]);
+  assert.equal(r.rolls, undefined);
+});
+
+test("the validator checks the Activation Number and where a node can skip the roll", () => {
+  assert.deepEqual(validate(withAN(3)).errors.filter((e) => e.code !== "dry-run-missing"), []);
+  let g = withAN({ var: "nope" });
+  assert.ok(validate(g).errors.some((e) => e.path === "/bots/0/deck/cards/0/sides/0/activation"));
+  g = cardGame(); g.bots[0].deck.cards[0].sides[0].nodes[1].noActivation = true;
+  assert.ok(validate(g).errors.some((e) => e.code === "bad-activation" && /has no Activation Number/.test(e.message)));
+  g = withAN(3); g.bots[0].deck.cards[0].sides[0].nodes[0].noActivation = true;
+  assert.ok(validate(g).errors.some((e) => e.code === "bad-activation" && /only an action node/.test(e.message)));
+});
+
+test("the Activation Number caps an action node with parts over its new spaces", () => {
+  const mk = (an) => {
+    const g = withAN(an), n = g.bots[0].deck.cards[0].sides[0].nodes[1];
+    n.parts = [{ text: "Crackdown.", table: n.table, steps: structuredClone(g.actions.find((a) => a.id === "crown.crackdown").steps) }];
+    delete n.table;
+    return g;
+  };
+  assert.deepEqual(run(mk(6), twoCrack).chosen, ["dublin"]);
+  assert.deepEqual(run(mk(0), twoCrack).chosen, ["dublin", "cork-city"]);
+});
+
+test("the bot aid prints the Activation Number of a side and the nodes that skip the roll", () => {
+  const g = withAN({ var: "track.repression" }, { noActivation: true }), md = toMarkdown(aidModel(g, g.bots[0]));
+  assert.match(md, /### Crackdown, side A\nActivation Number: Repression\. Before each space after the first, roll 1d6\./);
+  assert.match(md, /Crackdown \(cost [^)]*\)\. Do not roll for the Activation Number\./);
+  assert.equal(/Activation Number/.test(toMarkdown(aidModel(cardGame(), cardGame().bots[0]))), false);
+});
+
+// Codex review on PR 47 (two findings, each reproduced before the fix).
+// Part 1 raises Repression in each of its spaces; part 2 is Crackdown. The roll after Dublin ends the
+// Operation in part 1, so part 2 does not run, even in Dublin, which part 1 already paid for. The
+// Active Volunteer in Dublin stays: the check after the Operation answers yes.
+test("a roll that ends the Operation also ends its later parts", () => {
+  const g = withAN(6), side = g.bots[0].deck.cards[0].sides[0], n = side.nodes[1];
+  const crack = structuredClone(g.actions.find((a) => a.id === "crown.crackdown").steps);
+  n.parts = [{ text: "Repression.", table: n.table, steps: [{ op: "track", id: "repression", delta: 1 }] }, { text: "Crackdown.", table: n.table, steps: crack }];
+  delete n.table;
+  n.then = "k1.a.vol";
+  side.nodes.push({ id: "k1.a.vol", kind: "condition", text: "Active Volunteer in Dublin?", test: { op: "gte", args: [{ op: "count", args: ["ira.volunteer", "dublin", "active"] }, 1] }, yes: "k1.a.done", no: "k1.a.none" }, { id: "k1.a.none", kind: "end", text: "Done.", outcome: "operation" });
+  const r = run(g, twoCrack);
+  assert.deepEqual(r.chosen, ["dublin"]);
+  assert.equal(r.path.at(-1), "k1.a.done", "part 2 did not remove the Volunteer");
+});
+
+test("step targets list only the spaces the Operation takes", () => {
+  const g = withAN(6);
+  for (const st of g.bots[0].priorityTables.find((t) => t.id === "cw.t.crack").steps) st.target = "ira";
+  const r = run(g, twoCrack);
+  assert.deepEqual(r.chosen, ["dublin"]);
+  assert.deepEqual(r.targets, { dublin: "ira" });
 });

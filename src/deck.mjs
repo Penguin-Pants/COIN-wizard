@@ -117,10 +117,16 @@ export function buildPiles(game, n) {
   });
 }
 
+// A seeded random number source: each call gives a number from 0 up to (not including) 1.
+// The sample deck and the Activation Number rolls of card bots (schema 1.12.0) share it.
+export function seededRandom(seed) {
+  let s = seed >>> 0;
+  return () => { s = (s + 0x6d2b79f5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+
 // A seeded shuffle that follows the preparation: one possible deck, top card first.
 export function sampleDeck(game, seed = 1) {
-  let s = seed >>> 0;
-  const rnd = () => { s = (s + 0x6d2b79f5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const rnd = seededRandom(seed);
   const out = [];
   for (const p of game.deck.preparation.piles) {
     const ev = [...p.events];

@@ -337,8 +337,15 @@ function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionByI
   // Graphs (1.12.0): the bot's flowchart, then each side of each bot card. A branch stays in its graph,
   // or exits: $draw (card bots) draws the next card; $flip (a card side with a back) turns the card.
   const cards = bot.mode === "cards" ? bot.deck.cards : [];
-  const graphs = [{ nodes: bot.nodes, start: bot.start, path: p, flip: false }, ...cards.flatMap((c, ci) => c.sides.map((sd, si) => ({ nodes: sd.nodes, start: sd.start, path: `${p}/deck/cards/${ci}/sides/${si}`, flip: c.sides.length === 2 })))];
+  const graphs = [{ nodes: bot.nodes, start: bot.start, path: p, flip: false }, ...cards.flatMap((c, ci) => c.sides.map((sd, si) => ({ nodes: sd.nodes, start: sd.start, path: `${p}/deck/cards/${ci}/sides/${si}`, flip: c.sides.length === 2, activation: sd.activation !== undefined })))];
   for (const G of graphs) { G.ids = new Set(G.nodes.map((n) => n.id)); if (!G.ids.has(G.start)) err("missing-ref", `${G.path}/start`, `Start node not found: ${G.start}`); }
+  // Activation Number (1.12.0 part B): a number formula per card side; noActivation only where a roll can happen.
+  cards.forEach((c, ci) => c.sides.forEach((sd, si) => { if (sd.activation !== undefined) checkExpr(sd.activation, `${p}/deck/cards/${ci}/sides/${si}/activation`); }));
+  for (const G of graphs) G.nodes.forEach((n, i) => {
+    if (!n.noActivation) return;
+    if (n.kind !== "action") err("bad-activation", `${G.path}/nodes/${i}`, `Node ${n.id}: only an action node can skip the Activation roll`);
+    else if (!G.activation) err("bad-activation", `${G.path}/nodes/${i}`, `Node ${n.id} skips the Activation roll, but its flowchart has no Activation Number`);
+  });
   if (new Set(cards.map((c) => c.id)).size !== cards.length) err("duplicate-id", `${p}/deck/cards`, "Duplicate bot card id");
   cards.forEach((c, ci) => c.sides.forEach((sd, si) => { if (sd.id !== ["front", "back"][si]) err("card-sides", `${p}/deck/cards/${ci}/sides/${si}`, `Bot card ${c.id}: the sides are front, then back`); }));
   if (cards.length && !seq.choices.includes("pass")) err("pass-illegal", `${p}/deck`, "A card bot passes when it draws every card, but the rules do not allow Pass");

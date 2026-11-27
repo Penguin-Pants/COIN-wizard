@@ -444,3 +444,26 @@ test("a designer makes a card bot, edits a card side, sets the bot deck in a dry
   assert.equal("no" in b.nodes[2], false);
   assert.match(await page.innerText("#main"), /Cleared branches: cw\.event\.no/);
 }));
+
+// Schema 1.12.0 part B: an Activation Number per card side, a node that skips the roll and a dry-run seed.
+test("a designer sets a card side's Activation Number, skips the roll on one node and sets the dry-run seed", () => withApp(async ({ page, db }) => {
+  await botsTab(page);
+  const draft = async () => { await page.waitForTimeout(1800); return JSON.parse((await db())["data/users/u1/draft"].json).bots[0]; };
+  await page.click('[data-a="bot-cards"]'); await frames(page);
+  await page.click('[data-a="bot-addan"]'); await frames(page);
+  let b = await draft();
+  assert.equal(b.deck.cards[0].sides[0].activation, 3);
+  await page.locator('select[data-botgraph]').selectOption("0/0"); await frames(page);
+  await page.locator('select[data-addnode]').selectOption("action"); await frames(page);
+  await page.locator('input[data-a="bot-noan"]').check(); await frames(page);
+  await page.locator("details.act > summary", { hasText: "no-target" }).click(); await frames(page);
+  await page.locator('details.act[open] input[data-dk="seed"]').fill("7"); await page.locator('details.act[open] input[data-dk="seed"]').dispatchEvent("change"); await frames(page);
+  b = await draft();
+  assert.equal(b.deck.cards[0].sides[0].nodes[1].noActivation, true);
+  assert.equal(b.dryRuns.find((d) => d.case === "no-target").patch.seed, 7);
+  // Removing the number also clears the skip flags on that side.
+  await page.click('[data-a="bot-delan"]'); await frames(page);
+  b = await draft();
+  assert.equal("activation" in b.deck.cards[0].sides[0], false);
+  assert.equal("noActivation" in b.deck.cards[0].sides[0].nodes[1], false);
+}));

@@ -94,6 +94,11 @@ export function applyPatch(state, patch = {}) {
     s.inPlay = [...patch.inPlay];
   }
   if (patch.dice) s.dice = [...patch.dice];
+  // seed (1.12.0 part B): the random seed of the Activation Number rolls. Default 1 (owner decision 2026-11-27).
+  if (patch.seed !== undefined) {
+    if (!Number.isInteger(patch.seed) || patch.seed < 0) throw new Error("Patch seed must be a whole number, 0 or more");
+    s.seed = patch.seed;
+  }
   // botDeck (1.12.0): the bot deck order and flipped cards. runBot checks it against the bot's deck.
   if (patch.botDeck) {
     if (Object.keys(patch.botDeck).some((k) => k !== "order" && k !== "flipped")) throw new Error("Patch botDeck may set only order and flipped");
