@@ -80,6 +80,8 @@ export function addBotCard(bot) {
   const id = freeId(new Set(cards.map((c) => c.id)), "k"), start = freeId(taken, `${prefixOf(bot)}.${id}.n`);
   const card = { id, title: `Card ${cards.length + 1}`, sides: [{ id: "front", label: String.fromCharCode(65 + (cards.length % 26)), start, nodes: [{ id: start, kind: "end", text: "Pass.", outcome: "pass" }] }] };
   cards.push(card);
+  // A dry run that sets the order lists every card, so the new card goes to the bottom.
+  for (const d of bot.dryRuns ?? []) if (d.patch.botDeck?.order) d.patch.botDeck.order.push(id);
   return card;
 }
 // Removes a bot card and its id from every dry-run botDeck patch. The deck keeps at least one card.

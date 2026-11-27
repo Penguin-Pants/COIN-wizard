@@ -480,6 +480,7 @@ function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionByI
   // reachability, termination, cycles
   // Each graph on its own: exits ($draw, $flip) and branches into another graph end the walk.
   const next = (n) => n.kind === "condition" || n.kind === "event-check" ? [n.yes, n.no] : n.kind === "action" ? [n.then, n.onEmpty] : [];
+  let loops = 0;
   for (const g of graphs) {
     const inG = (id) => g.ids.has(id), reach = new Set(), stack = [g.start];
     while (stack.length) { const id = stack.pop(); if (reach.has(id) || !inG(id)) continue; reach.add(id); stack.push(...next(nodes[id]).filter(Boolean)); }
@@ -487,12 +488,22 @@ function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionByI
     const color = {};
     const dfs = (id) => {
       if (!inG(id)) return;
-      if (color[id] === 1) { err("cycle", g.path, `Decision loop through node ${id} has no explicit limit`); return; }
+      if (color[id] === 1) { loops++; err("cycle", g.path, `Decision loop through node ${id} has no explicit limit`); return; }
       if (color[id] === 2) return;
       color[id] = 1; for (const nx of next(nodes[id]).filter(Boolean)) dfs(nx); color[id] = 2;
     };
     dfs(g.start);
   }
+  // $flip runs the other side from its start, so a loop can also pass through both sides of a card.
+  // Checked when no side has a loop of its own.
+  if (!loops) cards.forEach((c, ci) => {
+    if (c.sides.length < 2) return;
+    const sideOf = (id) => c.sides.find((sd) => sd.nodes.some((n) => n.id === id));
+    const step = (id) => next(nodes[id]).filter(Boolean).map((x) => (x === "$flip" ? c.sides.find((sd) => sd !== sideOf(id)).start : x)).filter(sideOf);
+    const color = {};
+    const dfs = (id) => { if (color[id] === 1) return true; if (color[id] === 2) return false; color[id] = 1; const hit = step(id).some(dfs); color[id] = 2; return hit; };
+    if (dfs(c.sides[0].start) || dfs(c.sides[1].start)) err("cycle", `${p}/deck/cards/${ci}`, `Bot card ${c.id} can flip back and forth with no explicit limit`);
+  });
   if (cards.length && !bot.nodes.some((n) => next(n).includes("$draw"))) warn("no-draw", p, `Card bot ${bot.id} never draws a card: no branch of its flowchart goes to "draw the next card"`);
   // A card bot that draws every card passes (1.12.0).
   if (cards.length) outcomes.add("pass");

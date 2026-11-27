@@ -183,3 +183,34 @@ test("the bot aid, the Mermaid chart, the flowchart and the Non-Player sheet nam
   assert.match(nonPlayerSheetHtml(g, b), /Draw the next bot card/);
   assert.equal(/## Bot cards/.test(toMarkdown(aidModel(tan(), tan().bots[0]))), false, "a flowchart bot has no card section");
 });
+
+// Codex review on PR 46 (four findings, each reproduced before the fix).
+test("adding a bot card puts it at the bottom of every dry-run order", () => {
+  const g = cardGame(), b = g.bots[0];
+  b.dryRuns = [{ id: "d1", case: "ineligible", patch: { eligible: { crown: false }, botDeck: { order: ["k2", "k1"] } }, expect: { outcome: "none" } }];
+  addBotCard(b);
+  assert.deepEqual(b.dryRuns[0].patch.botDeck.order, ["k2", "k1", "k3"]);
+  assert.equal(run(g, b.dryRuns[0].patch).outcome, "none");
+});
+
+test("the Non-Player sheet prints an action whose then branch draws a card", () => {
+  const g = cardGame(), b = g.bots[0];
+  b.nodes.push({ id: "cw.op", kind: "action", text: "Sweep", action: "crown.sweep", table: "cw.t.sweep", then: "$draw", onEmpty: "$draw" });
+  b.nodes.find((n) => n.id === "cw.event").no = "cw.op";
+  assert.match(nonPlayerSheetHtml(g, b), /after<\/b> → Draw the next bot card/);
+});
+
+test("the Non-Player sheet prints an Event table that only a bot card uses", () => {
+  const g = cardGame(), b = g.bots[0];
+  b.eventPolicy.overrides[0].node = { table: "cw.t.crack" };
+  const row = b.priorityTables.find((t) => t.id === "cw.t.crack").steps[0].text;
+  assert.ok(nonPlayerSheetHtml(g, b).includes(row.replace(/&/g, "&amp;").replace(/</g, "&lt;")), "the rows print under the Event line");
+});
+
+test("a card whose two sides flip back and forth is a loop", () => {
+  const g = cardGame(), back = g.bots[0].deck.cards[0].sides[1];
+  back.nodes = [{ id: "k1.b.low", kind: "condition", text: "", test: { op: "lt", args: [{ var: "self.resources" }, 1] }, yes: "$flip", no: "k1.b.pass" }, { id: "k1.b.pass", kind: "end", text: "Pass.", outcome: "pass" }];
+  back.start = "k1.b.low";
+  assert.ok(validate(g).errors.some((e) => e.code === "cycle" && e.path === "/bots/0/deck/cards/0"));
+  assert.equal(validate(cardGame()).errors.some((e) => e.code === "cycle"), false, "one flip that ends is not a loop");
+});

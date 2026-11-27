@@ -2,7 +2,7 @@
 import { opinionName } from "./opinion.mjs";
 import { aidModel, toHtml, stepNumbers, tableLabels } from "./botaid.mjs";
 import { graphSvg } from "./graphsvg.mjs";
-import { linkedOf, cardLasting, botNodes, EXIT_TEXT } from "./dryrun.mjs";
+import { linkedOf, cardLasting, EXIT_TEXT } from "./dryrun.mjs";
 import { choiceCounts } from "./effects.mjs";
 import { condText, stepText, budgetText, controllerName } from "./plain.mjs";
 import { setupControl } from "./expr.mjs";
@@ -283,7 +283,7 @@ export function nonPlayerSheetHtml(g, bot) {
     });
     const target = n.target ? `<p><b>Target:</b> one enemy faction (${labels[n.target]})</p>${prio(table(n.target))}` : "";
     const linked = links.map((l, i) => `<p class="arr"><b>${i ? "if none" : TIMING[l.timing] ?? "then"}</b> → ${h(saName(l))}</p>`).join("");
-    const next = nodes[n.then].kind === "end" ? "" : arr("after", n.then);
+    const next = nodes[n.then]?.kind === "end" ? "" : arr("after", n.then); // an exit (1.12.0) prints its arrow
     // parts: numbered sub-actions in one box, each with its table label, max and priorities.
     const maxOf = (pt) => { const x = table(pt.table); return Math.min(x.select === "all" ? x.limit : 1, a?.maxSpaces ?? Infinity); };
     const body = n.parts
@@ -313,7 +313,8 @@ export function nonPlayerSheetHtml(g, bot) {
   const playSide = (o) => (o.directive === "ignore" ? "" : ` (play the ${o.side ?? ep.side} side)`);
   // An override node (1.10.0): the plain text is the label, then the table that picks the spaces.
   // Its rows print under the line only when no Operation, Special Activity or scoring box prints the table.
-  const boxed = new Set([...botNodes(bot).flatMap((n) => [n.table, n.target, ...(n.parts ?? []).map((pt) => pt.table), ...linkedOf(n).map((l) => l.table)]), ...(bot.scoring ?? []).map((sc) => sc.table)]);
+  // The boxes come from the bot's own flowchart: bot card nodes (1.12.0) print no box on this sheet.
+  const boxed = new Set([...bot.nodes.flatMap((n) => [n.table, n.target, ...(n.parts ?? []).map((pt) => pt.table), ...linkedOf(n).map((l) => l.table)]), ...(bot.scoring ?? []).map((sc) => sc.table)]);
   const rowsOf = (id) => (id && !boxed.has(id) && table(id) ? prio(table(id)) : "");
   const ovNode = (o) => (o.node ? ` <i>Priorities: ${labels[o.node.table] ?? o.node.table}${o.node.target ? `; target: ${labels[o.node.target] ?? o.node.target}` : ""}.</i>` : "");
   const ovRows = (o) => (o.node ? rowsOf(o.node.target) + rowsOf(o.node.table) : "");
