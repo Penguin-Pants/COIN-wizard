@@ -8,6 +8,12 @@ import { applyAction, payCost, refundCost, withoutCost, runPhaseSteps, legalityO
 
 // A node's linked Special Activities as a list: none, one object or a list (schema 1.5.0).
 export const linkedOf = (node) => (node?.linked == null ? [] : [node.linked].flat());
+// The nodes, scoring entries and Event nodes that choose spaces with a table.
+export const tableUsers = (bot, id) => [...botNodes(bot).filter((n) => n.table === id || linkedOf(n).some((L) => L.table === id) || (n.parts ?? []).some((pt) => pt.table === id)), ...(bot.scoring ?? []).filter((sc) => sc.table === id), ...bot.eventPolicy.overrides.filter((o) => o.node?.table === id).map((o) => o.node)];
+// True when the bot uses the table in any way, also as an enemy (target) table.
+export const usesTable = (bot, id) => tableUsers(bot, id).length > 0 || botNodes(bot).some((n) => n.target === id) || bot.eventPolicy.overrides.some((o) => o.node?.target === id);
+// A bot's priority tables: its own, then the game's shared tables (schema 1.12.0 part C). Ids are unique over both.
+export const tablesOf = (game, bot) => [...bot.priorityTables, ...(game.sharedTables ?? [])];
 // The exits of a card bot (schema 1.12.0), in words. A branch may name one in place of a node.
 export const EXIT_TEXT = { $draw: "Draw the next bot card", $flip: "Flip this bot card" };
 // Every node of a bot: its own flowchart, then each side of each bot card (schema 1.12.0). Ids are unique over all.
@@ -270,7 +276,7 @@ export function runBot(game, bot, startState) {
   state.self = bot.factionId;
   cardFields(game, bot, state);
   const nodes = Object.fromEntries(botNodes(bot).map((n) => [n.id, n]));
-  const tables = Object.fromEntries(bot.priorityTables.map((t) => [t.id, t]));
+  const tables = Object.fromEntries(tablesOf(game, bot).map((t) => [t.id, t]));
   const actions = Object.fromEntries(game.actions.map((a) => [a.id, a]));
   const ctx = { state, links: game.board.links };
   const result = { path: [], chosen: [], linked: undefined, side: undefined, outcome: undefined, target: undefined };
@@ -386,7 +392,7 @@ export function runBot(game, bot, startState) {
 export function runScoring(game, bot, startState) {
   const state = structuredClone(startState);
   state.self = bot.factionId;
-  const tables = Object.fromEntries(bot.priorityTables.map((t) => [t.id, t]));
+  const tables = Object.fromEntries(tablesOf(game, bot).map((t) => [t.id, t]));
   cardFields(game, bot, state);
   const result = { path: [], chosen: [], linked: undefined, side: undefined, outcome: "none", target: undefined };
   for (const ph of game.rules.scoring.phases) {

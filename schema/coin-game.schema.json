@@ -827,6 +827,13 @@
       "items": {
         "$ref": "#/$defs/bot"
       }
+    },
+    "sharedTables": {
+      "type": "array",
+      "description": "1.12.0 part C: priority tables that every bot can use, such as the shared Move and Pieces priorities of the card bots. A bot reads its own tables first, then these. Ids are unique over a bot's tables and these.",
+      "items": {
+        "$ref": "#/$defs/priorityTable"
+      }
     }
   },
   "$defs": {
@@ -2314,140 +2321,7 @@
         "priorityTables": {
           "type": "array",
           "items": {
-            "type": "object",
-            "required": [
-              "id",
-              "scope",
-              "select",
-              "steps",
-              "tiebreak"
-            ],
-            "additionalProperties": false,
-            "properties": {
-              "id": {
-                "$ref": "#/$defs/id"
-              },
-              "scope": {
-                "enum": [
-                  "space",
-                  "opponent"
-                ],
-                "description": "space: picks spaces. opponent: picks one enemy faction, read as $faction in its steps and tie-breaks."
-              },
-              "select": {
-                "enum": [
-                  "one",
-                  "all"
-                ]
-              },
-              "limit": {
-                "type": "integer",
-                "minimum": 1
-              },
-              "steps": {
-                "type": "array",
-                "minItems": 1,
-                "items": {
-                  "type": "object",
-                  "required": [
-                    "n",
-                    "text",
-                    "filter"
-                  ],
-                  "additionalProperties": false,
-                  "properties": {
-                    "n": {
-                      "type": "integer",
-                      "minimum": 1
-                    },
-                    "text": {
-                      "type": "string"
-                    },
-                    "filter": {
-                      "$ref": "#/$defs/expr"
-                    },
-                    "tiebreak": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "required": [
-                          "letter",
-                          "text",
-                          "key",
-                          "order"
-                        ],
-                        "additionalProperties": false,
-                        "properties": {
-                          "letter": {
-                            "type": "string",
-                            "pattern": "^[a-z]$"
-                          },
-                          "text": {
-                            "type": "string"
-                          },
-                          "key": {
-                            "$ref": "#/$defs/expr"
-                          },
-                          "order": {
-                            "enum": [
-                              "max",
-                              "min"
-                            ]
-                          }
-                        }
-                      },
-                      "description": "Tie-breaks for this step only (1.7.0), as printed under one row of a GMT sheet. They replace the table tie-breaks for this step's matches."
-                    },
-                    "piece": {
-                      "$ref": "#/$defs/id",
-                      "description": "Opponent tables only (1.9.0): a piece type of an enemy. The step considers only that piece's owner faction; the action then runs only a choice option made for that piece."
-                    },
-                    "target": {
-                      "$ref": "#/$defs/id",
-                      "description": "Space tables only (1.8.0): the enemy faction this step acts against. Its filter and tie-breaks read $target, and its spaces run the action against that faction."
-                    }
-                  }
-                }
-              },
-              "tiebreak": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "required": [
-                    "letter",
-                    "text",
-                    "key",
-                    "order"
-                  ],
-                  "additionalProperties": false,
-                  "properties": {
-                    "letter": {
-                      "type": "string",
-                      "pattern": "^[a-z]$"
-                    },
-                    "text": {
-                      "type": "string"
-                    },
-                    "key": {
-                      "$ref": "#/$defs/expr"
-                    },
-                    "order": {
-                      "enum": [
-                        "max",
-                        "min"
-                      ]
-                    }
-                  }
-                }
-              },
-              "mode": {
-                "enum": [
-                  "first",
-                  "sequence"
-                ],
-                "description": "first (default): only the first step with a match applies. sequence (1.7.0, the GMT reading): every step in order, each step's matches in tie-break order, until the limit."
-              }
-            }
+            "$ref": "#/$defs/priorityTable"
           }
         },
         "randomization": {
@@ -2890,6 +2764,142 @@
               }
             }
           }
+        }
+      }
+    },
+    "priorityTable": {
+      "type": "object",
+      "required": [
+        "id",
+        "scope",
+        "select",
+        "steps",
+        "tiebreak"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "scope": {
+          "enum": [
+            "space",
+            "opponent"
+          ],
+          "description": "space: picks spaces. opponent: picks one enemy faction, read as $faction in its steps and tie-breaks."
+        },
+        "select": {
+          "enum": [
+            "one",
+            "all"
+          ]
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "n",
+              "text",
+              "filter"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "n": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "text": {
+                "type": "string"
+              },
+              "filter": {
+                "$ref": "#/$defs/expr"
+              },
+              "tiebreak": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "letter",
+                    "text",
+                    "key",
+                    "order"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "letter": {
+                      "type": "string",
+                      "pattern": "^[a-z]$"
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "key": {
+                      "$ref": "#/$defs/expr"
+                    },
+                    "order": {
+                      "enum": [
+                        "max",
+                        "min"
+                      ]
+                    }
+                  }
+                },
+                "description": "Tie-breaks for this step only (1.7.0), as printed under one row of a GMT sheet. They replace the table tie-breaks for this step's matches."
+              },
+              "piece": {
+                "$ref": "#/$defs/id",
+                "description": "Opponent tables only (1.9.0): a piece type of an enemy. The step considers only that piece's owner faction; the action then runs only a choice option made for that piece."
+              },
+              "target": {
+                "$ref": "#/$defs/id",
+                "description": "Space tables only (1.8.0): the enemy faction this step acts against. Its filter and tie-breaks read $target, and its spaces run the action against that faction."
+              }
+            }
+          }
+        },
+        "tiebreak": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "letter",
+              "text",
+              "key",
+              "order"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "letter": {
+                "type": "string",
+                "pattern": "^[a-z]$"
+              },
+              "text": {
+                "type": "string"
+              },
+              "key": {
+                "$ref": "#/$defs/expr"
+              },
+              "order": {
+                "enum": [
+                  "max",
+                  "min"
+                ]
+              }
+            }
+          }
+        },
+        "mode": {
+          "enum": [
+            "first",
+            "sequence"
+          ],
+          "description": "first (default): only the first step with a match applies. sequence (1.7.0, the GMT reading): every step in order, each step's matches in tie-break order, until the limit."
         }
       }
     }

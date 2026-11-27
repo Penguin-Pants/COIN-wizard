@@ -19,8 +19,8 @@ const here = (i) => { const st = EDITOR_STEP[i.editor] ?? [4]; return st[0] === 
 const TAB = { rules: "Rules tab", deck: "Deck tab", victory: "Victory tab", bots: "Bots tab" };
 export function whereOf(i) {
   const [step, tab] = EDITOR_STEP[i.editor] ?? [4];
-  const g = S.game, m = /^\/(actions|bots|deck\/cards)\/(\d+)/.exec(i.path ?? "");
-  const owner = !m ? "" : m[1] === "actions" ? g.actions[+m[2]]?.name : m[1] === "bots" ? `${g.factions.find((f) => f.id === g.bots[+m[2]]?.factionId)?.name ?? ""} bot` : g.deck.cards[+m[2]]?.title;
+  const g = S.game, m = /^\/(actions|bots|deck\/cards|sharedTables)\/(\d+)/.exec(i.path ?? "");
+  const owner = !m ? "" : m[1] === "actions" ? g.actions[+m[2]]?.name : m[1] === "bots" ? `${g.factions.find((f) => f.id === g.bots[+m[2]]?.factionId)?.name ?? ""} bot` : m[1] === "sharedTables" ? `shared table ${g.sharedTables?.[+m[2]]?.id ?? ""}` : g.deck.cards[+m[2]]?.title;
   return `Step ${step + 1}, ${STEPS[step].name}${tab ? ` (${TAB[tab] ?? tab})` : ""}${owner ? `: ${owner}` : ""}`;
 }
 

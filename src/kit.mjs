@@ -1,8 +1,8 @@
 // Print kit generators. Everything reads the confirmed definition only.
 import { opinionName } from "./opinion.mjs";
-import { aidModel, toHtml, stepNumbers, tableLabels } from "./botaid.mjs";
+import { aidModel, toHtml, stepNumbers, tableLabels, policyOf } from "./botaid.mjs";
 import { graphSvg } from "./graphsvg.mjs";
-import { linkedOf, cardLasting, EXIT_TEXT } from "./dryrun.mjs";
+import { linkedOf, cardLasting, EXIT_TEXT, tablesOf } from "./dryrun.mjs";
 import { choiceCounts } from "./effects.mjs";
 import { condText, stepText, budgetText, controllerName } from "./plain.mjs";
 import { setupControl } from "./expr.mjs";
@@ -240,9 +240,9 @@ const END = { none: "No action", event: "Event", operation: "Operation done", op
 export function nonPlayerSheetHtml(g, bot) {
   const f = faction(g, bot.factionId);
   const { num, nodes } = stepNumbers(bot);
-  const labels = tableLabels(bot);
+  const labels = tableLabels(bot, g);
   const act = (id) => g.actions.find((a) => a.id === id);
-  const table = (id) => bot.priorityTables.find((t) => t.id === id);
+  const table = (id) => tablesOf(g, bot).find((t) => t.id === id);
   const order = bot.nodes.filter((n) => num[n.id]).sort((a, b) => num[a.id] - num[b.id]);
   const to = (id) => { const n = nodes[id]; return EXIT_TEXT[id] ?? (n.kind === "end" ? END[n.outcome] : n.kind === "event-check" ? "Event?" : n.kind === "action" ? `${act(n.action)?.name ?? n.action} (${n.parts ? n.parts.map((pt) => labels[pt.table]).join(", ") : labels[n.table]})` : n.text); };
   const arr = (label, id) => `<p class="arr"><b>${label}</b> → ${h(to(id))}</p>`;
@@ -407,7 +407,7 @@ export function buildFiles(g, { toMermaid, toMarkdown, toPolicyYaml }) {
       [`${base}.flow.mmd`, `${draft ? `%% ${draft}\n` : ""}${toMermaid(bot)}`],
       [`${base}.flow.svg`, graphSvg(bot, { title: `${g.meta.title}: ${faction(g, bot.factionId)?.name ?? bot.factionId} bot flowchart${draft ? ` (${draft})` : ""}` })],
       [`${base}.policy.yaml`, `${draft ? `# ${draft}\n` : ""}${toPolicyYaml(g, bot)}`],
-      [`${base}.policy.json`, JSON.stringify(draft ? { draft: true, ...bot } : bot, null, 2) + "\n"]);
+      [`${base}.policy.json`, JSON.stringify(draft ? { draft: true, ...policyOf(g, bot) } : policyOf(g, bot), null, 2) + "\n"]);
   }
   return files;
 }

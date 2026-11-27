@@ -2,8 +2,8 @@
 import { newBot, addNode, deleteNode, graphInfo, missingCases, newDryRun, runDry, toExpect, CASES, setCardMode, addBotCard, deleteBotCard, addBack, deleteBack } from "../../src/botedit.mjs";
 import { graphSvg } from "../../src/graphsvg.mjs";
 import { aidModel, toMarkdown } from "../../src/botaid.mjs";
-import { renameId, tableUsers } from "../../src/validate.mjs";
-import { linkedOf, botNodes, EXIT_TEXT } from "../../src/dryrun.mjs";
+import { renameId } from "../../src/validate.mjs";
+import { linkedOf, botNodes, EXIT_TEXT, tableUsers, tablesOf } from "../../src/dryrun.mjs";
 import { opinionMax } from "../../src/opinion.mjs";
 import { budgetText } from "../../src/plain.mjs";
 import { isExpr } from "../../src/exprmodel.mjs";
@@ -79,7 +79,7 @@ function nodeForm(b, bi, G) {
   const branch = (k, label) => fld(label, sel(`${p}/${k}`, n[k] ?? "", ids, { t: "o", r: true }));
   const ops = g.actions.filter((a) => a.faction === b.factionId && a.kind === "operation").map((a) => [a.id, a.name]);
   const sas = g.actions.filter((a) => a.faction === b.factionId && a.kind === "specialActivity").map((a) => [a.id, a.name]);
-  const tables = [["", "(none)"], ...b.priorityTables.filter((t) => t.scope !== "opponent").map((t) => [t.id, t.id])];
+  const tables = [["", "(none)"], ...tablesOf(g, b).filter((t) => t.scope !== "opponent").map((t) => [t.id, t.id])];
   let body = "";
   if (n.kind === "condition") body = `${fld("Test", condEditor(`${p}/test`, n.test ?? true))}<div class="grid2">${branch("yes", "If yes, go to")}${branch("no", "If no, go to")}</div>`;
   if (n.kind === "event-check") body = `<p><small>Plays the Event when the Event rules below allow it.</small></p><div class="grid2">${branch("yes", "If it plays the Event, go to")}${branch("no", "If not, go to")}</div>`;
@@ -88,9 +88,9 @@ function nodeForm(b, bi, G) {
     const L = n.linked, list = Array.isArray(L), entries = linkedOf(n);
     const entry = (E, i) => {
       const lp = list ? `${p}/linked/${i}` : `${p}/linked`;
-      return `<div class="sblock">${i ? `<p><b>If none, try next:</b></p>` : ""}<div class="grid3">${fld("Special Activity", sel(`${lp}/action`, E.action, sas.length ? sas : [[E.action, E.action]]))}${fld("Timing", sel(`${lp}/timing`, E.timing, ["before", "during", "after"]), list && !i ? "Every entry uses the same timing." : "")}${fld("Table", sel(`${lp}/table`, E.table, b.priorityTables.map((t) => [t.id, t.id])))}</div>${fld("Trigger", condEditor(`${lp}/trigger`, E.trigger))}${fld("When it is skipped (printed)", inp(`${lp}/skipText`, E.skipText ?? ""))}${entries.length > 1 ? `<div class="row">${btn("bot-linked-del", "Remove this Special Activity", { cls: "link", data: `data-p="${p}" data-i="${i}"` })}</div>` : ""}</div>`;
+      return `<div class="sblock">${i ? `<p><b>If none, try next:</b></p>` : ""}<div class="grid3">${fld("Special Activity", sel(`${lp}/action`, E.action, sas.length ? sas : [[E.action, E.action]]))}${fld("Timing", sel(`${lp}/timing`, E.timing, ["before", "during", "after"]), list && !i ? "Every entry uses the same timing." : "")}${fld("Table", sel(`${lp}/table`, E.table, tablesOf(g, b).map((t) => [t.id, t.id])))}</div>${fld("Trigger", condEditor(`${lp}/trigger`, E.trigger))}${fld("When it is skipped (printed)", inp(`${lp}/skipText`, E.skipText ?? ""))}${entries.length > 1 ? `<div class="row">${btn("bot-linked-del", "Remove this Special Activity", { cls: "link", data: `data-p="${p}" data-i="${i}"` })}</div>` : ""}</div>`;
     };
-    const enemyTables = [["", "(none: act without a target)"], ...b.priorityTables.filter((t) => t.scope === "opponent").map((t) => [t.id, t.id])];
+    const enemyTables = [["", "(none: act without a target)"], ...tablesOf(g, b).filter((t) => t.scope === "opponent").map((t) => [t.id, t.id])];
     body = `<div class="grid2">${fld("Pick the enemy first", sel(`${p}/target`, n.target ?? "", enemyTables, { t: "o", r: true }), "An enemy table picks one enemy faction. The space table can then use \"the target\".")}${fld("Operation", sel(`${p}/action`, n.action ?? "", [["", "(choose)"], ...ops], { t: "o", r: true }))}${n.parts ? "" : fld("Priority table", sel(`${p}/table`, n.table ?? "", tables, { t: "o", r: true }), "The table picks the spaces, so the bot needs no judgment.")}${branch("then", "After it acts, go to")}${branch("onEmpty", "If no space qualifies (fallback), go to")}</div>
       ${G.g.activation !== undefined ? `<label class="chk"><input type="checkbox" data-a="bot-noan" data-p="${p}" ${n.noActivation ? "checked" : ""}> Skip the Activation roll</label><small> This Operation takes spaces up to its table's limit.</small>` : ""}
       ${budgetForm(n, p)}
@@ -110,8 +110,9 @@ function partsForm(n, p, tables) {
   return `${rows}<div class="row">${btn("bot-parts-add", n.parts ? "Add a part" : "Split into parts", { cls: "link", data: `data-p="${p}"` })}<small> Parts run in order. Each picks its own spaces with its table and runs its own effects. The cost is paid once per space.</small></div>`;
 }
 
-function tableEditor(t, bi, ti) {
-  const p = `bots/${bi}/priorityTables/${ti}`, b = S.game.bots[bi];
+// shared (1.12.0 part C): a table of game.sharedTables, shown from the current bot's view.
+function tableEditor(t, bi, ti, shared = false) {
+  const p = shared ? `sharedTables/${ti}` : `bots/${bi}/priorityTables/${ti}`, b = S.game.bots[bi];
   // An enemy table reads "that faction". A space table reads "the target" when every node that uses it picks an enemy.
   const users = tableUsers(b, t.id);
   const ctx = t.scope === "opponent" ? { faction: true } : { space: true, target: users.length > 0 && users.every((n) => n.target) };
@@ -132,13 +133,13 @@ function tableEditor(t, bi, ti) {
     ${t.scope === "opponent" ? "" : fld("How the steps work", sel(`${p}/mode`, t.mode ?? "first", [["sequence", "In order: every step, as far as possible (GMT)"], ["first", "Only the first step with a match"]]), "With one space chosen, both work the same.")}
     <h4>${t.mode === "sequence" && t.select === "all" ? "Steps: work down in order, each as far as possible" : "Steps: the first step with a match wins"}</h4><ol class="steps">${steps}</ol>${addButton("tsteps", "Add step", { cls: "link", data: `data-p="${p}/steps"` })}
     <h4>Tie-breaks, in letter order</h4><ol class="steps">${ties}</ol>${addButton("tbreaks", "Add tie-break", { cls: "link", data: `data-p="${p}/tiebreak"` })}
-    <div class="row">${confirmButton(`tbl-${t.id}`, "Delete table", { action: "bot-deltable", data: `data-p="bots/${bi}" data-i="${ti}"` })}</div></details>`;
+    <div class="row">${confirmButton(`tbl-${t.id}`, "Delete table", { action: shared ? "bot-delshared" : "bot-deltable", data: `data-p="bots/${bi}" data-i="${ti}"` })}</div></details>`;
 }
 
 // Scoring-phase choices (bot.scoring): in each named phase, steps that need a space pick with the table.
 function scoringRules(b, bi) {
   const g = S.game, phases = g.rules.scoring.phases.map((ph) => [ph.id, ph.name]);
-  const spaceTables = b.priorityTables.filter((t) => t.scope !== "opponent").map((t) => [t.id, t.id]);
+  const spaceTables = tablesOf(S.game, b).filter((t) => t.scope !== "opponent").map((t) => [t.id, t.id]);
   const rows = (b.scoring ?? []).map((sc, i) => `<div class="opt"><div class="grid3">${fld("Phase", sel(`bots/${bi}/scoring/${i}/phaseId`, sc.phaseId, phases, { r: true }))}${fld("Table", sel(`bots/${bi}/scoring/${i}/table`, sc.table, spaceTables, { r: true }))}${fld("What the bot does (printed)", inp(`bots/${bi}/scoring/${i}/text`, sc.text ?? ""))}</div><div class="row">${btn("bot-delscoring", "Remove", { cls: "link", data: `data-p="bots/${bi}" data-i="${i}"` })}</div></div>`).join("");
   return `<section class="panel"><h3>${esc(g.rules.scoring.name)} choices</h3><p class="lead">In a phase named here, every effect that needs a space picks it with the table, so the bot needs no judgment. Other phases are automatic.</p>${rows || "<p><small>No choices. Every phase is automatic.</small></p>"}${spaceTables.length ? btn("bot-addscoring", "Add a scoring choice", { cls: "link", data: `data-p="bots/${bi}"` }) : ""}</section>`;
 }
@@ -147,7 +148,7 @@ function eventRules(b, bi) {
   const g = S.game, p = `bots/${bi}/eventPolicy`, ep = b.eventPolicy;
   const events = g.deck.cards.filter((c) => c.type === "event");
   // Override node (1.10.0): a space table runs the side's steps; an optional enemy table picks the target first.
-  const spaceT = b.priorityTables.filter((t) => t.scope !== "opponent").map((t) => [t.id, t.id]), foeT = b.priorityTables.filter((t) => t.scope === "opponent").map((t) => [t.id, t.id]);
+  const spaceT = tablesOf(S.game, b).filter((t) => t.scope !== "opponent").map((t) => [t.id, t.id]), foeT = tablesOf(S.game, b).filter((t) => t.scope === "opponent").map((t) => [t.id, t.id]);
   const runEvent = (o, np) => `<div class="grid2">${fld("Run the Event with table", sel(`${np}/table`, o.node?.table ?? "", [["", "no (text only)"], ...spaceT], { t: "o", r: true }))}${o.node && foeT.length ? fld("Target enemy with table", sel(`${np}/target`, o.node.target ?? "", [["", "none"], ...foeT], { t: "o" })) : ""}</div>`;
   const rows = ep.overrides.map((o, oi) => `<div class="opt"><div class="grid4">${fld("Card", sel(`${p}/overrides/${oi}/cardId`, o.cardId, events.map((c) => [c.id, `${c.title} (${c.id})`]), { r: true }))}${fld("Rule", sel(`${p}/overrides/${oi}/directive`, o.directive, [["force", "Always play"], ["ignore", "Never play"], ["conditional", "Play only if"]], { r: true }))}${fld("Side", sel(`${p}/overrides/${oi}/side`, o.side ?? "", [["", "as usual"], ["unshaded", "unshaded"], ["shaded", "shaded"]], { t: "o" }))}<div class="fld"><span>&nbsp;</span>${removeButton("overrides", { i: oi, data: `data-p="${p}/overrides"` })}</div></div>
     ${o.directive === "conditional" ? fld("Play only if", condEditor(`${p}/overrides/${oi}/when`, o.when ?? true)) : ""}${fld("Rule in plain words (printed)", inp(`${p}/overrides/${oi}/plain`, o.plain))}${o.directive === "ignore" ? "" : runEvent(o, `${p}/overrides/${oi}/node`)}</div>`).join("");
@@ -230,6 +231,7 @@ export function renderBots() {
       <div class="graph"><div><h4>Nodes</h4><ul class="nodes">${list}</ul><select data-addnode="${bi}" data-g="${G.p}" data-path="/${G.p}/nodes" aria-label="Add a node"><option value="">Add a node...</option>${KINDS.map(([v, l]) => `<option value="${v}">${l}</option>`).join("")}</select></div><div>${nodeForm(b, bi, G)}</div></div></section>
     <section class="panel"><h3>Priority tables</h3>${b.priorityTables.map((t, ti) => tableEditor(t, bi, ti)).join("")}${btn("bot-addtable", "Add a space table", { cls: "link", data: `data-p="bots/${bi}"` })}${btn("bot-addenemy", "Add an enemy table", { cls: "link", data: `data-p="bots/${bi}"` })}
       <h4>Random ties</h4><div class="grid3">${fld("Die", sel(`bots/${bi}/randomization/die`, b.randomization.die, [["d6", "one six-sided die"]]))}${fld("Which spaces take part", area(`bots/${bi}/randomization/eligibleSet`, b.randomization.eligibleSet, { rows: 2 }))}${fld("How the roll picks", area(`bots/${bi}/randomization/procedure`, b.randomization.procedure, { rows: 2 }))}</div></section>
+    <section class="panel"><h3>Shared tables</h3><p class="lead">Every bot can use these, such as the shared Move and Pieces priorities of card bots. A bot reads its own tables first. They print as S-1, S-2.</p>${(g.sharedTables ?? []).map((t, ti) => tableEditor(t, bi, ti, true)).join("")}${btn("bot-addshared", "Add a shared space table", { cls: "link", data: `data-scope="space"` })}${btn("bot-addshared", "Add a shared enemy table", { cls: "link", data: `data-scope="opponent"` })}</section>
     ${eventRules(b, bi)}
     ${scoringRules(b, bi)}
     <section class="panel"><h3>Measures</h3><p class="lead">Named values the bot aid prints.</p>${meas || "<p><small>No measures yet.</small></p>"}${btn("bot-addmeasure", "Add a measure", { cls: "link", data: `data-p="bots/${bi}/measures"` })}</section>
@@ -265,7 +267,7 @@ export const botActions = {
   "bot-delnode": (d) => { S.confirm = null; const cleared = deleteNode(botOf(d.p), d.id); done(cleared.length ? `Deleted ${d.id}. Cleared branches: ${cleared.join(", ")}. Set them again.` : `Deleted ${d.id}.`); },
   "bot-linked": (d, el) => {
     const n = getP(S.game, d.p), b = botAt(d.p);
-    if (el.checked) n.linked = { action: S.game.actions.find((a) => a.faction === b.factionId && a.kind === "specialActivity")?.id ?? "", timing: "after", trigger: true, table: b.priorityTables[0]?.id ?? "" };
+    if (el.checked) n.linked = { action: S.game.actions.find((a) => a.faction === b.factionId && a.kind === "specialActivity")?.id ?? "", timing: "after", trigger: true, table: tablesOf(S.game, b).find((t) => t.scope !== "opponent")?.id ?? "" };
     else delete n.linked;
     done();
   },
@@ -286,14 +288,14 @@ export const botActions = {
   "bot-addscoring": (d) => {
     const b = botOf(d.p), taken = new Set(S.game.bots.flatMap((x) => (x.scoring ?? []).map((sc) => sc.phaseId)));
     const ph = S.game.rules.scoring.phases.find((x) => !taken.has(x.id)) ?? S.game.rules.scoring.phases[0];
-    (b.scoring ??= []).push({ phaseId: ph?.id ?? "", table: b.priorityTables.find((t) => t.scope !== "opponent")?.id ?? "", text: "" });
+    (b.scoring ??= []).push({ phaseId: ph?.id ?? "", table: tablesOf(S.game, b).find((t) => t.scope !== "opponent")?.id ?? "", text: "" });
     done();
   },
   "bot-delscoring": (d) => { const b = botOf(d.p); b.scoring.splice(Number(d.i), 1); if (!b.scoring.length) delete b.scoring; done(); },
   // The first part takes the node's table and the Operation's effects; removing the last part gives its table back.
   "bot-parts-add": (d) => {
     const n = getP(S.game, d.p), b = botAt(d.p);
-    const table = n.table ?? b.priorityTables.find((t) => t.scope !== "opponent")?.id ?? "";
+    const table = n.table ?? tablesOf(S.game, b).find((t) => t.scope !== "opponent")?.id ?? "";
     if (!n.parts) { n.parts = [{ text: "", table, steps: structuredClone(S.game.actions.find((a) => a.id === n.action)?.steps ?? []) }]; delete n.table; }
     else n.parts.push({ text: "", table: n.parts.at(-1).table, steps: [] });
     done();
@@ -305,8 +307,16 @@ export const botActions = {
   },
   // A step's own tie-break list is created on first add; removing the last one removes the field.
   "bot-steptb-add": (d) => { const st = getP(S.game, d.p); (st.tiebreak ??= []).push({ letter: "", text: "Highest Pop.", key: { var: "$space.pop" }, order: "max" }); reletter(st.tiebreak); done(); },
-  "bot-addtable": (d) => { const b = botOf(d.p); const id = freeId(new Set(b.priorityTables.map((t) => t.id)), `${b.code.toLowerCase()}.t`); b.priorityTables.push({ id, scope: "space", select: "one", mode: "sequence", steps: [{ n: 1, text: "Any legal space.", filter: true }], tiebreak: [] }); S.dopen[`tbl-${id}`] = true; done(); },
-  "bot-addenemy": (d) => { const b = botOf(d.p); const id = freeId(new Set(b.priorityTables.map((t) => t.id)), `${b.code.toLowerCase()}.enemy`); b.priorityTables.push({ id, scope: "opponent", select: "one", steps: [{ n: 1, text: "Any enemy.", filter: true }], tiebreak: [{ letter: "a", text: "Highest victory margin.", key: { var: "$faction.margin" }, order: "max" }] }); S.dopen[`tbl-${id}`] = true; done(); },
+  "bot-addtable": (d) => { const b = botOf(d.p); const id = freeId(new Set(tablesOf(S.game, b).map((t) => t.id)), `${b.code.toLowerCase()}.t`); b.priorityTables.push({ id, scope: "space", select: "one", mode: "sequence", steps: [{ n: 1, text: "Any legal space.", filter: true }], tiebreak: [] }); S.dopen[`tbl-${id}`] = true; done(); },
+  "bot-addenemy": (d) => { const b = botOf(d.p); const id = freeId(new Set(tablesOf(S.game, b).map((t) => t.id)), `${b.code.toLowerCase()}.enemy`); b.priorityTables.push({ id, scope: "opponent", select: "one", steps: [{ n: 1, text: "Any enemy.", filter: true }], tiebreak: [{ letter: "a", text: "Highest victory margin.", key: { var: "$faction.margin" }, order: "max" }] }); S.dopen[`tbl-${id}`] = true; done(); },
+  // Shared tables (1.12.0 part C). Ids are free over every bot's tables and the shared ones.
+  "bot-addshared": (d) => {
+    const g = S.game, taken = new Set([...g.bots.flatMap((b) => b.priorityTables.map((t) => t.id)), ...(g.sharedTables ?? []).map((t) => t.id)]);
+    const enemy = d.scope === "opponent", id = freeId(taken, enemy ? "sh.enemy" : "sh.t");
+    (g.sharedTables ??= []).push(enemy ? { id, scope: "opponent", select: "one", steps: [{ n: 1, text: "Any enemy.", filter: true }], tiebreak: [{ letter: "a", text: "Highest victory margin.", key: { var: "$faction.margin" }, order: "max" }] } : { id, scope: "space", select: "one", mode: "sequence", steps: [{ n: 1, text: "Any legal space.", filter: true }], tiebreak: [] });
+    S.dopen[`tbl-${id}`] = true; done();
+  },
+  "bot-delshared": (d) => { S.confirm = null; S.game.sharedTables.splice(Number(d.i), 1); if (!S.game.sharedTables.length) delete S.game.sharedTables; done(); },
   "bot-deltable": (d) => { S.confirm = null; botOf(d.p).priorityTables.splice(Number(d.i), 1); done(); },
   "bot-addov": (d) => { getP(S.game, d.p).push({ cardId: d.card, directive: "force", plain: "Always play this Event when it has an effect." }); done(); },
   "bot-addmeasure": (d) => { const arr = getP(S.game, d.p); arr.push({ id: freeId(new Set(arr.map((m) => m.id)), "m"), name: "New measure", plain: "", expr: 0 }); done(); },

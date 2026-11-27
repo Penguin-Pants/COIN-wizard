@@ -152,7 +152,7 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 // Placeholder spaces: a default name, no starting pieces, and not named (by id or displayed name)
 // anywhere outside the board.
 export function placeholderIds(game) {
-  const refs = JSON.stringify([game.actions, game.deck, game.bots, game.victory, game.rules]);
+  const refs = JSON.stringify([game.actions, game.deck, game.bots, game.sharedTables ?? [], game.victory, game.rules]);
   const named = (id) => new RegExp(`(^|[^a-z0-9._-])${esc(id)}($|[^a-z0-9._-])`, "i").test(refs);
   // Text can name a space by its displayed name too, such as "Control of Space 3".
   const shown = (name) => new RegExp(`(^|[^a-z0-9])${esc(name.trim())}($|[^a-z0-9])`, "i").test(refs);

@@ -1,7 +1,7 @@
 // Generate bot exports from the same definition the validator and dry-runs use:
 // Mermaid source, printable aid (Markdown and HTML), policy YAML, structured JSON.
 import YAML from "yaml";
-import { linkedOf, botNodes, EXIT_TEXT } from "./dryrun.mjs";
+import { linkedOf, botNodes, EXIT_TEXT, tablesOf, usesTable } from "./dryrun.mjs";
 import { budgetText, valueText } from "./plain.mjs";
 import { toValue } from "./exprmodel.mjs";
 
@@ -11,8 +11,10 @@ const mid = (id) => (id.startsWith("$") ? `x_${id.slice(1)}` : id.replace(/[^a-z
 // "Base (Valley Militia)": a piece target names its owner (schema 1.9.0).
 const pieceLabel = (g, pid) => { const f = g.factions.find((x) => x.pieces.some((p) => p.id === pid)); return f ? `${f.pieces.find((p) => p.id === pid).name} (${f.name})` : pid; };
 
-export function tableLabels(bot) {
-  return Object.fromEntries(bot.priorityTables.map((t, i) => [t.id, `${bot.code}-${i + 1}`]));
+// A bot's tables print as CW-1, CW-2; the game's shared tables (1.12.0 part C) as S-1, S-2. A bot code
+// has 2 or 3 capitals, so a shared label never matches a bot's own.
+export function tableLabels(bot, game) {
+  return Object.fromEntries([...bot.priorityTables.map((t, i) => [t.id, `${bot.code}-${i + 1}`]), ...(game?.sharedTables ?? []).map((t, i) => [t.id, `S-${i + 1}`])]);
 }
 
 // Number the steps in breadth-first order from the start node.
@@ -66,7 +68,7 @@ function scoringText(game, bot, labels) {
 // Structured model of one aid. Both renderers read this.
 export function aidModel(game, bot) {
   const faction = game.factions.find((f) => f.id === bot.factionId);
-  const labels = tableLabels(bot);
+  const labels = tableLabels(bot, game);
   const actions = Object.fromEntries(game.actions.map((a) => [a.id, a]));
   const passGain = game.rules.sequence.passGain[bot.factionId];
   const endLabel = (n) => ({
@@ -79,7 +81,7 @@ export function aidModel(game, bot) {
   let num, nodes;
   const goto = (id) => (EXIT_TEXT[id] ? EXIT_TEXT[id].toLowerCase() : nodes[id].kind === "end" ? endLabel(nodes[id]) : `go to step ${num[id]}`);
   const select = (t) => (t.select === "all" ? `up to ${t.limit} spaces` : "1 space");
-  const tableById = Object.fromEntries(bot.priorityTables.map((t) => [t.id, t]));
+  const tableById = Object.fromEntries(tablesOf(game, bot).map((t) => [t.id, t]));
   // The steps of one flowchart: the bot's own, or one side of a bot card (1.12.0), numbered from its start.
   // A side that starts with an end node prints that end as its one step.
   const stepsOf = (graph) => { ({ num, nodes } = stepNumbers(graph)); const first = nodes[graph.start]; if (first?.kind === "end") return [{ n: 1, text: `${first.text} ${endLabel(first)}.` }]; return graph.nodes.filter((n) => n.kind !== "end").sort((a, b) => num[a.id] - num[b.id]).map(stepOf); };
@@ -119,7 +121,8 @@ export function aidModel(game, bot) {
     eventRule: bot.eventPolicy.plain,
     steps,
     cards,
-    tables: bot.priorityTables.map((t) => ({
+    // The bot's own tables, then the shared tables it uses.
+    tables: [...bot.priorityTables, ...(game.sharedTables ?? []).filter((t) => usesTable(bot, t.id))].map((t) => ({
       label: labels[t.id], select: t.scope === "opponent" ? "one enemy faction" : t.select === "all" ? `all matching spaces, up to ${t.limit}` : "one space",
       what: t.scope === "opponent" ? "Choose an enemy faction that is" : "Choose a space that is",
       rows: t.steps.map((s) => [String(s.n), `${s.text}${s.target ? ` Target: ${game.factions.find((f) => f.id === s.target)?.name ?? s.target}.` : ""}${s.piece ? ` Target: ${pieceLabel(game, s.piece)}.` : ""}${s.tiebreak?.length ? ` Ties in this step: ${s.tiebreak.map((tb) => `${tb.letter}. ${tb.text} (${tb.order === "max" ? "highest" : "lowest"} wins)`).join("; ")}` : ""}`]),
@@ -160,11 +163,17 @@ export function toHtml(m) {
 <h2>Ties and dice</h2><p>${h(m.tieRandom)}</p><h2>Fallback</h2><p>${h(m.fallback)}</p><h2>Scoring rounds</h2><p>${h(m.scoring)}</p><h2>Counting the turn</h2><p>${h(m.outcome)}</p></body></html>`;
 }
 
+// A bot with the shared tables (1.12.0 part C) it uses, so its exported policy files stand alone.
+export function policyOf(game, bot) {
+  const shared = (game.sharedTables ?? []).filter((t) => usesTable(bot, t.id));
+  return shared.length ? { ...bot, sharedTables: shared } : bot;
+}
+
 export function toPolicyYaml(game, bot) {
   const used = new Set();
   for (const n of botNodes(bot)) { if (n.action) used.add(n.action); for (const L of linkedOf(n)) used.add(L.action); }
   const actions = game.actions.filter((a) => used.has(a.id)).map((a) => ({ id: a.id, name: a.name, kind: a.kind, cost: a.cost, plain: a.plain, dependsOn: a.dependsOn }));
-  const { dryRuns, ...policy } = bot;
+  const { dryRuns, ...policy } = policyOf(game, bot);
   const f = game.factions.find((x) => x.id === bot.factionId);
   return YAML.stringify({ schemaVersion: game.meta.schemaVersion, game: game.meta.gameId, revision: game.meta.revision, faction: { id: bot.factionId, name: f?.name ?? bot.factionId }, policy, actions, dryRuns }, { lineWidth: 100 });
 }

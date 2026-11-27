@@ -467,3 +467,71 @@ test("a designer sets a card side's Activation Number, skips the roll on one nod
   assert.equal("activation" in b.deck.cards[0].sides[0], false);
   assert.equal("noActivation" in b.deck.cards[0].sides[0].nodes[1], false);
 }));
+
+// Schema 1.12.0 part C: a shared table that every bot can use.
+test("a designer adds a shared table, uses it on a node and deletes it", () => withApp(async ({ page, db }) => {
+  await botsTab(page);
+  const draft = async () => { await page.waitForTimeout(1800); return JSON.parse((await db())["data/users/u1/draft"].json); };
+  await page.click('[data-a="bot-addshared"][data-scope="space"]'); await frames(page);
+  let g = await draft();
+  assert.deepEqual(g.sharedTables.map((t) => t.id), ["sh.t1"]);
+  assert.match(await page.innerText("#main"), /Shared tables/i);
+  await page.click('[data-a="bot-node"][data-id="cw.sweep"]'); await frames(page);
+  const ts = `select[data-b="bots/0/nodes/${g.bots[0].nodes.findIndex((n) => n.id === "cw.sweep")}/table"]`;
+  assert.ok(await page.locator(`${ts} option[value="sh.t1"]`).count(), "the node's table select offers the shared table");
+  await page.locator(ts).selectOption("sh.t1"); await frames(page);
+  g = await draft();
+  assert.equal(g.bots[0].nodes.find((n) => n.id === "cw.sweep").table, "sh.t1");
+  await page.click('[data-a="bot-pick"][data-i="1"]'); await frames(page);
+  assert.match(await page.innerText("#main"), /sh\.t1/, "the other bot sees the shared table too");
+  await page.click('[data-a="confirm-ask"][data-key="tbl-sh.t1"]'); await page.click('[data-a="bot-delshared"]'); await frames(page);
+  g = await draft();
+  assert.equal("sharedTables" in g, false);
+}));
+
+// Codex review on PR 48: a bot whose only space tables are shared starts a scoring choice with one.
+test("a new scoring choice takes a shared space table when the bot has none of its own", async () => {
+  const g = JSON.parse(readFileSync("examples/tan-war.game.json", "utf8")), b = g.bots[0];
+  const space = b.priorityTables.filter((t) => t.scope !== "opponent");
+  b.priorityTables = b.priorityTables.filter((t) => t.scope === "opponent");
+  g.sharedTables = space;
+  delete b.scoring;
+  for (const o of b.eventPolicy.overrides) delete o.node;
+  const app = await openApp(browser, { example: false, saved: { "data/users/u1/draft": { json: JSON.stringify(g), savedAt: "2026-11-27T10:00:00Z" } } });
+  try {
+    const { page, db } = app;
+    await page.click('[data-a="resume"]'); await frames(page);
+    await botsTab(page);
+    await page.click('[data-a="bot-addscoring"]'); await frames(page);
+    await page.waitForTimeout(1800);
+    const sc = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].scoring;
+    assert.equal(sc[0].table, space[0].id);
+    assert.deepEqual(app.errors, []);
+  } finally { await app.close(); }
+});
+
+// Codex review on PR 48, second pass: new ids and new defaults see the shared tables.
+test("with shared tables, a new bot table gets a free id, a linked Special Activity gets a table and issues name the shared table", async () => {
+  const g = JSON.parse(readFileSync("examples/tan-war.game.json", "utf8")), b = g.bots[0];
+  b.code = "SH";
+  const space = b.priorityTables.filter((t) => t.scope !== "opponent");
+  b.priorityTables = b.priorityTables.filter((t) => t.scope === "opponent");
+  g.sharedTables = [...space, { id: "sh.t1", scope: "space", select: "one", steps: [{ n: 1, text: "Unused.", filter: true }], tiebreak: [] }];
+  const node = b.nodes.find((n) => n.id === "cw.sweep");
+  const app = await openApp(browser, { example: false, saved: { "data/users/u1/draft": { json: JSON.stringify(g), savedAt: "2026-11-27T10:00:00Z" } } });
+  try {
+    const { page, db } = app;
+    const draft = async () => { await page.waitForTimeout(1800); return JSON.parse((await db())["data/users/u1/draft"].json); };
+    await page.click('[data-a="resume"]'); await frames(page);
+    await botsTab(page);
+    assert.match(await page.innerText("#stepissues"), /shared table sh\.t1/, "the unused shared table warning names it");
+    await page.click(`[data-a="bot-node"][data-id="${node.id}"]`); await frames(page);
+    await page.locator('input[data-a="bot-linked"]').check(); await frames(page);
+    let d = await draft();
+    assert.equal(d.bots[0].nodes.find((n) => n.id === node.id).linked.table, space[0].id, "the first space table the bot can use");
+    await page.click('[data-a="bot-addtable"]'); await frames(page);
+    d = await draft();
+    assert.deepEqual(d.bots[0].priorityTables.filter((t) => t.scope === "space").map((t) => t.id), ["sh.t2"], "sh.t1 is a shared table, so the new one is sh.t2");
+    assert.deepEqual(app.errors, []);
+  } finally { await app.close(); }
+});

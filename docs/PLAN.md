@@ -1,6 +1,6 @@
 # Plan: COIN Wizard
 
-Date: 2026-11-27. `main`: 301c3a6. Schema: `coin-game/1.12.0` (frozen).
+Date: 2026-11-27. `main`: fd27e53. Schema: `coin-game/1.12.0` (frozen).
 This file lists the work still open. Finished work and its evidence are in `docs/ACCEPTANCE.md`.
 
 ## Status
@@ -10,7 +10,7 @@ This file lists the work still open. Finished work and its evidence are in `docs
 | Phases 0 to 12 (wizard, kit, print) | Done | `docs/ACCEPTANCE.md`, "Results" |
 | Bot model gaps, items 13 to 21 (schemas 1.5.0 to 1.10.0) | Done | `docs/ACCEPTANCE.md`, rows 13 to 21 |
 | Schema 1.11.0, parts A to F | Done | `docs/ACCEPTANCE.md`, rows 24 to 29 |
-| Schema 1.12.0 (card bots) | Parts A and B done; C to F open | `docs/ACCEPTANCE.md`, rows 32 and 34 |
+| Schema 1.12.0 (card bots) | Parts A to C done; D to G open | `docs/ACCEPTANCE.md`, rows 32, 34 and 35 |
 | GMT sheet research | 7 of 7 sheets done; 5 of 6 rule questions answered; 1.11.0 parts decided | `docs/research/bot-patterns/README.md`, `docs/proposals/bot-model-gaps-2.md` |
 | Live artifact | Build 208116d, schema 1.11.0 (published 2026-11-26) | Artifact `8d21134e-1d1c-4dce-a1b5-57b010d5c92c` |
 
@@ -28,7 +28,7 @@ Owner: **Owner** (a person must act or decide) or **Claude** (code or docs, afte
 
 | # | Item | Owner | Source |
 |---|---|---|---|
-| C1 | Card-driven bot mode, schema 1.12.0: parts A and B done (ACCEPTANCE rows 32 and 34); parts C to F open, one part per PR | Claude | R7; `docs/proposals/card-bots.md`, "Parts" |
+| C1 | Card-driven bot mode, schema 1.12.0: parts A to C done (ACCEPTANCE rows 32, 34 and 35); parts D to G open, one part per PR. Part G (Move and Pieces tables) needs design questions first | Claude | R7; `docs/proposals/card-bots.md`, "Parts" |
 | C2 | Import the research data: prototype deck into a sample game; claims with confidence and a contested flag | Claude | R8 |
 | C3 | Preset library from the 14-game tables (victory, pass gain, tracks, scoring phases) | Claude | R9; `docs/research/coin-analysis/variation-matrix.md` |
 | C4 | Initiative Track and Operation limits before scoring | Claude | R11; `docs/research/coin-analysis/variation-matrix.md` lines 35-41 |
