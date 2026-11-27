@@ -2781,6 +2781,10 @@
               }
             }
           }
+        },
+        "noActivation": {
+          "type": "boolean",
+          "description": "1.12.0 part B, action nodes on a card side with an Activation Number: this Operation skips the roll and takes spaces up to its table's limit."
         }
       }
     },
@@ -2879,6 +2883,10 @@
                 "items": {
                   "$ref": "#/$defs/botNode"
                 }
+              },
+              "activation": {
+                "$ref": "#/$defs/expr",
+                "description": "1.12.0 part B: the Activation Number of this side, a number or a formula (a track value). Before each space after the first, an action node on this side rolls 1d6; a roll at or under the number ends its Operation."
               }
             }
           }

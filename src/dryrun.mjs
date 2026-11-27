@@ -2,6 +2,7 @@
 // effect steps on the dry-run state (src/effects.mjs) before its linked Special Activity
 // and before the next node, so each sees the board the action left.
 import { evalExpr } from "./expr.mjs";
+import { seededRandom } from "./deck.mjs";
 import { applyAction, payCost, refundCost, withoutCost, runPhaseSteps, legalityOf, startOperation } from "./effects.mjs";
 
 
@@ -11,6 +12,16 @@ export const linkedOf = (node) => (node?.linked == null ? [] : [node.linked].fla
 export const EXIT_TEXT = { $draw: "Draw the next bot card", $flip: "Flip this bot card" };
 // Every node of a bot: its own flowchart, then each side of each bot card (schema 1.12.0). Ids are unique over all.
 export const botNodes = (bot) => [...bot.nodes, ...(bot.deck?.cards ?? []).flatMap((c) => c.sides.flatMap((sd) => sd.nodes))];
+
+// The Activation Number (schema 1.12.0 part B) of the card side being run, as a gate on an Operation's
+// spaces: take() is true for the first space; before each later space it rolls 1d6 from the turn's
+// seeded source, and a roll at or under the number ends the Operation. null: no roll.
+function activationGate(side, node, ctx, roll, rolls) {
+  if (!side || side.activation === undefined || node.noActivation || !side.nodes.includes(node)) return null;
+  const n = Number(evalExpr(side.activation, ctx));
+  let taken = 0, stopped = false;
+  return { take: () => { if (stopped) return false; if (taken++ === 0) return true; const r = roll(); rolls.push(r); if (r <= n) { stopped = true; return false; } return true; } };
+}
 
 // The bot deck for one turn (schema 1.12.0): the dry-run patch "botDeck" sets the order (top card first)
 // and the flipped cards. Default: the deck as listed, none flipped. A flipped card shows its back.
@@ -201,7 +212,8 @@ function runLinked(game, state, links, actions, tables, ctx, extra) {
 // its own table from the Operation's legal spaces, on the board the earlier parts left, and runs its
 // own steps there. Cost: once per distinct space (per "space"), or once on the first pick (per "use").
 // Returns false when the node is empty (no part picked; with timing "before", no part could pick).
-function runParts(game, state, node, action, tables, actions, extra, result) {
+// gate (schema 1.12.0 part B): the Activation Number of the card side, over the Operation's new spaces.
+function runParts(game, state, node, action, tables, actions, extra, result, gate) {
   const links = linkedOf(node), ctx = { state, links: game.board.links };
   const { amount, per } = action.cost, paid = new Set();
   // Each part runs its own steps, so the legal spaces of its own enemy option apply (schema 1.6.0).
@@ -233,7 +245,7 @@ function runParts(game, state, node, action, tables, actions, extra, result) {
     const picked = [];
     for (const sp of ranked) {
       if (t.select === "all" && picked.length >= t.limit) break;
-      if (!paid.has(sp.id)) { if (room <= 0) continue; room--; if (per === "space" || !paid.size) payCost(game, state, action, [sp.id]); paid.add(sp.id); }
+      if (!paid.has(sp.id)) { if (room <= 0 || (gate && !gate.take())) continue; room--; if (per === "space" || !paid.size) payCost(game, state, action, [sp.id]); paid.add(sp.id); }
       picked.push(sp.id);
     }
     applyAction(game, state, { ...action, steps: pt.steps }, picked, extra, { pay: false, targetOf: ranked.targetOf });
@@ -263,12 +275,14 @@ export function runBot(game, bot, startState) {
   // other side of the current card. A turn that draws every card passes (owner decision 2026-11-27).
   const deck = bot.mode === "cards" ? deckOf(bot, state) : null;
   let drawn = 0, card = null, side = null;
+  // Activation Number rolls (part B): one seeded source per turn, seed 1 unless the patch sets one.
+  const rnd = seededRandom(state.seed ?? 1), roll = () => 1 + Math.floor(rnd() * 6), rolls = [];
   let cur = bot.start;
   for (let i = 0; i <= bot.maxSteps; i++) {
     if (i === bot.maxSteps) throw new Error(`Bot ${bot.id} did not terminate within ${bot.maxSteps} steps`);
     if (cur === "$draw") {
       if (!deck) throw new Error(`Bot ${bot.id} draws a card but is not a card bot`);
-      if (drawn === deck.order.length) { result.path.push("deck:empty"); result.outcome = "pass"; return result; }
+      if (drawn === deck.order.length) { result.path.push("deck:empty"); result.outcome = "pass"; if (rolls.length) result.rolls = rolls; return result; }
       card = deck.order[drawn++];
       side = card.sides[deck.flipped.has(card.id) ? 1 : 0];
       result.path.push(`draw:${card.id}`);
@@ -307,13 +321,16 @@ export function runBot(game, bot, startState) {
       if (node.target && !target) { result.path.push(`${node.id}:empty`); cur = node.onEmpty; continue; }
       // A piece target (schema 1.9.0): the action runs only the option made for that piece.
       const extra = target ? { $target: target, ...(picked.piece ? { $targetPiece: picked.piece } : {}) } : {};
+      const gate = activationGate(side, node, ctx, roll, rolls);
       if (node.parts) {
-        if (!runParts(game, state, node, action, tables, actions, extra, result)) { result.path.push(`${node.id}:empty`); cur = node.onEmpty; continue; }
+        if (!runParts(game, state, node, action, tables, actions, extra, result, gate)) { result.path.push(`${node.id}:empty`); cur = node.onEmpty; continue; }
         cur = node.then;
         continue;
       }
       const legal = legalSpaces(game, state, action, extra);
-      const chosen = selectByTable(game, state, tables[node.table], legal, action, extra);
+      const ranked = selectByTable(game, state, tables[node.table], legal, action, extra);
+      // The Activation Number ends the Operation early; the rest of the ranked spaces are not taken.
+      const chosen = gate ? Object.assign(ranked.filter(() => gate.take()), { targetOf: ranked.targetOf }) : ranked;
       if (!chosen.length) { result.path.push(`${node.id}:empty`); cur = node.onEmpty; continue; }
       result.path.push(node.id);
       result.chosen = chosen.map((s) => s.id);
@@ -350,6 +367,7 @@ export function runBot(game, bot, startState) {
       cur = node.then;
     } else if (node.kind === "end") {
       result.path.push(node.id);
+      if (rolls.length) result.rolls = rolls;
       result.outcome = node.outcome === "operation" && result.linked && result.linked !== "skipped" ? "operationSpecial" : node.outcome;
       return result;
     }
