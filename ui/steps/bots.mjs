@@ -267,7 +267,7 @@ export const botActions = {
   "bot-delnode": (d) => { S.confirm = null; const cleared = deleteNode(botOf(d.p), d.id); done(cleared.length ? `Deleted ${d.id}. Cleared branches: ${cleared.join(", ")}. Set them again.` : `Deleted ${d.id}.`); },
   "bot-linked": (d, el) => {
     const n = getP(S.game, d.p), b = botAt(d.p);
-    if (el.checked) n.linked = { action: S.game.actions.find((a) => a.faction === b.factionId && a.kind === "specialActivity")?.id ?? "", timing: "after", trigger: true, table: b.priorityTables[0]?.id ?? "" };
+    if (el.checked) n.linked = { action: S.game.actions.find((a) => a.faction === b.factionId && a.kind === "specialActivity")?.id ?? "", timing: "after", trigger: true, table: tablesOf(S.game, b).find((t) => t.scope !== "opponent")?.id ?? "" };
     else delete n.linked;
     done();
   },
@@ -307,8 +307,8 @@ export const botActions = {
   },
   // A step's own tie-break list is created on first add; removing the last one removes the field.
   "bot-steptb-add": (d) => { const st = getP(S.game, d.p); (st.tiebreak ??= []).push({ letter: "", text: "Highest Pop.", key: { var: "$space.pop" }, order: "max" }); reletter(st.tiebreak); done(); },
-  "bot-addtable": (d) => { const b = botOf(d.p); const id = freeId(new Set(b.priorityTables.map((t) => t.id)), `${b.code.toLowerCase()}.t`); b.priorityTables.push({ id, scope: "space", select: "one", mode: "sequence", steps: [{ n: 1, text: "Any legal space.", filter: true }], tiebreak: [] }); S.dopen[`tbl-${id}`] = true; done(); },
-  "bot-addenemy": (d) => { const b = botOf(d.p); const id = freeId(new Set(b.priorityTables.map((t) => t.id)), `${b.code.toLowerCase()}.enemy`); b.priorityTables.push({ id, scope: "opponent", select: "one", steps: [{ n: 1, text: "Any enemy.", filter: true }], tiebreak: [{ letter: "a", text: "Highest victory margin.", key: { var: "$faction.margin" }, order: "max" }] }); S.dopen[`tbl-${id}`] = true; done(); },
+  "bot-addtable": (d) => { const b = botOf(d.p); const id = freeId(new Set(tablesOf(S.game, b).map((t) => t.id)), `${b.code.toLowerCase()}.t`); b.priorityTables.push({ id, scope: "space", select: "one", mode: "sequence", steps: [{ n: 1, text: "Any legal space.", filter: true }], tiebreak: [] }); S.dopen[`tbl-${id}`] = true; done(); },
+  "bot-addenemy": (d) => { const b = botOf(d.p); const id = freeId(new Set(tablesOf(S.game, b).map((t) => t.id)), `${b.code.toLowerCase()}.enemy`); b.priorityTables.push({ id, scope: "opponent", select: "one", steps: [{ n: 1, text: "Any enemy.", filter: true }], tiebreak: [{ letter: "a", text: "Highest victory margin.", key: { var: "$faction.margin" }, order: "max" }] }); S.dopen[`tbl-${id}`] = true; done(); },
   // Shared tables (1.12.0 part C). Ids are free over every bot's tables and the shared ones.
   "bot-addshared": (d) => {
     const g = S.game, taken = new Set([...g.bots.flatMap((b) => b.priorityTables.map((t) => t.id)), ...(g.sharedTables ?? []).map((t) => t.id)]);

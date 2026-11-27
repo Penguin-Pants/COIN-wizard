@@ -1,6 +1,6 @@
 // Print kit generators. Everything reads the confirmed definition only.
 import { opinionName } from "./opinion.mjs";
-import { aidModel, toHtml, stepNumbers, tableLabels } from "./botaid.mjs";
+import { aidModel, toHtml, stepNumbers, tableLabels, policyOf } from "./botaid.mjs";
 import { graphSvg } from "./graphsvg.mjs";
 import { linkedOf, cardLasting, EXIT_TEXT, tablesOf } from "./dryrun.mjs";
 import { choiceCounts } from "./effects.mjs";
@@ -407,7 +407,7 @@ export function buildFiles(g, { toMermaid, toMarkdown, toPolicyYaml }) {
       [`${base}.flow.mmd`, `${draft ? `%% ${draft}\n` : ""}${toMermaid(bot)}`],
       [`${base}.flow.svg`, graphSvg(bot, { title: `${g.meta.title}: ${faction(g, bot.factionId)?.name ?? bot.factionId} bot flowchart${draft ? ` (${draft})` : ""}` })],
       [`${base}.policy.yaml`, `${draft ? `# ${draft}\n` : ""}${toPolicyYaml(g, bot)}`],
-      [`${base}.policy.json`, JSON.stringify(draft ? { draft: true, ...bot } : bot, null, 2) + "\n"]);
+      [`${base}.policy.json`, JSON.stringify(draft ? { draft: true, ...policyOf(g, bot) } : policyOf(g, bot), null, 2) + "\n"]);
   }
   return files;
 }

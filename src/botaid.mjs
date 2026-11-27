@@ -163,13 +163,17 @@ export function toHtml(m) {
 <h2>Ties and dice</h2><p>${h(m.tieRandom)}</p><h2>Fallback</h2><p>${h(m.fallback)}</p><h2>Scoring rounds</h2><p>${h(m.scoring)}</p><h2>Counting the turn</h2><p>${h(m.outcome)}</p></body></html>`;
 }
 
+// A bot with the shared tables (1.12.0 part C) it uses, so its exported policy files stand alone.
+export function policyOf(game, bot) {
+  const shared = (game.sharedTables ?? []).filter((t) => usesTable(bot, t.id));
+  return shared.length ? { ...bot, sharedTables: shared } : bot;
+}
+
 export function toPolicyYaml(game, bot) {
   const used = new Set();
   for (const n of botNodes(bot)) { if (n.action) used.add(n.action); for (const L of linkedOf(n)) used.add(L.action); }
   const actions = game.actions.filter((a) => used.has(a.id)).map((a) => ({ id: a.id, name: a.name, kind: a.kind, cost: a.cost, plain: a.plain, dependsOn: a.dependsOn }));
-  // The shared tables (1.12.0 part C) the bot uses travel with its policy, so the file stands alone.
-  const { dryRuns, ...own } = bot, shared = (game.sharedTables ?? []).filter((t) => usesTable(bot, t.id));
-  const policy = shared.length ? { ...own, sharedTables: shared } : own;
+  const { dryRuns, ...policy } = policyOf(game, bot);
   const f = game.factions.find((x) => x.id === bot.factionId);
   return YAML.stringify({ schemaVersion: game.meta.schemaVersion, game: game.meta.gameId, revision: game.meta.revision, faction: { id: bot.factionId, name: f?.name ?? bot.factionId }, policy, actions, dryRuns }, { lineWidth: 100 });
 }

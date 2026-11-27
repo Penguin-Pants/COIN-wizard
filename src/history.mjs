@@ -33,7 +33,7 @@ export const SECTIONS = [
   { id: "rules", name: "Rules", keys: ["rules"] },
   { id: "deck", name: "Deck", keys: ["deck"] },
   { id: "victory", name: "Victory", keys: ["victory"] },
-  { id: "bots", name: "Bots", keys: ["bots"] }
+  { id: "bots", name: "Bots", keys: ["bots", "sharedTables"] }
 ];
 // Progress and save bookkeeping are not design changes.
 const IGNORE = new Set(["progress", "confirmedAt"]);

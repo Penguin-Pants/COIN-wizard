@@ -509,3 +509,29 @@ test("a new scoring choice takes a shared space table when the bot has none of i
     assert.deepEqual(app.errors, []);
   } finally { await app.close(); }
 });
+
+// Codex review on PR 48, second pass: new ids and new defaults see the shared tables.
+test("with shared tables, a new bot table gets a free id, a linked Special Activity gets a table and issues name the shared table", async () => {
+  const g = JSON.parse(readFileSync("examples/tan-war.game.json", "utf8")), b = g.bots[0];
+  b.code = "SH";
+  const space = b.priorityTables.filter((t) => t.scope !== "opponent");
+  b.priorityTables = b.priorityTables.filter((t) => t.scope === "opponent");
+  g.sharedTables = [...space, { id: "sh.t1", scope: "space", select: "one", steps: [{ n: 1, text: "Unused.", filter: true }], tiebreak: [] }];
+  const node = b.nodes.find((n) => n.id === "cw.sweep");
+  const app = await openApp(browser, { example: false, saved: { "data/users/u1/draft": { json: JSON.stringify(g), savedAt: "2026-11-27T10:00:00Z" } } });
+  try {
+    const { page, db } = app;
+    const draft = async () => { await page.waitForTimeout(1800); return JSON.parse((await db())["data/users/u1/draft"].json); };
+    await page.click('[data-a="resume"]'); await frames(page);
+    await botsTab(page);
+    assert.match(await page.innerText("#stepissues"), /shared table sh\.t1/, "the unused shared table warning names it");
+    await page.click(`[data-a="bot-node"][data-id="${node.id}"]`); await frames(page);
+    await page.locator('input[data-a="bot-linked"]').check(); await frames(page);
+    let d = await draft();
+    assert.equal(d.bots[0].nodes.find((n) => n.id === node.id).linked.table, space[0].id, "the first space table the bot can use");
+    await page.click('[data-a="bot-addtable"]'); await frames(page);
+    d = await draft();
+    assert.deepEqual(d.bots[0].priorityTables.filter((t) => t.scope === "space").map((t) => t.id), ["sh.t2"], "sh.t1 is a shared table, so the new one is sh.t2");
+    assert.deepEqual(app.errors, []);
+  } finally { await app.close(); }
+});

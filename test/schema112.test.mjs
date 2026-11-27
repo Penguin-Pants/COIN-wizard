@@ -413,3 +413,21 @@ test("a shared table label never matches a bot table label, even for bot code SH
   const labels = Object.values(tableLabels(g.bots[0], g));
   assert.equal(new Set(labels).size, labels.length, labels.join(", "));
 });
+
+// Codex review on PR 48, second pass (each reproduced before the fix).
+import { buildFiles } from "../src/kit.mjs";
+import { compareGames } from "../src/history.mjs";
+
+test("the policy.json export holds the shared tables the bot uses", () => {
+  const g = sharedGame(tan());
+  const files = Object.fromEntries(buildFiles(g, { toMermaid, toMarkdown, toPolicyYaml }));
+  const name = Object.keys(files).find((f) => f.endsWith(".policy.json") && JSON.parse(files[f]).id === g.bots[0].id);
+  assert.ok(name, "the Crown bot has a policy.json");
+  assert.deepEqual(JSON.parse(files[name]).sharedTables.map((t) => t.id), ["cw.t.garrison"]);
+});
+
+test("a change to a shared table shows in the Bots section of a revision comparison", () => {
+  const a = sharedGame(tan()), b = structuredClone(a);
+  b.sharedTables[0].steps[0].text = "Changed.";
+  assert.equal(compareGames(a, b).find((s) => s.id === "bots").changes, 1);
+});
