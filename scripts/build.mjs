@@ -6,7 +6,7 @@ import { dirname } from "node:path";
 import { execSync } from "node:child_process";
 import { LATEST } from "../src/migrate.mjs";
 
-export const LIMIT_KIB = 700;
+export const LIMIT_KIB = 950;
 const limit = Number(process.env.BUILD_LIMIT_KIB ?? LIMIT_KIB);
 const out = process.env.BUILD_OUT ?? "dist/index.html";
 

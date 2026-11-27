@@ -29,7 +29,6 @@ Owner: **Owner** (a person must act or decide) or **Claude** (code or docs, afte
 | # | Item | Owner | Source |
 |---|---|---|---|
 | C1 | Card-driven bot mode, schema 1.12.0: part A done (ACCEPTANCE row 32); parts B to F open, one part per PR | Claude | R7; `docs/proposals/card-bots.md`, "Parts" |
-| C9 | Build size: the page is 699 of 700 KiB after 1.12.0 part A, so parts B to F do not fit. Raise `LIMIT_KIB` in `scripts/build.mjs`, or shrink the bundle (ajv 112 KiB, yaml 101 KiB, the 3 bundled examples 101 KiB) | Owner decides | `scripts/build.mjs` |
 | C2 | Import the research data: prototype deck into a sample game; claims with confidence and a contested flag | Claude | R8 |
 | C3 | Preset library from the 14-game tables (victory, pass gain, tracks, scoring phases) | Claude | R9; `docs/research/coin-analysis/variation-matrix.md` |
 | C4 | Initiative Track and Operation limits before scoring | Claude | R11; `docs/research/coin-analysis/variation-matrix.md` lines 35-41 |

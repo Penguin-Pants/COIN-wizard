@@ -22,11 +22,11 @@ test("the build fails with a clear message above the size limit", () => {
   } finally { r.done(); }
 });
 
-test("the build passes under the default limit of 700 KiB", () => {
+test("the build passes under the default limit of 950 KiB", () => {
   const r = build({});
   try {
     assert.equal(r.status, 0, r.stderr);
-    assert.match(r.stdout, /KiB \(limit 700 KiB\)/);
+    assert.match(r.stdout, /KiB \(limit 950 KiB\)/);
   } finally { r.done(); }
 });
 
