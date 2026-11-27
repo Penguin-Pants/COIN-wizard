@@ -499,7 +499,8 @@ function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionByI
   if (!loops) cards.forEach((c, ci) => {
     if (c.sides.length < 2) return;
     const sideOf = (id) => c.sides.find((sd) => sd.nodes.some((n) => n.id === id));
-    const step = (id) => next(nodes[id]).filter(Boolean).map((x) => (x === "$flip" ? c.sides.find((sd) => sd !== sideOf(id)).start : x)).filter(sideOf);
+    // A missing start or node is already a missing-ref error: the walk stops there.
+    const step = (id) => (!nodes[id] ? [] : next(nodes[id])).filter(Boolean).map((x) => (x === "$flip" ? c.sides.find((sd) => sd !== sideOf(id)).start : x)).filter(sideOf);
     const color = {};
     const dfs = (id) => { if (color[id] === 1) return true; if (color[id] === 2) return false; color[id] = 1; const hit = step(id).some(dfs); color[id] = 2; return hit; };
     if (dfs(c.sides[0].start) || dfs(c.sides[1].start)) err("cycle", `${p}/deck/cards/${ci}`, `Bot card ${c.id} can flip back and forth with no explicit limit`);

@@ -108,10 +108,12 @@ export function deleteBack(bot, card) {
   for (const d of bot.dryRuns) dropFromBotDeck(d.patch, card.id, ["flipped"]);
   return clearBranches(card.sides[0].nodes, "$flip");
 }
-// A card bot: the deck starts with one card. Back to a flowchart bot: the deck goes and every $draw branch is cleared.
+// A card bot: the deck starts with one card. Back to a flowchart bot: the deck goes, with every dry-run
+// botDeck patch and every $draw branch.
 export function setCardMode(bot, on) {
   if (on) { bot.mode = "cards"; if (!bot.deck) addBotCard(bot); return []; }
   delete bot.mode; delete bot.deck;
+  for (const d of bot.dryRuns) delete d.patch.botDeck;
   return clearBranches(bot.nodes, "$draw");
 }
 // Deletes every branch to a node id or an exit. Returns the cleared branches as "node.branch".

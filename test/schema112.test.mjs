@@ -214,3 +214,19 @@ test("a card whose two sides flip back and forth is a loop", () => {
   assert.ok(validate(g).errors.some((e) => e.code === "cycle" && e.path === "/bots/0/deck/cards/0"));
   assert.equal(validate(cardGame()).errors.some((e) => e.code === "cycle"), false, "one flip that ends is not a loop");
 });
+
+// Codex review on PR 46, second pass (two findings, each reproduced before the fix).
+test("removing the bot deck drops the dry-run deck patches, so a new deck starts clean", () => {
+  const g = tan(), b = g.bots[0];
+  setCardMode(b, true);
+  b.dryRuns[0].patch.botDeck = { order: ["k1"] };
+  setCardMode(b, false);
+  assert.equal("botDeck" in b.dryRuns[0].patch, false);
+  setCardMode(b, true);
+  assert.equal("botDeck" in b.dryRuns[0].patch, false);
+});
+
+test("a two-sided card with a missing start is an error, not a validator crash", () => {
+  const g = cardGame(); g.bots[0].deck.cards[0].sides[0].start = "nope";
+  assert.ok(validate(g).errors.some((e) => e.code === "missing-ref" && e.path === "/bots/0/deck/cards/0/sides/0/start"));
+});
