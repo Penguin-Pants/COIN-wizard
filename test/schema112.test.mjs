@@ -493,3 +493,19 @@ test("the bot aid and the Non-Player sheet say that the bot tracks no Resources"
   assert.equal(/tracks no Resources/.test(toMarkdown(aidModel(tan(), tan().bots[0]))), false);
   assert.match(nonPlayerSheetHtml(g, g.bots[0]), /tracks no Resources/);
 });
+
+// Codex review on PR 49: the warning also covers the bot's own actions (targets and steps) and node parts.
+test("the validator warns when an action of a bot with no Resources reads them", () => {
+  const g = noRes(), a = g.actions.findIndex((x) => x.id === "crown.garrison"), reads = { op: "gte", args: [{ var: "self.resources" }, 1] };
+  g.actions[a].targets = { op: "and", args: [g.actions[a].targets, reads] };
+  g.actions[a].steps.push({ op: "if", test: reads, then: [] });
+  const paths = validate(g).warnings.filter((x) => x.code === "no-resources").map((x) => x.path);
+  assert.ok(paths.includes(`/actions/${a}/targets`), JSON.stringify(paths));
+  assert.ok(paths.includes(`/actions/${a}/steps`), JSON.stringify(paths));
+  const ira = g.actions.findIndex((x) => x.faction === "ira");
+  g.actions[ira].targets = { op: "and", args: [g.actions[ira].targets, reads] };
+  assert.equal(validate(g).warnings.some((x) => x.code === "no-resources" && x.path === `/actions/${ira}/targets`), false, "the IRA bot tracks Resources");
+  const n = botNodes(g.bots[0]).find((x) => x.id === "k1.a.crack");
+  n.parts = [{ text: "Crackdown.", table: n.table, steps: [{ op: "if", test: reads, then: [] }] }]; delete n.table;
+  assert.ok(validate(g).warnings.some((x) => x.code === "no-resources" && x.path === "/bots/0/deck/cards/0/sides/0/nodes/1/parts/0/steps"));
+});

@@ -334,11 +334,12 @@ function validateBot(game, bot, p, { err, warn, checkExpr: checkAny, checkSteps,
   const faction = game.factions.find((f) => f.id === bot.factionId);
   if (!faction) { err("missing-ref", p, `Bot ${bot.id} names unknown faction ${bot.factionId}`); return; }
   // A bot that tracks no Resources (1.12.0 part D) still reads its track; warn on each such read.
+  // It covers the bot's own expressions, its node parts and the targets and steps of its faction's actions.
   const ownRes = new Set(["self.resources", `resources.${faction.id}`, `track.${faction.resourceTrack}`]);
-  const checkExpr = (e, path, scope) => {
-    checkAny(e, path, scope);
-    if (!tracksResources(bot) && scanExpr(e).vars.some((v) => ownRes.has(v))) warn("no-resources", path, `Bot ${bot.id} tracks no Resources, but this reads them. Its Resources never change while it runs`);
-  };
+  const readsRes = (x) => !!x && typeof x === "object" && (ownRes.has(x.var) || Object.values(x).some(readsRes));
+  const noRes = (x, path) => { if (!tracksResources(bot) && readsRes(x)) warn("no-resources", path, `Bot ${bot.id} tracks no Resources, but this reads them. Its Resources never change while it runs`); };
+  const checkExpr = (e, path, scope) => { checkAny(e, path, scope); noRes(e, path); };
+  game.actions.forEach((a, i) => { if (a.faction === bot.factionId) { noRes(a.targets, `/actions/${i}/targets`); noRes(a.steps, `/actions/${i}/steps`); } });
   const all = botNodes(bot), nodes = Object.fromEntries(all.map((n) => [n.id, n]));
   const tables = Object.fromEntries(tablesOf(game, bot).map((t) => [t.id, t]));
   for (const [i, t] of bot.priorityTables.entries()) if ((game.sharedTables ?? []).some((x) => x.id === t.id)) err("duplicate-id", `${p}/priorityTables/${i}`, `Table id ${t.id} is also a shared table. Ids are unique over a bot's tables and the shared tables`);
@@ -402,6 +403,7 @@ function validateBot(game, bot, p, { err, warn, checkExpr: checkAny, checkSteps,
         if (!tables[pt.table]) err("missing-ref", pp, `Part table not found: ${pt.table}`);
         else { used.add(pt.table); if (tables[pt.table].scope === "opponent") err("bad-target", pp, `Table ${pt.table} picks an enemy. A part chooses spaces with a space table`); }
         checkSteps(pt.steps, `${pp}/steps`, { target: n.target !== undefined, owner: bot.factionId });
+        noRes(pt.steps, `${pp}/steps`);
       });
       if (n.parts) { if (n.table !== undefined) err("parts-table", np, `Action ${n.id} has parts, so it takes no table of its own: each part has its table`); }
       else if (!n.table) err("solo", np, `Action ${n.id} needs a priority table, so the choice needs no judgment`);
