@@ -535,3 +535,21 @@ test("with shared tables, a new bot table gets a free id, a linked Special Activ
     assert.deepEqual(app.errors, []);
   } finally { await app.close(); }
 });
+
+// Schema 1.12.0 part D: a bot that tracks no Resources ignores costs and spending limits.
+test("a designer turns off Resources for a bot, sees the warning and the hidden spending limit, and turns it on", () => withApp(async ({ page, db }) => {
+  await botsTab(page);
+  const box = page.locator('input[data-a="bot-res"]'), botOf = async () => JSON.parse((await db())["data/users/u1/draft"].json).bots[0];
+  assert.equal(await box.isChecked(), true, "a bot tracks Resources by default");
+  await box.uncheck(); await frames(page);
+  await page.waitForTimeout(1800);
+  assert.equal((await botOf()).tracksResources, false);
+  assert.ok(await page.locator(".warning", { hasText: "tracks no Resources, but this reads them" }).count() > 0, "cw.low reads self.resources");
+  await page.locator('.flow g[data-node="cw.crack"]').click(); await frames(page);
+  assert.equal(await page.locator(".nodeform details > summary", { hasText: "Spending limit" }).count(), 0);
+  assert.match(await page.innerText(".nodeform"), /tracks no Resources, so it has no spending limit/);
+  await page.locator('input[data-a="bot-res"]').check(); await frames(page);
+  await page.waitForTimeout(1800);
+  assert.equal("tracksResources" in (await botOf()), false, "on is the default, so the key goes");
+  assert.equal(await page.locator(".nodeform details > summary", { hasText: "Spending limit" }).count(), 1);
+}));

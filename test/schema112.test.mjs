@@ -431,3 +431,81 @@ test("a change to a shared table shows in the Bots section of a revision compari
   b.sharedTables[0].steps[0].text = "Changed.";
   assert.equal(compareGames(a, b).find((s) => s.id === "bots").changes, 1);
 });
+
+// Part D (owner decisions Q5 on 2026-11-26 and three answers on 2026-11-27): a bot with
+// tracksResources false ignores costs and budgets. While it runs, steps that change its own resource
+// track do nothing (PP 8.5.4). self.resources still reads the track; the validator warns. Any bot mode.
+import { evalExpr } from "../src/expr.mjs";
+const noRes = (g = cardGame()) => { g.bots[0].tracksResources = false; return g; };
+const garrisonFirst = { botDeck: { order: ["k2", "k1"] } };
+
+test("a bot that tracks no Resources ignores the cost of its actions", () => {
+  assert.deepEqual(run(cardGame(), { ...garrisonFirst, resources: { crown: 0 } }).path.slice(3), ["k2.garrison:empty", "draw:k1", "k1.a.low", "flip:k1", "k1.b.pass"], "with Resources, it cannot pay");
+  const r = run(noRes(), { ...garrisonFirst, resources: { crown: 0 } });
+  assert.deepEqual(r.path.slice(3), ["k2.garrison", "k2.done"]);
+  assert.deepEqual(r.chosen, ["cork-city"]);
+  assert.equal(r.linked, "skipped", "the linked trigger still reads the track: 0 is below 3");
+});
+
+test("a bot that tracks no Resources ignores its spending limits", () => {
+  const set = (g) => { botNodes(g.bots[0]).find((n) => n.id === "k2.garrison").budget = { floor: 8 }; return g; };
+  assert.equal(run(set(cardGame()), garrisonFirst).path[3], "k2.garrison:empty");
+  assert.deepEqual(run(set(noRes()), garrisonFirst).chosen, ["cork-city"]);
+});
+
+// The linked Martial Law runs when self.resources is 3 or more after Garrison.
+test("while a bot that tracks no Resources runs, gain and pay steps on its own track do nothing", () => {
+  const add = (g, step) => { g.actions.find((a) => a.id === "crown.garrison").steps.push(step); return g; };
+  const gain = { op: "gain", track: "res.crown", amount: 1 }, pay = { op: "pay", track: "res.crown", amount: 1 };
+  assert.equal(run(add(noRes(), gain), { ...garrisonFirst, resources: { crown: 2 } }).linked, "skipped");
+  assert.equal(run(add(noRes(), pay), { ...garrisonFirst, resources: { crown: 3 } }).linked, "crown.martial-law:cork-city");
+  // Control: a bot that tracks Resources pays 2 for Garrison, then the step changes the track.
+  assert.equal(run(add(cardGame(), gain), { ...garrisonFirst, resources: { crown: 4 } }).linked, "crown.martial-law:cork-city");
+  assert.equal(run(add(cardGame(), pay), { ...garrisonFirst, resources: { crown: 5 } }).linked, "skipped");
+});
+
+test("a flowchart bot can track no Resources, and canDo ignores its costs", () => {
+  const g = noRes(tan()), test0 = { op: "canDo", args: ["crown.garrison", "*"] };
+  const st = (h) => applyPatch(deriveState(h, "ira"), { resources: { crown: 0 } });
+  assert.equal(evalExpr(test0, { state: st(tan()), links: g.board.links }), false);
+  assert.equal(evalExpr(test0, { state: st(g), links: g.board.links }), true);
+  // cw.low passes below 1 Resource; a bot with no Resources skips that check, so the test is false.
+  g.bots[0].nodes.find((n) => n.id === "cw.low").test = false;
+  assert.deepEqual(run(g, { resources: { crown: 0 } }).chosen, ["cork-city"]);
+});
+
+test("the schema accepts tracksResources; the validator warns when such a bot reads its Resources or has a budget", () => {
+  const check = schemaCheck(), g = noRes();
+  assert.equal(check(g), true, JSON.stringify(check.errors?.slice(0, 2)));
+  const w = validate(g).warnings.filter((x) => x.code === "no-resources");
+  assert.ok(w.some((x) => x.path === "/bots/0/deck/cards/0/sides/0/nodes/0/test"), JSON.stringify(w));
+  assert.equal(validate(cardGame()).warnings.some((x) => x.code === "no-resources"), false);
+  botNodes(g.bots[0]).find((n) => n.id === "k2.garrison").budget = { floor: 1 };
+  assert.ok(validate(g).warnings.some((x) => x.code === "no-resources" && x.path.endsWith("/budget")));
+  g.bots[0].tracksResources = "no";
+  assert.equal(check(g), false);
+});
+
+test("the bot aid and the Non-Player sheet say that the bot tracks no Resources", () => {
+  const g = noRes(tan()), md = toMarkdown(aidModel(g, g.bots[0]));
+  assert.match(md, /tracks no Resources/);
+  assert.match(md, /Garrison \(cost free: no Resources\)/);
+  assert.equal(/tracks no Resources/.test(toMarkdown(aidModel(tan(), tan().bots[0]))), false);
+  assert.match(nonPlayerSheetHtml(g, g.bots[0]), /tracks no Resources/);
+});
+
+// Codex review on PR 49: the warning also covers the bot's own actions (targets and steps) and node parts.
+test("the validator warns when an action of a bot with no Resources reads them", () => {
+  const g = noRes(), a = g.actions.findIndex((x) => x.id === "crown.garrison"), reads = { op: "gte", args: [{ var: "self.resources" }, 1] };
+  g.actions[a].targets = { op: "and", args: [g.actions[a].targets, reads] };
+  g.actions[a].steps.push({ op: "if", test: reads, then: [] });
+  const paths = validate(g).warnings.filter((x) => x.code === "no-resources").map((x) => x.path);
+  assert.ok(paths.includes(`/actions/${a}/targets`), JSON.stringify(paths));
+  assert.ok(paths.includes(`/actions/${a}/steps`), JSON.stringify(paths));
+  const ira = g.actions.findIndex((x) => x.faction === "ira");
+  g.actions[ira].targets = { op: "and", args: [g.actions[ira].targets, reads] };
+  assert.equal(validate(g).warnings.some((x) => x.code === "no-resources" && x.path === `/actions/${ira}/targets`), false, "the IRA bot tracks Resources");
+  const n = botNodes(g.bots[0]).find((x) => x.id === "k1.a.crack");
+  n.parts = [{ text: "Crackdown.", table: n.table, steps: [{ op: "if", test: reads, then: [] }] }]; delete n.table;
+  assert.ok(validate(g).warnings.some((x) => x.code === "no-resources" && x.path === "/bots/0/deck/cards/0/sides/0/nodes/1/parts/0/steps"));
+});

@@ -1,6 +1,6 @@
 # Proposal: card-driven bot mode (plan item C1)
 
-Status: rounds 1 and 2 decided by the owner on 2026-11-26. Schema 1.12.0, one part per PR: parts A, B and C done (2026-11-27); parts D to G open.
+Status: rounds 1 and 2 decided by the owner on 2026-11-26. Schema 1.12.0, one part per PR: parts A to D done (2026-11-27); parts E to G open.
 Approval: review item R7 (2026-11-26), "Design questions first, then its own version" (`docs/proposals/bot-model-gaps-2.md`).
 Model today: `coin-game/1.11.0`. Each bot has one flowchart (`nodes`), its own priority tables, Event rules and dry runs.
 
@@ -73,7 +73,7 @@ Split approved by the owner on 2026-11-27.
 | A | Q1, Q2, Q8, Q10 | `bot.mode`, `bot.deck`, the exits `$draw` and `$flip`, dry-run patch `botDeck`, editor | Done (`docs/ACCEPTANCE.md` row 32) |
 | B | Q3, Q9 | Activation Number: a formula per card side, seeded die rolls, an action node that skips the roll | Done (`docs/ACCEPTANCE.md` row 34) |
 | C | Q4 | Shared tables at game level, of today's kinds (space and enemy) | Done (`docs/ACCEPTANCE.md` row 35) |
-| D | Q5 | Per-bot "tracks Resources" setting | Open |
+| D | Q5 | Per-bot "tracks Resources" setting | Done (`docs/ACCEPTANCE.md` row 36) |
 | E | Q6, Q7 | "Critical for" on game cards; the Eligibility rule list in place of the bot flowchart's checks | Open |
 | F | Q11 | The bot card sheet in the kit | Open |
 | G | Q4 | Move and Pieces tables, a new table kind: destination, origin, keep and get rows; piece order. Design questions first | Open |
@@ -92,6 +92,12 @@ Owner answers for part B, 2026-11-27:
 Owner answer for part C, 2026-11-27:
 
 - Part C shares today's table kinds. The model has no Move or Pieces table: a table picks spaces or an enemy, a move takes pieces from linked spaces in name order, and each step names one piece type. Those kinds move to part G.
+
+Owner answers for part D, 2026-11-27:
+
+- `self.resources` still reads the track. The validator warns when a bot with no Resources reads them.
+- Any bot can use the setting, flowchart or cards.
+- While the bot runs, `gain` and `pay` steps on its own resource track do nothing (PP 8.5.4, `games/11-people-power.md` line 185).
 
 ## Deferred
 

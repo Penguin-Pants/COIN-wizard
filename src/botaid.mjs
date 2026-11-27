@@ -2,6 +2,7 @@
 // Mermaid source, printable aid (Markdown and HTML), policy YAML, structured JSON.
 import YAML from "yaml";
 import { linkedOf, botNodes, EXIT_TEXT, tablesOf, usesTable } from "./dryrun.mjs";
+import { tracksResources } from "./state.mjs";
 import { budgetText, valueText } from "./plain.mjs";
 import { toValue } from "./exprmodel.mjs";
 
@@ -71,12 +72,15 @@ export function aidModel(game, bot) {
   const labels = tableLabels(bot, game);
   const actions = Object.fromEntries(game.actions.map((a) => [a.id, a]));
   const passGain = game.rules.sequence.passGain[bot.factionId];
+  // A bot that tracks no Resources (1.12.0 part D) pays nothing and gains nothing.
+  const res = tracksResources(bot), cost = (a) => (res ? costText(a) : "free: no Resources");
+  const passText = res ? `Pass and gain ${passGain} Resource${passGain === 1 ? "" : "s"}` : "Pass";
   const endLabel = (n) => ({
     none: "END, take no action and gain nothing",
     event: "END, execute the Event",
     operation: "END, Operation done",
     operationSpecial: "END, Operation plus Special Activity done",
-    pass: `END, Pass and gain ${passGain} Resource${passGain === 1 ? "" : "s"}`
+    pass: `END, ${passText}`
   })[n.outcome];
   let num, nodes;
   const goto = (id) => (EXIT_TEXT[id] ? EXIT_TEXT[id].toLowerCase() : nodes[id].kind === "end" ? endLabel(nodes[id]) : `go to step ${num[id]}`);
@@ -91,14 +95,14 @@ export function aidModel(game, bot) {
     const a = actions[n.action];
     // parts: numbered sub-actions, each with its own table (schema 1.5.0, docs/SCHEMA.md "Action node parts").
     const choose = n.parts
-      ? `Do these parts in order, each in its own spaces: ${n.parts.map((pt, i) => `${i + 1}. ${pt.text} Choose ${select(tableById[pt.table])} with table ${labels[pt.table]}.`).join(" ")} ${a.cost.per === "use" ? "Pay the cost once, for the whole Operation." : "Pay the cost once for each space, over all parts."} If no part finds a legal or affordable space`
-      : `Choose ${select(tableById[n.table])} with table ${labels[n.table]}. If no space is legal or affordable`;
-    let t = `${a.name} (cost ${costText(a)}). ${n.noActivation ? "Do not roll for the Activation Number. " : ""}${n.budget ? `${budgetText(n.budget)} ` : ""}${n.target ? `First choose the target: one enemy faction with table ${labels[n.target]}. If no enemy qualifies: ${goto(n.onEmpty)}. ` : ""}${choose}: ${goto(n.onEmpty)}. Otherwise resolve it, then ${goto(n.then)}.`;
+      ? `Do these parts in order, each in its own spaces: ${n.parts.map((pt, i) => `${i + 1}. ${pt.text} Choose ${select(tableById[pt.table])} with table ${labels[pt.table]}.`).join(" ")} ${!res ? "" : a.cost.per === "use" ? "Pay the cost once, for the whole Operation. " : "Pay the cost once for each space, over all parts. "}If no part finds a legal${res ? " or affordable" : ""} space`
+      : `Choose ${select(tableById[n.table])} with table ${labels[n.table]}. If no space is legal${res ? " or affordable" : ""}`;
+    let t = `${a.name} (cost ${cost(a)}). ${n.noActivation ? "Do not roll for the Activation Number. " : ""}${n.budget && res ? `${budgetText(n.budget)} ` : ""}${n.target ? `First choose the target: one enemy faction with table ${labels[n.target]}. If no enemy qualifies: ${goto(n.onEmpty)}. ` : ""}${choose}: ${goto(n.onEmpty)}. Otherwise resolve it, then ${goto(n.then)}.`;
     const links = linkedOf(n);
-    const saText = (L) => `${actions[L.action].name} (cost ${costText(actions[L.action])}). ${L.skipText ?? "Skip it if it cannot be used."} Choose its space with table ${labels[L.table]}.`;
+    const saText = (L) => `${actions[L.action].name} (cost ${cost(actions[L.action])}). ${L.skipText ?? "Skip it if it cannot be used."} Choose its space with table ${labels[L.table]}.`;
     if (links.length === 1) {
       const L = links[0], sa = actions[L.action];
-      t += ` Before you end: Special Activity ${sa.name} (cost ${costText(sa)}) may follow, ${L.timing} the Operation. ${L.skipText ?? "Skip it if it cannot be used."} Choose its space with table ${labels[L.table]}.`;
+      t += ` Before you end: Special Activity ${sa.name} (cost ${cost(sa)}) may follow, ${L.timing} the Operation. ${L.skipText ?? "Skip it if it cannot be used."} Choose its space with table ${labels[L.table]}.`;
     } else if (links.length) {
       t += ` Before you end: Special Activities may follow, ${links[0].timing} the Operation. Try them in order; the first one that can be used runs. ${links.map((L, i) => `${i + 1}. ${i ? "If none: " : ""}${saText(L)}`).join(" ")}`;
     }
@@ -115,7 +119,8 @@ export function aidModel(game, bot) {
     before: [
       "Use this aid for the faction no player controls.",
       "Check Eligibility first. An Ineligible bot takes no action and gains nothing.",
-      `You need one six-sided die. Roll only when a tie-break says so. ${bot.randomization.procedure}`
+      `You need one six-sided die. Roll only when a tie-break says so. ${bot.randomization.procedure}`,
+      ...(res ? [] : ["This bot tracks no Resources. Its actions cost nothing, and it never gains or spends Resources."])
     ],
     measures: bot.measures.map((m) => [m.name, m.plain]),
     eventRule: bot.eventPolicy.plain,
@@ -131,7 +136,7 @@ export function aidModel(game, bot) {
     })),
     tieRandom: `If spaces are still tied after the lettered tie-breaks: ${bot.randomization.eligibleSet} ${bot.randomization.procedure}`,
     exceptions: bot.eventPolicy.overrides.map((o) => [o.cardId.toUpperCase() + " " + (game.deck.cards.find((c) => c.id === o.cardId)?.title ?? ""), `${o.directive}: ${o.plain}${o.targets ? " Targets: " + o.targets : ""}${o.node ? ` Priorities: Table ${labels[o.node.table] ?? o.node.table}${o.node.target ? `; target: Table ${labels[o.node.target] ?? o.node.target}` : ""}.` : ""}`]),
-    fallback: `If every action has no legal target, or Resources are too low, Pass and gain ${passGain} Resource${passGain === 1 ? "" : "s"}.`,
+    fallback: `If every action has no legal target${res ? ", or Resources are too low" : ""}, ${passText}.`,
     scoring: scoringText(game, bot, labels),
     outcome: "If an Operation runs and its linked Special Activity also runs, count it as Operation plus Special Activity for the sequence of play."
   };

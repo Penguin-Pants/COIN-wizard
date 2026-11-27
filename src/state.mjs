@@ -1,6 +1,9 @@
 // Derive a board state from setup and apply dry-run patches.
 import { sideEffects, cardLastingAny } from "./cardfx.mjs";
 
+// Part D (schema 1.12.0): false when the bot tracks no Resources (PP 8.5.4). Default: true.
+export const tracksResources = (bot) => bot?.tracksResources !== false;
+
 export function deriveState(game, selfFactionId) {
   const spaces = {};
   for (const s of game.board.spaces) {
@@ -26,7 +29,10 @@ export function deriveState(game, selfFactionId) {
   const victory = Object.fromEntries(game.victory.perFaction.map((v) => [v.factionId, { formula: v.formula, threshold: v.threshold }]));
   // canPlace and canDo (schema 1.8.0) read piece limits and actions.
   const maxPer = Object.fromEntries(game.factions.flatMap((f) => f.pieces.filter((p) => p.maxPerSpace).map((p) => [p.id, p.maxPerSpace])));
-  const actions = Object.fromEntries(game.actions.map((a) => [a.id, a]));
+  // An action of a faction whose bot tracks no Resources (schema 1.12.0 part D) costs nothing, so its
+  // costs, cost limits and budgets have no effect in bot runs and in canDo.
+  const free = new Set(game.bots.filter((b) => !tracksResources(b)).map((b) => b.factionId));
+  const actions = Object.fromEntries(game.actions.map((a) => [a.id, free.has(a.faction) ? { ...a, cost: { ...a.cost, amount: 0 } } : a]));
   // Faction order per card, so canDo can read card.position as another faction (schema 1.8.0).
   const cardOrder = Object.fromEntries(game.deck.cards.map((c) => [c.id, c.order ?? []]));
   // The side each faction's bot plays per card (its override's side, else its Event policy side),
