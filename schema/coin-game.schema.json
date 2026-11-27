@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coin-wizard.local/schema/coin-game/1.11.0",
+  "$id": "https://coin-wizard.local/schema/coin-game/1.12.0",
   "title": "COIN game definition",
   "description": "Single source of truth for one COIN-style prototype. All printable text and diagrams are generated from a confirmed revision of this document.",
   "type": "object",
@@ -32,7 +32,7 @@
       "additionalProperties": false,
       "properties": {
         "schemaVersion": {
-          "const": "coin-game/1.11.0"
+          "const": "coin-game/1.12.0"
         },
         "gameId": {
           "$ref": "#/$defs/id"
@@ -2601,6 +2601,59 @@
               }
             }
           }
+        },
+        "mode": {
+          "enum": [
+            "flowchart",
+            "cards"
+          ],
+          "description": "1.12.0. flowchart (default): the bot runs its nodes. cards: the bot runs its nodes, and the exit $draw draws a card from its deck."
+        },
+        "deck": {
+          "type": "object",
+          "description": "The bot deck (1.12.0, mode cards only). order: cycle (a drawn card goes to the bottom face up, Jacquard) or shuffle (a drawn card is discarded, then the deck is shuffled, ABB). In one turn both draw the cards in order.",
+          "required": [
+            "order",
+            "cards"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "order": {
+              "enum": [
+                "cycle",
+                "shuffle"
+              ]
+            },
+            "cards": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/botCard"
+              }
+            }
+          }
+        }
+      },
+      "if": {
+        "required": [
+          "mode"
+        ],
+        "properties": {
+          "mode": {
+            "const": "cards"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "deck"
+        ]
+      },
+      "else": {
+        "not": {
+          "required": [
+            "deck"
+          ]
         }
       }
     },
@@ -2631,10 +2684,10 @@
           "$ref": "#/$defs/expr"
         },
         "yes": {
-          "$ref": "#/$defs/id"
+          "$ref": "#/$defs/branch"
         },
         "no": {
-          "$ref": "#/$defs/id"
+          "$ref": "#/$defs/branch"
         },
         "action": {
           "$ref": "#/$defs/id"
@@ -2643,10 +2696,10 @@
           "$ref": "#/$defs/id"
         },
         "then": {
-          "$ref": "#/$defs/id"
+          "$ref": "#/$defs/branch"
         },
         "onEmpty": {
-          "$ref": "#/$defs/id"
+          "$ref": "#/$defs/branch"
         },
         "linked": {
           "description": "One linked Special Activity, or a list tried in order: the first entry whose trigger holds and whose table finds a space runs.",
@@ -2759,6 +2812,76 @@
         },
         "skipText": {
           "type": "string"
+        }
+      }
+    },
+    "branch": {
+      "description": "A node id, or an exit of a card bot (1.12.0): $draw draws the next bot card; $flip turns the current bot card to its other side.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/id"
+        },
+        {
+          "enum": [
+            "$draw",
+            "$flip"
+          ]
+        }
+      ]
+    },
+    "botCard": {
+      "type": "object",
+      "description": "One card of a bot deck (1.12.0). Each side is a small flowchart with today's node kinds.",
+      "required": [
+        "id",
+        "title",
+        "sides"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "title": {
+          "type": "string"
+        },
+        "sides": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "description": "front, then back. A card with one side cannot flip.",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "label",
+              "start",
+              "nodes"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "enum": [
+                  "front",
+                  "back"
+                ]
+              },
+              "label": {
+                "type": "string",
+                "description": "The side's printed letter, such as A or AA."
+              },
+              "start": {
+                "$ref": "#/$defs/id"
+              },
+              "nodes": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/botNode"
+                }
+              }
+            }
+          }
         }
       }
     }

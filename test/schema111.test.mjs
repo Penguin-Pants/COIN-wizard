@@ -25,12 +25,11 @@ const tan = () => read("../examples/tan-war.game.json");
 const harbor = () => read("../examples/harbor-strike.game.json");
 const ev = (g, self, e, patch, extra = {}) => evalExpr(e, { state: applyPatch(deriveState(g, self), patch), links: g.board.links, ...extra });
 
-test("the latest version is 1.11.0, and a frozen 1.10.0 file migrates with only its version changed", () => {
-  assert.equal(LATEST, "coin-game/1.11.0");
+test("a frozen 1.10.0 file migrates with only its version changed", () => {
   const old = read("./fixtures/tan-war.1.10.0.game.json");
   assert.equal(old.meta.schemaVersion, "coin-game/1.10.0");
   const m = migrate(old);
-  assert.equal(m.meta.schemaVersion, "coin-game/1.11.0");
+  assert.equal(m.meta.schemaVersion, LATEST);
   assert.deepEqual(validate(m).errors, []);
   m.meta.schemaVersion = old.meta.schemaVersion; assert.deepEqual(m, old);
 });

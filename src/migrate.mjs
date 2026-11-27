@@ -1,6 +1,6 @@
 // Lifts older coin-game documents to the latest schema version.
 // Each entry lifts one version. Never edit an old entry: add a new one.
-export const LATEST = "coin-game/1.11.0";
+export const LATEST = "coin-game/1.12.0";
 
 const STEPS = ["brief", "factions", "board", "rules", "review"];
 
@@ -78,6 +78,11 @@ const MIGRATIONS = {
   // Part F: op cardCould; variables next.id and next.lasting; dry-run patch next. Nothing to rewrite.
   "coin-game/1.10.0": (g) => {
     g.meta.schemaVersion = "coin-game/1.11.0";
+  },
+  // Card-driven bots (docs/proposals/card-bots.md), added in parts. Part A: bot.mode, bot.deck,
+  // the exits $draw and $flip, and the dry-run patch "botDeck". Nothing to rewrite.
+  "coin-game/1.11.0": (g) => {
+    g.meta.schemaVersion = "coin-game/1.12.0";
   }
 };
 
