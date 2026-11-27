@@ -4,7 +4,7 @@ import schema from "../schema/coin-game.schema.json" with { type: "json" };
 import { scanExpr, VAR_OK } from "./expr.mjs";
 import { opinionMax } from "./opinion.mjs";
 import { deriveState, applyPatch } from "./state.mjs";
-import { runCase, linkedOf, botNodes } from "./dryrun.mjs";
+import { runCase, linkedOf, botNodes, tableUsers, tablesOf, usesTable } from "./dryrun.mjs";
 
 const ajv = new Ajv2020({ allErrors: true, strict: false });
 const schemaCheck = ajv.compile(schema);
@@ -12,7 +12,7 @@ const LOC_WORDS = new Set(["$space", "choose", "adjacent", "available", "outOfPl
 
 const EDITORS = {
   meta: "Review", brief: "Research", factions: "Factions", actions: "Actions", board: "Board", tracks: "Setup",
-  setup: "Setup", rules: "Rules", deck: "Deck", victory: "Victory", bots: "Bots"
+  setup: "Setup", rules: "Rules", deck: "Deck", victory: "Victory", bots: "Bots", sharedTables: "Bots"
 };
 
 export function validate(game) {
@@ -322,6 +322,9 @@ export function validate(game) {
   for (const f of factionIds) if (game.bots.filter((b) => b.factionId === f).length !== 1) err("bot-coverage", "/bots", `Faction ${f} needs exactly one bot`);
   const codes = game.bots.map((b) => b.code);
   codes.forEach((c, i) => { if (codes.indexOf(c) !== i) err("duplicate-code", `/bots/${i}/code`, `Bot code ${c} is used by more than one bot`); });
+  // Shared tables (1.12.0 part C): unique ids, and each one used by some bot.
+  dup(game.sharedTables ?? [], "id", "/sharedTables");
+  (game.sharedTables ?? []).forEach((t, i) => { if (!game.bots.some((b) => usesTable(b, t.id))) warn("unused-table", `/sharedTables/${i}`, `Shared table ${t.id} is never used`); });
   game.bots.forEach((bot, bi) => validateBot(game, bot, `/bots/${bi}`, { err, warn, checkExpr, checkSteps, actionById, cardById, seq }));
 
   return result(issues);
@@ -331,9 +334,10 @@ function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionByI
   const faction = game.factions.find((f) => f.id === bot.factionId);
   if (!faction) { err("missing-ref", p, `Bot ${bot.id} names unknown faction ${bot.factionId}`); return; }
   const all = botNodes(bot), nodes = Object.fromEntries(all.map((n) => [n.id, n]));
-  const tables = Object.fromEntries(bot.priorityTables.map((t) => [t.id, t]));
+  const tables = Object.fromEntries(tablesOf(game, bot).map((t) => [t.id, t]));
+  for (const [i, t] of bot.priorityTables.entries()) if ((game.sharedTables ?? []).some((x) => x.id === t.id)) err("duplicate-id", `${p}/priorityTables/${i}`, `Table id ${t.id} is also a shared table. Ids are unique over a bot's tables and the shared tables`);
   if (Object.keys(nodes).length !== all.length) err("duplicate-id", `${p}/nodes`, "Duplicate node id. Node ids are unique over the bot's flowchart and its bot cards");
-  if (Object.keys(tables).length !== bot.priorityTables.length) err("duplicate-id", `${p}/priorityTables`, "Duplicate table id");
+  if (new Set(bot.priorityTables.map((t) => t.id)).size !== bot.priorityTables.length) err("duplicate-id", `${p}/priorityTables`, "Duplicate table id");
   // Graphs (1.12.0): the bot's flowchart, then each side of each bot card. A branch stays in its graph,
   // or exits: $draw (card bots) draws the next card; $flip (a card side with a back) turns the card.
   const cards = bot.mode === "cards" ? bot.deck.cards : [];
@@ -452,8 +456,9 @@ function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionByI
     const named = game.bots.flatMap((b) => (b.scoring ?? []).filter((x) => x.phaseId === sc.phaseId));
     if (named.length > 1) err("scoring-phase", sp, `Phase ${sc.phaseId} is named by ${named.length} scoring entries. One bot chooses in a phase, once`);
   });
-  bot.priorityTables.forEach((t, i) => {
-    const tp = `${p}/priorityTables/${i}`;
+  // The bot's own tables, then the shared tables (1.12.0 part C) it uses, checked as this bot reads them.
+  const checked = [...bot.priorityTables.map((t, i) => [t, `${p}/priorityTables/${i}`, true]), ...(game.sharedTables ?? []).map((t, i) => [t, `/sharedTables/${i}`, false]).filter(([t]) => usesTable(bot, t.id))];
+  checked.forEach(([t, tp, own]) => {
     // An opponent table reads $faction. A space table may read $target only if every node using it has a target.
     const users = tableUsers(bot, t.id);
     const scope = t.scope === "opponent" ? { faction: true } : { target: users.length > 0 && users.every((n) => n.target !== undefined) };
@@ -482,7 +487,7 @@ function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionByI
     const tbScope = inheritors.length && inheritors.every((s) => s.target) ? { ...scope, target: true } : scope;
     t.tiebreak.forEach((tb, j) => { checkExpr(tb.key, `${tp}/tiebreak/${j}`, tbScope); if (tb.letter !== String.fromCharCode(97 + j)) err("numbering", tp, `Table ${t.id} tie-breaks must be lettered a, b, c in order`); });
     if (t.select === "all" && !t.limit) err("unbounded", tp, `Table ${t.id} selects all targets without a limit`);
-    if (!used.has(t.id)) warn("unused-table", tp, `Table ${t.id} is never used`);
+    if (own && !used.has(t.id)) warn("unused-table", tp, `Table ${t.id} is never used`);
   });
   // reachability, termination, cycles
   // Each graph on its own: exits ($draw, $flip) and branches into another graph end the walk.
@@ -544,7 +549,6 @@ export function sideReadsTarget(game, cardId, sideId) {
   const r = game.bots.flatMap((b) => b.eventPolicy.overrides.filter((o) => o.cardId === cardId && o.node && o.directive !== "ignore" && (o.side ?? b.eventPolicy.side) === sideId));
   return r.length > 0 && r.every((o) => o.node.target !== undefined);
 }
-export const tableUsers = (bot, id) => [...botNodes(bot).filter((n) => n.table === id || linkedOf(n).some((L) => L.table === id) || (n.parts ?? []).some((pt) => pt.table === id)), ...(bot.scoring ?? []).filter((sc) => sc.table === id), ...bot.eventPolicy.overrides.filter((o) => o.node?.table === id).map((o) => o.node)];
 
 // True when an enemy choice sits below the top level of the steps (inside if, else or another
 // choice). A piece target (1.9.0) needs every enemy choice at the top level: a nested one is not
@@ -555,7 +559,9 @@ const nestedChoice = (steps) => {
   return steps.some((s) => deep(below(s)));
 };
 
-function result(issues) {
+// A shared table that several bots use is checked once per bot, so the same issue can repeat: keep one.
+function result(all) {
+  const seen = new Set(), issues = all.filter((i) => { const k = `${i.severity}|${i.code}|${i.path}|${i.message}`; return !seen.has(k) && seen.add(k); });
   return { ok: !issues.some((i) => i.severity === "error"), errors: issues.filter((i) => i.severity === "error"), warnings: issues.filter((i) => i.severity === "warning") };
 }
 

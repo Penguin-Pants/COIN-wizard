@@ -2,12 +2,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import Ajv2020 from "ajv/dist/2020.js";
-import { validate, tableUsers } from "../src/validate.mjs";
+import { validate } from "../src/validate.mjs";
 import { migrate, LATEST } from "../src/migrate.mjs";
 import { deriveState, applyPatch } from "../src/state.mjs";
-import { runBot, botNodes } from "../src/dryrun.mjs";
+import { runBot, botNodes, tableUsers } from "../src/dryrun.mjs";
 import { addNode, setCardMode, addBotCard, deleteBotCard, addBack, deleteBack } from "../src/botedit.mjs";
-import { aidModel, toMarkdown, toMermaid } from "../src/botaid.mjs";
+import { aidModel, toMarkdown, toMermaid, toPolicyYaml } from "../src/botaid.mjs";
+import YAML from "yaml";
 import { nonPlayerSheetHtml } from "../src/kit.mjs";
 import { graphSvg } from "../src/graphsvg.mjs";
 import { seededRandom } from "../src/deck.mjs";
@@ -332,4 +333,57 @@ test("step targets list only the spaces the Operation takes", () => {
   const r = run(g, twoCrack);
   assert.deepEqual(r.chosen, ["dublin"]);
   assert.deepEqual(r.targets, { dublin: "ira" });
+});
+
+// Part C (owner decisions Q4, 2026-11-26, and today's table kinds only, 2026-11-27): game.sharedTables.
+// Every bot can use a shared table; a bot reads its own tables first. Ids are unique over both.
+// Here the Crown's Garrison table moves to the shared list: the bot's choice must not change.
+function sharedGame(g = cardGame()) {
+  const b = g.bots[0], i = b.priorityTables.findIndex((t) => t.id === "cw.t.garrison");
+  g.sharedTables = b.priorityTables.splice(i, 1);
+  return g;
+}
+
+test("a bot uses a shared table as it uses its own", () => {
+  const own = run(cardGame()), shared = run(sharedGame());
+  assert.deepEqual(shared.path, own.path);
+  assert.deepEqual(shared.chosen, ["cork-city"]);
+  assert.equal(shared.linked, own.linked);
+});
+
+test("the schema and the validator accept shared tables and check their ids and use", () => {
+  const check = schemaCheck(), g = sharedGame();
+  assert.equal(check(g), true, JSON.stringify(check.errors?.slice(0, 2)));
+  assert.deepEqual(validate(g).errors.filter((e) => e.code !== "dry-run-missing"), []);
+  let h = sharedGame(); h.bots[0].priorityTables.push(structuredClone(h.sharedTables[0]));
+  assert.ok(validate(h).errors.some((e) => e.code === "duplicate-id" && /also a shared table/.test(e.message)));
+  h = sharedGame(); h.sharedTables.push(structuredClone(h.sharedTables[0]));
+  assert.ok(validate(h).errors.some((e) => e.code === "duplicate-id" && e.path === "/sharedTables/1"));
+  h = sharedGame(); h.sharedTables.push({ ...structuredClone(h.sharedTables[0]), id: "sh.lost" });
+  assert.ok(validate(h).warnings.some((w) => w.code === "unused-table" && w.path === "/sharedTables/1"));
+});
+
+// A shared table is checked as each bot reads it: a step that targets the Crown is an error for the Crown bot.
+test("a shared table is checked for each bot that uses it, and each issue shows once", () => {
+  const g = sharedGame(); g.sharedTables[0].steps[0].target = "crown";
+  const errs = validate(g).errors.filter((e) => e.code === "step-target");
+  assert.equal(errs.length, 1);
+  assert.equal(errs[0].path, "/sharedTables/0/steps/0");
+  assert.equal(errs[0].editor, "Bots");
+});
+
+test("the bot aid and the Non-Player sheet print a shared table as SH-1", () => {
+  const g = sharedGame(), b = g.bots[0], md = toMarkdown(aidModel(g, b));
+  assert.match(md, /Choose 1 space with table SH-1/);
+  assert.match(md, /### Table SH-1 \(choose one space\)/);
+  // The sheet prints the bot's own flowchart, so it is checked on the flowchart bot.
+  const f = sharedGame(tan());
+  assert.match(nonPlayerSheetHtml(f, f.bots[0]), /Garrison <small>\(SH-1\)<\/small>/);
+  assert.equal(/SH-1/.test(toMarkdown(aidModel(g, g.bots[1]))), false, "a bot that does not use it does not print it");
+});
+
+test("the policy file of a bot holds the shared tables it uses", () => {
+  const g = sharedGame(tan());
+  assert.deepEqual(YAML.parse(toPolicyYaml(g, g.bots[0])).policy.sharedTables.map((t) => t.id), ["cw.t.garrison"]);
+  assert.equal("sharedTables" in YAML.parse(toPolicyYaml(g, g.bots[1])).policy, false, "a bot that does not use it does not carry it");
 });

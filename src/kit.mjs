@@ -2,7 +2,7 @@
 import { opinionName } from "./opinion.mjs";
 import { aidModel, toHtml, stepNumbers, tableLabels } from "./botaid.mjs";
 import { graphSvg } from "./graphsvg.mjs";
-import { linkedOf, cardLasting, EXIT_TEXT } from "./dryrun.mjs";
+import { linkedOf, cardLasting, EXIT_TEXT, tablesOf } from "./dryrun.mjs";
 import { choiceCounts } from "./effects.mjs";
 import { condText, stepText, budgetText, controllerName } from "./plain.mjs";
 import { setupControl } from "./expr.mjs";
@@ -240,9 +240,9 @@ const END = { none: "No action", event: "Event", operation: "Operation done", op
 export function nonPlayerSheetHtml(g, bot) {
   const f = faction(g, bot.factionId);
   const { num, nodes } = stepNumbers(bot);
-  const labels = tableLabels(bot);
+  const labels = tableLabels(bot, g);
   const act = (id) => g.actions.find((a) => a.id === id);
-  const table = (id) => bot.priorityTables.find((t) => t.id === id);
+  const table = (id) => tablesOf(g, bot).find((t) => t.id === id);
   const order = bot.nodes.filter((n) => num[n.id]).sort((a, b) => num[a.id] - num[b.id]);
   const to = (id) => { const n = nodes[id]; return EXIT_TEXT[id] ?? (n.kind === "end" ? END[n.outcome] : n.kind === "event-check" ? "Event?" : n.kind === "action" ? `${act(n.action)?.name ?? n.action} (${n.parts ? n.parts.map((pt) => labels[pt.table]).join(", ") : labels[n.table]})` : n.text); };
   const arr = (label, id) => `<p class="arr"><b>${label}</b> → ${h(to(id))}</p>`;

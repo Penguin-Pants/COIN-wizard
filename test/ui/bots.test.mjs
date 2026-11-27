@@ -467,3 +467,24 @@ test("a designer sets a card side's Activation Number, skips the roll on one nod
   assert.equal("activation" in b.deck.cards[0].sides[0], false);
   assert.equal("noActivation" in b.deck.cards[0].sides[0].nodes[1], false);
 }));
+
+// Schema 1.12.0 part C: a shared table that every bot can use.
+test("a designer adds a shared table, uses it on a node and deletes it", () => withApp(async ({ page, db }) => {
+  await botsTab(page);
+  const draft = async () => { await page.waitForTimeout(1800); return JSON.parse((await db())["data/users/u1/draft"].json); };
+  await page.click('[data-a="bot-addshared"][data-scope="space"]'); await frames(page);
+  let g = await draft();
+  assert.deepEqual(g.sharedTables.map((t) => t.id), ["sh.t1"]);
+  assert.match(await page.innerText("#main"), /Shared tables/i);
+  await page.click('[data-a="bot-node"][data-id="cw.sweep"]'); await frames(page);
+  const ts = `select[data-b="bots/0/nodes/${g.bots[0].nodes.findIndex((n) => n.id === "cw.sweep")}/table"]`;
+  assert.ok(await page.locator(`${ts} option[value="sh.t1"]`).count(), "the node's table select offers the shared table");
+  await page.locator(ts).selectOption("sh.t1"); await frames(page);
+  g = await draft();
+  assert.equal(g.bots[0].nodes.find((n) => n.id === "cw.sweep").table, "sh.t1");
+  await page.click('[data-a="bot-pick"][data-i="1"]'); await frames(page);
+  assert.match(await page.innerText("#main"), /sh\.t1/, "the other bot sees the shared table too");
+  await page.click('[data-a="confirm-ask"][data-key="tbl-sh.t1"]'); await page.click('[data-a="bot-delshared"]'); await frames(page);
+  g = await draft();
+  assert.equal("sharedTables" in g, false);
+}));
