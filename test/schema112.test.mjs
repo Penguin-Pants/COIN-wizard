@@ -7,7 +7,7 @@ import { migrate, LATEST } from "../src/migrate.mjs";
 import { deriveState, applyPatch } from "../src/state.mjs";
 import { runBot, botNodes, tableUsers } from "../src/dryrun.mjs";
 import { addNode, setCardMode, addBotCard, deleteBotCard, addBack, deleteBack } from "../src/botedit.mjs";
-import { aidModel, toMarkdown, toMermaid, toPolicyYaml } from "../src/botaid.mjs";
+import { aidModel, toMarkdown, toMermaid, toPolicyYaml, tableLabels } from "../src/botaid.mjs";
 import YAML from "yaml";
 import { nonPlayerSheetHtml } from "../src/kit.mjs";
 import { graphSvg } from "../src/graphsvg.mjs";
@@ -372,18 +372,44 @@ test("a shared table is checked for each bot that uses it, and each issue shows 
   assert.equal(errs[0].editor, "Bots");
 });
 
-test("the bot aid and the Non-Player sheet print a shared table as SH-1", () => {
+test("the bot aid and the Non-Player sheet print a shared table as S-1", () => {
   const g = sharedGame(), b = g.bots[0], md = toMarkdown(aidModel(g, b));
-  assert.match(md, /Choose 1 space with table SH-1/);
-  assert.match(md, /### Table SH-1 \(choose one space\)/);
+  assert.match(md, /Choose 1 space with table S-1/);
+  assert.match(md, /### Table S-1 \(choose one space\)/);
   // The sheet prints the bot's own flowchart, so it is checked on the flowchart bot.
   const f = sharedGame(tan());
-  assert.match(nonPlayerSheetHtml(f, f.bots[0]), /Garrison <small>\(SH-1\)<\/small>/);
-  assert.equal(/SH-1/.test(toMarkdown(aidModel(g, g.bots[1]))), false, "a bot that does not use it does not print it");
+  assert.match(nonPlayerSheetHtml(f, f.bots[0]), /Garrison <small>\(S-1\)<\/small>/);
+  assert.equal(/S-1/.test(toMarkdown(aidModel(g, g.bots[1]))), false, "a bot that does not use it does not print it");
 });
 
 test("the policy file of a bot holds the shared tables it uses", () => {
   const g = sharedGame(tan());
   assert.deepEqual(YAML.parse(toPolicyYaml(g, g.bots[0])).policy.sharedTables.map((t) => t.id), ["cw.t.garrison"]);
   assert.equal("sharedTables" in YAML.parse(toPolicyYaml(g, g.bots[1])).policy, false, "a bot that does not use it does not carry it");
+});
+
+// Codex review on PR 48 (four findings, each reproduced before the fix).
+import { renameCard, cardRefs } from "../src/deck.mjs";
+import { placeholderIds } from "../src/boardsuggest.mjs";
+
+test("renaming a card rewrites card ids and inPlay variables in shared tables", () => {
+  const g = sharedGame(tan());
+  g.sharedTables[0].steps[0].filter = { op: "and", args: [{ op: "eq", args: [{ var: "card.id" }, "e01"] }, { var: "inPlay.e01" }] };
+  assert.ok(cardRefs(g, "e01").some((r) => r.path.startsWith("/sharedTables/0")));
+  const h = renameCard(g, "e01", "e01x");
+  assert.deepEqual(h.sharedTables[0].steps[0].filter, { op: "and", args: [{ op: "eq", args: [{ var: "card.id" }, "e01x"] }, { var: "inPlay.e01x" }] });
+});
+
+test("a placeholder space that a shared table names is kept by board suggestions", () => {
+  const g = tan();
+  g.board.spaces.push({ ...structuredClone(g.board.spaces[0]), id: "sp9", name: "Space 9" });
+  assert.ok(placeholderIds(g).has("sp9"), "an unnamed, empty placeholder can be replaced");
+  g.sharedTables = [{ id: "sh.t1", scope: "space", select: "one", steps: [{ n: 1, text: "Space 9.", filter: { op: "eq", args: [{ var: "$space.id" }, "sp9"] } }], tiebreak: [] }];
+  assert.equal(placeholderIds(g).has("sp9"), false);
+});
+
+test("a shared table label never matches a bot table label, even for bot code SH", () => {
+  const g = sharedGame(tan()); g.bots[0].code = "SH";
+  const labels = Object.values(tableLabels(g.bots[0], g));
+  assert.equal(new Set(labels).size, labels.length, labels.join(", "));
 });

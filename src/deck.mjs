@@ -40,6 +40,7 @@ function cardIdLiterals(game, visit) {
     for (const [k, x] of Object.entries(v)) walk(x, `${path}/${k}`);
   };
   walk(game.bots, "/bots");
+  walk(game.sharedTables ?? [], "/sharedTables");
 }
 
 // inPlay.<card> variables (schema 1.11.0) anywhere in the game, and dry-run patches that set inPlay.
@@ -50,7 +51,7 @@ function inPlayVars(game, visit) {
     if (typeof v.var === "string" && v.var.startsWith("inPlay.")) visit(v, path);
     for (const [k, x] of Object.entries(v)) walk(x, `${path}/${k}`);
   };
-  for (const k of ["actions", "deck", "rules", "victory", "bots"]) walk(game[k], `/${k}`);
+  for (const k of ["actions", "deck", "rules", "victory", "bots", "sharedTables"]) walk(game[k] ?? [], `/${k}`);
 }
 const inPlayPatches = (game, visit) => game.bots.forEach((b, bi) => b.dryRuns.forEach((d, di) => { if (d.patch?.inPlay) visit(d.patch, `/bots/${bi}/dryRuns/${di}/patch/inPlay`, b, d); }));
 

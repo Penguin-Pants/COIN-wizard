@@ -231,7 +231,7 @@ export function renderBots() {
       <div class="graph"><div><h4>Nodes</h4><ul class="nodes">${list}</ul><select data-addnode="${bi}" data-g="${G.p}" data-path="/${G.p}/nodes" aria-label="Add a node"><option value="">Add a node...</option>${KINDS.map(([v, l]) => `<option value="${v}">${l}</option>`).join("")}</select></div><div>${nodeForm(b, bi, G)}</div></div></section>
     <section class="panel"><h3>Priority tables</h3>${b.priorityTables.map((t, ti) => tableEditor(t, bi, ti)).join("")}${btn("bot-addtable", "Add a space table", { cls: "link", data: `data-p="bots/${bi}"` })}${btn("bot-addenemy", "Add an enemy table", { cls: "link", data: `data-p="bots/${bi}"` })}
       <h4>Random ties</h4><div class="grid3">${fld("Die", sel(`bots/${bi}/randomization/die`, b.randomization.die, [["d6", "one six-sided die"]]))}${fld("Which spaces take part", area(`bots/${bi}/randomization/eligibleSet`, b.randomization.eligibleSet, { rows: 2 }))}${fld("How the roll picks", area(`bots/${bi}/randomization/procedure`, b.randomization.procedure, { rows: 2 }))}</div></section>
-    <section class="panel"><h3>Shared tables</h3><p class="lead">Every bot can use these, such as the shared Move and Pieces priorities of card bots. A bot reads its own tables first. They print as SH-1, SH-2.</p>${(g.sharedTables ?? []).map((t, ti) => tableEditor(t, bi, ti, true)).join("")}${btn("bot-addshared", "Add a shared space table", { cls: "link", data: `data-scope="space"` })}${btn("bot-addshared", "Add a shared enemy table", { cls: "link", data: `data-scope="opponent"` })}</section>
+    <section class="panel"><h3>Shared tables</h3><p class="lead">Every bot can use these, such as the shared Move and Pieces priorities of card bots. A bot reads its own tables first. They print as S-1, S-2.</p>${(g.sharedTables ?? []).map((t, ti) => tableEditor(t, bi, ti, true)).join("")}${btn("bot-addshared", "Add a shared space table", { cls: "link", data: `data-scope="space"` })}${btn("bot-addshared", "Add a shared enemy table", { cls: "link", data: `data-scope="opponent"` })}</section>
     ${eventRules(b, bi)}
     ${scoringRules(b, bi)}
     <section class="panel"><h3>Measures</h3><p class="lead">Named values the bot aid prints.</p>${meas || "<p><small>No measures yet.</small></p>"}${btn("bot-addmeasure", "Add a measure", { cls: "link", data: `data-p="bots/${bi}/measures"` })}</section>
@@ -288,14 +288,14 @@ export const botActions = {
   "bot-addscoring": (d) => {
     const b = botOf(d.p), taken = new Set(S.game.bots.flatMap((x) => (x.scoring ?? []).map((sc) => sc.phaseId)));
     const ph = S.game.rules.scoring.phases.find((x) => !taken.has(x.id)) ?? S.game.rules.scoring.phases[0];
-    (b.scoring ??= []).push({ phaseId: ph?.id ?? "", table: b.priorityTables.find((t) => t.scope !== "opponent")?.id ?? "", text: "" });
+    (b.scoring ??= []).push({ phaseId: ph?.id ?? "", table: tablesOf(S.game, b).find((t) => t.scope !== "opponent")?.id ?? "", text: "" });
     done();
   },
   "bot-delscoring": (d) => { const b = botOf(d.p); b.scoring.splice(Number(d.i), 1); if (!b.scoring.length) delete b.scoring; done(); },
   // The first part takes the node's table and the Operation's effects; removing the last part gives its table back.
   "bot-parts-add": (d) => {
     const n = getP(S.game, d.p), b = botAt(d.p);
-    const table = n.table ?? b.priorityTables.find((t) => t.scope !== "opponent")?.id ?? "";
+    const table = n.table ?? tablesOf(S.game, b).find((t) => t.scope !== "opponent")?.id ?? "";
     if (!n.parts) { n.parts = [{ text: "", table, steps: structuredClone(S.game.actions.find((a) => a.id === n.action)?.steps ?? []) }]; delete n.table; }
     else n.parts.push({ text: "", table: n.parts.at(-1).table, steps: [] });
     done();

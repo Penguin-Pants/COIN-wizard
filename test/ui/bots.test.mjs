@@ -488,3 +488,24 @@ test("a designer adds a shared table, uses it on a node and deletes it", () => w
   g = await draft();
   assert.equal("sharedTables" in g, false);
 }));
+
+// Codex review on PR 48: a bot whose only space tables are shared starts a scoring choice with one.
+test("a new scoring choice takes a shared space table when the bot has none of its own", async () => {
+  const g = JSON.parse(readFileSync("examples/tan-war.game.json", "utf8")), b = g.bots[0];
+  const space = b.priorityTables.filter((t) => t.scope !== "opponent");
+  b.priorityTables = b.priorityTables.filter((t) => t.scope === "opponent");
+  g.sharedTables = space;
+  delete b.scoring;
+  for (const o of b.eventPolicy.overrides) delete o.node;
+  const app = await openApp(browser, { example: false, saved: { "data/users/u1/draft": { json: JSON.stringify(g), savedAt: "2026-11-27T10:00:00Z" } } });
+  try {
+    const { page, db } = app;
+    await page.click('[data-a="resume"]'); await frames(page);
+    await botsTab(page);
+    await page.click('[data-a="bot-addscoring"]'); await frames(page);
+    await page.waitForTimeout(1800);
+    const sc = JSON.parse((await db())["data/users/u1/draft"].json).bots[0].scoring;
+    assert.equal(sc[0].table, space[0].id);
+    assert.deepEqual(app.errors, []);
+  } finally { await app.close(); }
+});

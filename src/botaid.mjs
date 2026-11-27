@@ -11,9 +11,10 @@ const mid = (id) => (id.startsWith("$") ? `x_${id.slice(1)}` : id.replace(/[^a-z
 // "Base (Valley Militia)": a piece target names its owner (schema 1.9.0).
 const pieceLabel = (g, pid) => { const f = g.factions.find((x) => x.pieces.some((p) => p.id === pid)); return f ? `${f.pieces.find((p) => p.id === pid).name} (${f.name})` : pid; };
 
-// A bot's tables print as CW-1, CW-2; the game's shared tables (1.12.0 part C) as SH-1, SH-2.
+// A bot's tables print as CW-1, CW-2; the game's shared tables (1.12.0 part C) as S-1, S-2. A bot code
+// has 2 or 3 capitals, so a shared label never matches a bot's own.
 export function tableLabels(bot, game) {
-  return Object.fromEntries([...bot.priorityTables.map((t, i) => [t.id, `${bot.code}-${i + 1}`]), ...(game?.sharedTables ?? []).map((t, i) => [t.id, `SH-${i + 1}`])]);
+  return Object.fromEntries([...bot.priorityTables.map((t, i) => [t.id, `${bot.code}-${i + 1}`]), ...(game?.sharedTables ?? []).map((t, i) => [t.id, `S-${i + 1}`])]);
 }
 
 // Number the steps in breadth-first order from the start node.
