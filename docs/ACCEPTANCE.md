@@ -1,6 +1,6 @@
 # Acceptance: COIN Wizard, phases 0 to 12
 
-Date: 2026-11-21. Schema: `coin-game/1.11.0` (frozen). Live tool: the "COIN Game Design Wizard" artifact.
+Date: 2026-11-21. Schema: `coin-game/1.12.0` (frozen). Live tool: the "COIN Game Design Wizard" artifact.
 
 Run the evidence: `npm test` (node tests) and `npm run test:ui` (browser tests with Playwright and system Chrome).
 
@@ -48,6 +48,7 @@ Run the evidence: `npm test` (node tests) and `npm run test:ui` (browser tests w
 | 29 | Schema 1.11.0 part F (gaps G2, G14): `cardCould(which, verb, what)` reads what the current card could do from its sides' steps; `next.id` and `next.lasting` read the next card (dry-run patch `next`). The condition picker offers "The card could"; the dry-run form sets the next card; the card editor shows what bots read for each side | Pass | `test/schema111.test.mjs`, `test/ui/bots.test.mjs` ("a designer tests what the card could do, sets the next card and sees what each side could do") |
 | 30 (plan C8) | The card effect editor offers `$target` on a card side when every Event exception node that runs that side has a target table, the same rule the validator uses (`sideReadsTarget`) | Pass | `test/schema110.test.mjs` ("a card side reads $target only when every override node that runs it has a target table"), `test/ui/bots.test.mjs` ("the card effect editor offers the target when the Event exception node picks an enemy") |
 | 31 | Release: the live artifact runs schema 1.11.0 | Pass | `make publish-check` on 208116d (497 node tests and 137 UI tests pass); build 208116d published to artifact `8d21134e-…` on 2026-11-26 (the page footer reads "Build 208116d, schema coin-game/1.11.0") |
+| 32 | Schema 1.12.0 part A (card bots, Q1 Q2 Q8 Q10): `bot.mode: cards` and `bot.deck` (`cycle` or `shuffle`; cards with a front and an optional back, each a small flowchart). The exit `$draw` draws the next card; `$flip` runs the other side; a turn that draws every card passes. Dry-run patch `botDeck` sets the top card and flipped cards. The editor makes a card bot, edits each card side and sets the bot deck in a dry run; the bot aid lists each card side | Pass | `test/schema112.test.mjs`, `test/ui/bots.test.mjs` ("a designer makes a card bot, edits a card side, sets the bot deck in a dry run and removes the deck", "clicking a node in the flowchart opens its form, and deleting it clears the branches") |
 | Core | Every part works for 3 and 4 factions: per-faction and rival values, bots that pick their enemy, templates that target a chosen enemy, unique bot codes | Pass | `test/nfaction.test.mjs`, `test/ui/fullgame.test.mjs`, examples `harbor-strike` and `four-valleys` (every bot picks its enemy; one dry run shows the enemy change with the board) |
 
 ## Real-source session (2026-11-21)

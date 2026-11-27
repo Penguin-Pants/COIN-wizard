@@ -1,11 +1,11 @@
 // Generate bot exports from the same definition the validator and dry-runs use:
 // Mermaid source, printable aid (Markdown and HTML), policy YAML, structured JSON.
 import YAML from "yaml";
-import { linkedOf } from "./dryrun.mjs";
+import { linkedOf, botNodes, EXIT_TEXT } from "./dryrun.mjs";
 import { budgetText } from "./plain.mjs";
 
 const esc = (s) => String(s).replace(/"/g, "'").replace(/[<>]/g, "");
-const mid = (id) => id.replace(/[^a-z0-9]/gi, "_");
+const mid = (id) => (id.startsWith("$") ? `x_${id.slice(1)}` : id.replace(/[^a-z0-9]/gi, "_"));
 
 // "Base (Valley Militia)": a piece target names its owner (schema 1.9.0).
 const pieceLabel = (g, pid) => { const f = g.factions.find((x) => x.pieces.some((p) => p.id === pid)); return f ? `${f.pieces.find((p) => p.id === pid).name} (${f.name})` : pid; };
@@ -22,6 +22,7 @@ export function stepNumbers(bot) {
     const id = q.shift();
     if (seen.has(id)) continue; seen.add(id);
     const node = nodes[id];
+    if (!node) continue; // an exit of a card bot (1.12.0): $draw or $flip
     if (node.kind !== "end") num[id] = ++n;
     const nx = node.kind === "condition" || node.kind === "event-check" ? [node.yes, node.no] : node.kind === "action" ? [node.then, node.onEmpty] : [];
     q.push(...nx);
@@ -32,6 +33,8 @@ export function stepNumbers(bot) {
 export function toMermaid(bot) {
   const { num } = stepNumbers(bot);
   const lines = ["flowchart TD"];
+  const used = new Set(bot.nodes.flatMap((n) => [n.yes, n.no, n.then, n.onEmpty]));
+  for (const [id, text] of Object.entries(EXIT_TEXT)) if (used.has(id)) lines.push(`  ${mid(id)}(["${text}"])`);
   for (const n of bot.nodes) {
     const label = `${n.kind === "end" ? "" : `${num[n.id]}. `}${esc(n.text)}`;
     const shape = n.kind === "condition" ? `{"${label}"}` : n.kind === "event-check" ? `{{"${label}"}}` : n.kind === "end" ? `(["${label}"])` : `["${label}"]`;
@@ -62,7 +65,6 @@ function scoringText(game, bot, labels) {
 // Structured model of one aid. Both renderers read this.
 export function aidModel(game, bot) {
   const faction = game.factions.find((f) => f.id === bot.factionId);
-  const { num, nodes } = stepNumbers(bot);
   const labels = tableLabels(bot);
   const actions = Object.fromEntries(game.actions.map((a) => [a.id, a]));
   const passGain = game.rules.sequence.passGain[bot.factionId];
@@ -73,10 +75,14 @@ export function aidModel(game, bot) {
     operationSpecial: "END, Operation plus Special Activity done",
     pass: `END, Pass and gain ${passGain} Resource${passGain === 1 ? "" : "s"}`
   })[n.outcome];
-  const goto = (id) => (nodes[id].kind === "end" ? endLabel(nodes[id]) : `go to step ${num[id]}`);
+  let num, nodes;
+  const goto = (id) => (EXIT_TEXT[id] ? EXIT_TEXT[id].toLowerCase() : nodes[id].kind === "end" ? endLabel(nodes[id]) : `go to step ${num[id]}`);
   const select = (t) => (t.select === "all" ? `up to ${t.limit} spaces` : "1 space");
   const tableById = Object.fromEntries(bot.priorityTables.map((t) => [t.id, t]));
-  const steps = bot.nodes.filter((n) => n.kind !== "end").sort((a, b) => num[a.id] - num[b.id]).map((n) => {
+  // The steps of one flowchart: the bot's own, or one side of a bot card (1.12.0), numbered from its start.
+  // A side that starts with an end node prints that end as its one step.
+  const stepsOf = (graph) => { ({ num, nodes } = stepNumbers(graph)); const first = nodes[graph.start]; if (first?.kind === "end") return [{ n: 1, text: `${first.text} ${endLabel(first)}.` }]; return graph.nodes.filter((n) => n.kind !== "end").sort((a, b) => num[a.id] - num[b.id]).map(stepOf); };
+  const stepOf = (n) => {
     if (n.kind === "condition") return { n: num[n.id], text: `${n.text} Yes: ${goto(n.yes)}. No: ${goto(n.no)}.` };
     if (n.kind === "event-check") return { n: num[n.id], text: `${n.text} If you play the Event: ${goto(n.yes)}. If not: ${goto(n.no)}.` };
     const a = actions[n.action];
@@ -94,7 +100,9 @@ export function aidModel(game, bot) {
       t += ` Before you end: Special Activities may follow, ${links[0].timing} the Operation. Try them in order; the first one that can be used runs. ${links.map((L, i) => `${i + 1}. ${i ? "If none: " : ""}${saText(L)}`).join(" ")}`;
     }
     return { n: num[n.id], text: t };
-  });
+  };
+  const steps = stepsOf(bot);
+  const cards = (bot.mode === "cards" ? bot.deck.cards : []).flatMap((c) => c.sides.map((sd) => ({ title: `${c.title}, side ${sd.label}`, steps: stepsOf(sd) })));
   return {
     title: `${faction.name} bot aid (${faction.symbol})`,
     game: game.meta.title, revision: game.meta.revision, status: game.meta.status,
@@ -107,6 +115,7 @@ export function aidModel(game, bot) {
     measures: bot.measures.map((m) => [m.name, m.plain]),
     eventRule: bot.eventPolicy.plain,
     steps,
+    cards,
     tables: bot.priorityTables.map((t) => ({
       label: labels[t.id], select: t.scope === "opponent" ? "one enemy faction" : t.select === "all" ? `all matching spaces, up to ${t.limit}` : "one space",
       what: t.scope === "opponent" ? "Choose an enemy faction that is" : "Choose a space that is",
@@ -122,8 +131,11 @@ export function aidModel(game, bot) {
   };
 }
 
+// Bot cards (1.12.0): the steps of each card side, in deck order.
+const cardsMd = (m) => (m.cards.length ? ["## Bot cards", "When a step says to draw the next bot card, draw it and follow its face-up side.", ...m.cards.flatMap((c) => ["", `### ${c.title}`, ...c.steps.map((s) => `${s.n}. ${s.text}`)]), ""] : []);
+
 export function toMarkdown(m) {
-  const L = [`# ${m.title}`, `${m.game}, revision ${m.revision}${m.status === "draft" ? " (DRAFT)" : ""}`, "", `**Goal.** ${m.objective}`, "", "## Before you act", ...m.before.map((b) => `- ${b}`), "", "## Terms", ...m.measures.map(([a, b]) => `- **${a}.** ${b}`), "", "## Events", m.eventRule, "", "### Event exceptions", ...(m.exceptions.length ? m.exceptions.map(([a, b]) => `- **${a}.** ${b}`) : ["- None."]), "", "## Steps (follow in order)", ...m.steps.map((s) => `${s.n}. ${s.text}`), "", "## Priority tables"];
+  const L = [`# ${m.title}`, `${m.game}, revision ${m.revision}${m.status === "draft" ? " (DRAFT)" : ""}`, "", `**Goal.** ${m.objective}`, "", "## Before you act", ...m.before.map((b) => `- ${b}`), "", "## Terms", ...m.measures.map(([a, b]) => `- **${a}.** ${b}`), "", "## Events", m.eventRule, "", "### Event exceptions", ...(m.exceptions.length ? m.exceptions.map(([a, b]) => `- **${a}.** ${b}`) : ["- None."]), "", "## Steps (follow in order)", ...m.steps.map((s) => `${s.n}. ${s.text}`), "", ...cardsMd(m), "## Priority tables"];
   for (const t of m.tables) {
     L.push("", `### Table ${t.label} (choose ${t.select})`, `| Step | ${t.what} |`, "|---|---|", ...t.rows.map(([a, b]) => `| ${a} | ${b} |`), "", t.how, "", "Tie-breaks, in order:", ...t.ties.map(([a, b]) => `- ${a}. ${b}`));
   }
@@ -140,14 +152,14 @@ export function toHtml(m) {
 <h2>Before you act</h2><ul>${m.before.map((b) => `<li>${h(b)}</li>`).join("")}</ul>
 <h2>Terms</h2><ul>${m.measures.map(([a, b]) => `<li><b>${h(a)}.</b> ${h(b)}</li>`).join("")}</ul>
 <h2>Events</h2><p>${h(m.eventRule)}</p><h3>Event exceptions</h3><ul>${(m.exceptions.length ? m.exceptions : [["None", ""]]).map(([a, b]) => `<li><b>${h(a)}.</b> ${h(b)}</li>`).join("")}</ul>
-<h2>Steps (follow in order)</h2><ol>${m.steps.map((s) => `<li value="${s.n}">${h(s.text)}</li>`).join("")}</ol>
+<h2>Steps (follow in order)</h2><ol>${m.steps.map((s) => `<li value="${s.n}">${h(s.text)}</li>`).join("")}</ol>${m.cards.length ? `<h2>Bot cards</h2>${m.cards.map((c) => `<h3>${h(c.title)}</h3><ol>${c.steps.map((s) => `<li value="${s.n}">${h(s.text)}</li>`).join("")}</ol>`).join("")}` : ""}
 <h2>Priority tables</h2>${m.tables.map((t) => `<h3>Table ${h(t.label)} (choose ${h(t.select)})</h3><table><tr><th>Step</th><th>${h(t.what)}</th></tr>${t.rows.map(([a, b]) => `<tr><td>${a}</td><td>${h(b)}</td></tr>`).join("")}</table><p>${h(t.how)}</p><p>Tie-breaks, in order:</p><ul>${t.ties.map(([a, b]) => `<li>${a}. ${h(b)}</li>`).join("")}</ul>`).join("")}
 <h2>Ties and dice</h2><p>${h(m.tieRandom)}</p><h2>Fallback</h2><p>${h(m.fallback)}</p><h2>Scoring rounds</h2><p>${h(m.scoring)}</p><h2>Counting the turn</h2><p>${h(m.outcome)}</p></body></html>`;
 }
 
 export function toPolicyYaml(game, bot) {
   const used = new Set();
-  for (const n of bot.nodes) { if (n.action) used.add(n.action); for (const L of linkedOf(n)) used.add(L.action); }
+  for (const n of botNodes(bot)) { if (n.action) used.add(n.action); for (const L of linkedOf(n)) used.add(L.action); }
   const actions = game.actions.filter((a) => used.has(a.id)).map((a) => ({ id: a.id, name: a.name, kind: a.kind, cost: a.cost, plain: a.plain, dependsOn: a.dependsOn }));
   const { dryRuns, ...policy } = bot;
   const f = game.factions.find((x) => x.id === bot.factionId);

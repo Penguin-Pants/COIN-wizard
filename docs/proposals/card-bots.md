@@ -1,6 +1,6 @@
 # Proposal: card-driven bot mode (plan item C1)
 
-Status: rounds 1 and 2 decided by the owner on 2026-11-26. Nothing is implemented. Next: its own schema version.
+Status: rounds 1 and 2 decided by the owner on 2026-11-26. Schema 1.12.0, one part per PR: part A done (2026-11-27); parts B to F open.
 Approval: review item R7 (2026-11-26), "Design questions first, then its own version" (`docs/proposals/bot-model-gaps-2.md`).
 Model today: `coin-game/1.11.0`. Each bot has one flowchart (`nodes`), its own priority tables, Event rules and dry runs.
 
@@ -63,6 +63,24 @@ Owner answers, 2026-11-26:
 | Q9 | (a) The Activation Number is a formula per card side (a number or a track value); a step can skip the roll. A number that grows after a success is deferred | As recommended |
 | Q10 | (a) The mode is set per bot: flowchart or cards | As recommended |
 | Q11 | (a) The kit prints one card sheet per card bot in place of its Non-Player sheet; shared tables print once | As recommended |
+
+## Parts (schema 1.12.0)
+
+Split approved by the owner on 2026-11-27.
+
+| Part | Decisions | Scope | State |
+|---|---|---|---|
+| A | Q1, Q2, Q8, Q10 | `bot.mode`, `bot.deck`, the exits `$draw` and `$flip`, dry-run patch `botDeck`, editor | Done (`docs/ACCEPTANCE.md` row 32) |
+| B | Q3, Q9 | Activation Number: a formula per card side, seeded die rolls, a step that skips the roll | Open |
+| C | Q4 | Shared Move and Pieces tables at game level | Open |
+| D | Q5 | Per-bot "tracks Resources" setting | Open |
+| E | Q6, Q7 | "Critical for" on game cards; the Eligibility rule list in place of the bot flowchart's checks | Open |
+| F | Q11 | The bot card sheet in the kit | Open |
+
+Owner answers for part A, 2026-11-27:
+
+- Until part E, a card bot keeps its own flowchart for the Eligible and Event checks. A branch to `$draw` draws a card.
+- A turn that draws every card passes (ABB 8.2.3).
 
 ## Deferred
 

@@ -94,6 +94,11 @@ export function applyPatch(state, patch = {}) {
     s.inPlay = [...patch.inPlay];
   }
   if (patch.dice) s.dice = [...patch.dice];
+  // botDeck (1.12.0): the bot deck order and flipped cards. runBot checks it against the bot's deck.
+  if (patch.botDeck) {
+    if (Object.keys(patch.botDeck).some((k) => k !== "order" && k !== "flipped")) throw new Error("Patch botDeck may set only order and flipped");
+    s.botDeck = structuredClone(patch.botDeck);
+  }
   for (const pid of patch.clearPieces ?? []) for (const sp of Object.values(s.spaces)) delete sp.pieces[pid];
   for (const [sid, sp] of Object.entries(patch.spaces ?? {})) {
     if (!s.spaces[sid]) throw new Error(`Patch names unknown space: ${sid}`);

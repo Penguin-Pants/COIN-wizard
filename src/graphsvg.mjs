@@ -1,5 +1,6 @@
 // Bot flowchart as SVG, with a small layered layout and no library.
 // The wizard, the print kit and the exports share it.
+import { EXIT_TEXT } from "./dryrun.mjs";
 
 const W = 210, GAPX = 36, GAPY = 54, LINE = 14, PAD = 10, CHARS = 30;
 const BRANCH = [["yes", "yes"], ["no", "no"], ["then", "then"], ["onEmpty", "no target"]];
@@ -67,9 +68,18 @@ export function layout(bot) {
 const KIND = { condition: "Check", "event-check": "Event", action: "Action", end: "End" };
 
 // highlight: node ids on a dry-run path, in order. selected: one node id.
-export function graphSvg(bot, { highlight = [], selected = null, title } = {}) {
-  const L = layout(bot), hl = new Set(highlight.map((x) => String(x).split(":")[0]));
-  const hlEdge = new Set(); for (let i = 1; i < highlight.length; i++) hlEdge.add(`${String(highlight[i - 1]).split(":")[0]}>${String(highlight[i]).split(":")[0]}`);
+// Card bot exits (schema 1.12.0) draw as end boxes, so their branches show. A dry-run path step
+// "draw:<card>" or "flip:<card>" lights that exit.
+const withExits = (g) => {
+  const used = new Set(g.nodes.flatMap((n) => BRANCH.map(([k]) => n[k]))), ex = Object.keys(EXIT_TEXT).filter((id) => used.has(id));
+  return ex.length ? { ...g, nodes: [...g.nodes, ...ex.map((id) => ({ id, kind: "end", text: EXIT_TEXT[id] }))] } : g;
+};
+const pathKey = (x) => { const s = String(x); return s.startsWith("draw:") ? "$draw" : s.startsWith("flip:") ? "$flip" : s.split(":")[0]; };
+
+export function graphSvg(graph, { highlight = [], selected = null, title } = {}) {
+  const bot = withExits(graph);
+  const L = layout(bot), hl = new Set(highlight.map(pathKey));
+  const hlEdge = new Set(); for (let i = 1; i < highlight.length; i++) hlEdge.add(`${pathKey(highlight[i - 1])}>${pathKey(highlight[i])}`);
   // Edges to the next layer curve straight down. Longer edges and back edges run in a lane right of
   // every box they pass, so no line crosses a box.
   let lanes = 0, right = L.width;

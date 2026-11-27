@@ -1,9 +1,9 @@
 // Bots tab: flowchart, node editor, priority tables, Event rules, measures and dry runs. No JSON.
-import { newBot, addNode, deleteNode, graphInfo, missingCases, newDryRun, runDry, toExpect, CASES } from "../../src/botedit.mjs";
+import { newBot, addNode, deleteNode, graphInfo, missingCases, newDryRun, runDry, toExpect, CASES, setCardMode, addBotCard, deleteBotCard, addBack, deleteBack } from "../../src/botedit.mjs";
 import { graphSvg } from "../../src/graphsvg.mjs";
 import { aidModel, toMarkdown } from "../../src/botaid.mjs";
 import { renameId, tableUsers } from "../../src/validate.mjs";
-import { linkedOf } from "../../src/dryrun.mjs";
+import { linkedOf, botNodes, EXIT_TEXT } from "../../src/dryrun.mjs";
 import { opinionMax } from "../../src/opinion.mjs";
 import { budgetText } from "../../src/plain.mjs";
 import { isExpr } from "../../src/exprmodel.mjs";
@@ -27,11 +27,38 @@ const fname = (id) => S.game.factions.find((f) => f.id === id)?.name ?? id;
 const cur = () => { const n = S.game.bots.length; S.bot = Math.min(S.bot ?? 0, Math.max(0, n - 1)); return S.bot; };
 const results = (S.dryResults ??= {});
 
+// The flowchart being edited (schema 1.12.0): the bot's own, or one side of a bot card.
+// S.botGraph is "" or "<card>/<side>" (indexes). p: its data path; flip: the side can flip.
+function graphOf(b, bi) {
+  const [ci, si] = (S.botGraph ?? "").split("/").map(Number), side = b.mode === "cards" ? b.deck.cards[ci]?.sides[si] : undefined;
+  if (!side) { S.botGraph = ""; return { g: b, p: `bots/${bi}`, flip: false }; }
+  return { g: side, p: `bots/${bi}/deck/cards/${ci}/sides/${si}`, flip: b.deck.cards[ci].sides.length === 2 };
+}
+// The bot that holds a node or graph path.
+const botAt = (p) => getP(S.game, p.match(/^bots\/\d+/)[0]);
+
 function picker() {
   const g = S.game, bi = cur();
   const tabs = g.bots.map((b, i) => { const f = g.factions.find((x) => x.id === b.factionId); return `<button type="button" role="tab" aria-selected="${i === bi}" class="${i === bi ? "on" : ""}" data-a="bot-pick" data-i="${i}">${f ? esc(f.name) : esc(b.factionId)}</button>`; }).join("");
   const free = g.factions.filter((f) => !g.bots.some((b) => b.factionId === f.id));
   return `<div class="tabs" role="tablist" aria-label="Bots">${tabs}</div>${free.length ? `<div class="row"><small>No bot yet:</small>${free.map((f) => btn("bot-new", `Add a bot for ${esc(f.name)}`, { cls: "link", data: `data-f="${esc(f.id)}"` })).join("")}</div>` : ""}`;
+}
+
+// Bot deck (schema 1.12.0): a card bot runs its flowchart, and "draw the next bot card" runs a card side.
+function deckPanel(b, bi) {
+  const p = `bots/${bi}`;
+  if (b.mode !== "cards") return `<section class="panel"><h3>Bot deck</h3><p class="lead">A card bot draws a bot card when its flowchart says so, and follows that card's flowchart.</p>${btn("bot-cards", "Make this a card bot", { data: `data-p="${p}"` })}</section>`;
+  const one = b.deck.cards.length === 1;
+  const cards = b.deck.cards.map((c, ci) => `<div class="opt"><div class="grid3">${fld(`Card ${ci + 1} title`, inp(`${p}/deck/cards/${ci}/title`, c.title))}${c.sides.map((sd, si) => fld(`${si ? "Back" : "Front"} letter`, inp(`${p}/deck/cards/${ci}/sides/${si}/label`, sd.label))).join("")}</div><div class="row">${c.sides.map((_, si) => btn("bot-graph", `Edit ${si ? "back" : "front"} ${esc(c.sides[si].label)}`, { cls: "link", data: `data-g="${ci}/${si}"` })).join("")}${c.sides.length === 1 ? btn("bot-addback", "Add a back side", { cls: "link", data: `data-p="${p}" data-i="${ci}"` }) : confirmButton(`back-${b.id}-${c.id}`, "Remove the back side", { action: "bot-delback", data: `data-p="${p}" data-i="${ci}"` })}${one ? "" : confirmButton(`card-${b.id}-${c.id}`, "Delete card", { action: "bot-delcard", data: `data-p="${p}" data-i="${ci}"` })}</div></div>`).join("");
+  return `<section class="panel"><h3>Bot deck</h3><p class="lead">The bot flowchart draws the next bot card. Each card side is a small flowchart; it can draw the next card, and a card with a back can flip.</p>
+    ${fld("After a draw", sel(`${p}/deck/order`, b.deck.order, [["cycle", "the card goes to the bottom, face up (cycle)"], ["shuffle", "the card is discarded, then the deck is shuffled (shuffle)"]], { r: true }), "In one turn both draw the cards in order. A turn that draws every card passes.")}
+    ${cards}<div class="row">${btn("bot-addcard", "Add a bot card", { cls: "link", data: `data-p="${p}"` })}${confirmButton(`nocards-${b.id}`, "Remove the bot deck", { action: "bot-nocards", data: `data-p="${p}"` })}</div></section>`;
+}
+// Which flowchart the editor shows: the bot's own or one card side.
+function graphPicker(b) {
+  if (b.mode !== "cards") return "";
+  const opts = [["", "Bot flowchart"], ...b.deck.cards.flatMap((c, ci) => c.sides.map((sd, si) => [`${ci}/${si}`, `${c.title}, side ${sd.label}`]))];
+  return `<label class="fld inline"><span>Flowchart to edit</span><select data-botgraph="1" aria-label="Flowchart to edit">${opts.map(([v, l]) => `<option value="${v}" ${v === (S.botGraph ?? "") ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>`;
 }
 
 // budget (1.11.0): what the Operation may spend. Each field is optional; an empty field removes its key.
@@ -40,11 +67,13 @@ function budgetForm(n, p) {
   return `<details class="sblock" ${n.budget ? "open" : ""}><summary>Spending limit${n.budget ? `: ${esc(budgetText(n.budget))}` : " (none)"}</summary><div class="grid3">${fld("Share of Resources", ctl("share", bg.share?.join("/"), 'placeholder="for example 2/3" aria-label="Share of Resources"'), "Rounded down.")}${fld("Spend all if Resources are below", ctl("allBelow", bg.allBelow, 'type="number" min="1" aria-label="Spend all below"'), "Needs a share.")}${fld("Keep at least", ctl("floor", bg.floor, 'type="number" min="0" aria-label="Keep at least"'), "Resources the Operation leaves.")}</div><small>A linked Special Activity pays from the full Resources.</small></details>`;
 }
 
-function nodeForm(b, bi) {
-  const ni = b.nodes.findIndex((n) => n.id === S.botNode);
+function nodeForm(b, bi, G) {
+  const ni = G.g.nodes.findIndex((n) => n.id === S.botNode);
   if (ni < 0) return "<p><small>Select a node in the list or the flowchart.</small></p>";
-  const n = b.nodes[ni], p = `bots/${bi}/nodes/${ni}`, g = S.game;
-  const ids = [["", "(none)"], ...b.nodes.filter((x) => x.id !== n.id).map((x) => [x.id, `${x.id}: ${x.text.slice(0, 40)}`])];
+  const n = G.g.nodes[ni], p = `${G.p}/nodes/${ni}`, g = S.game;
+  // Exits (1.12.0): any flowchart of a card bot can draw; a side of a two-sided card can flip.
+  const exits = [...(b.mode === "cards" ? ["$draw"] : []), ...(G.flip ? ["$flip"] : [])].map((x) => [x, `(${EXIT_TEXT[x].toLowerCase()})`]);
+  const ids = [["", "(none)"], ...G.g.nodes.filter((x) => x.id !== n.id).map((x) => [x.id, `${x.id}: ${x.text.slice(0, 40)}`]), ...exits];
   const branch = (k, label) => fld(label, sel(`${p}/${k}`, n[k] ?? "", ids, { t: "o", r: true }));
   const ops = g.actions.filter((a) => a.faction === b.factionId && a.kind === "operation").map((a) => [a.id, a.name]);
   const sas = g.actions.filter((a) => a.faction === b.factionId && a.kind === "specialActivity").map((a) => [a.id, a.name]);
@@ -67,9 +96,9 @@ function nodeForm(b, bi) {
       ${entries.map(entry).join("")}${L ? `<div class="row">${btn("bot-linked-add", "Add an If none Special Activity", { cls: "link", data: `data-p="${p}"` })}<small> Tried in order: the first one whose trigger holds and whose table finds a space runs.</small></div>` : ""}`;
   }
   if (n.kind === "end") body = fld("Outcome", sel(`${p}/outcome`, n.outcome ?? "pass", OUTCOMES, { r: true }));
-  return `<div class="nodeform"><div class="grid3">${fld("Node id", `<input data-nodeid="${esc(n.id)}" data-bot="${bi}" data-path="/${p}/id" value="${esc(n.id)}">`)}${fld("Kind", `<select data-nkind="${p}" data-path="/${p}/kind">${KINDS.map(([v, l]) => `<option value="${v}" ${v === n.kind ? "selected" : ""}>${l}</option>`).join("")}</select>`)}<div class="fld"><span>&nbsp;</span>${b.start === n.id ? chip("ok", "Start node") : btn("bot-start", "Make this the start", { data: `data-p="bots/${bi}" data-id="${esc(n.id)}"` })}</div></div>
+  return `<div class="nodeform"><div class="grid3">${fld("Node id", `<input data-nodeid="${esc(n.id)}" data-bot="${bi}" data-path="/${p}/id" value="${esc(n.id)}">`)}${fld("Kind", `<select data-nkind="${p}" data-path="/${p}/kind">${KINDS.map(([v, l]) => `<option value="${v}" ${v === n.kind ? "selected" : ""}>${l}</option>`).join("")}</select>`)}<div class="fld"><span>&nbsp;</span>${G.g.start === n.id ? chip("ok", "Start node") : btn("bot-start", "Make this the start", { data: `data-p="${G.p}" data-id="${esc(n.id)}"` })}</div></div>
     ${fld("Text (printed on the flowchart)", area(`${p}/text`, n.text, { rows: 2, r: true }))}${body}
-    <div class="row">${confirmButton(`node-${n.id}`, "Delete node", { action: "bot-delnode", data: `data-p="bots/${bi}" data-id="${esc(n.id)}"` })}</div></div>`;
+    <div class="row">${confirmButton(`node-${n.id}`, "Delete node", { action: "bot-delnode", data: `data-p="${G.p}" data-id="${esc(n.id)}"` })}</div></div>`;
 }
 
 // parts: numbered sub-actions of one Operation, each with its own table and effects (schema 1.5.0).
@@ -154,7 +183,10 @@ function patchForm(b, bi, d, di) {
     return `<div class="opt"><div class="row"><b>${esc(name)}</b><label class="mini"><span>Opinion</span><input type="number" min="${-opinionMax(g)}" max="${opinionMax(g)}" placeholder="as in setup" ${ctl(`spaces/${sid}/opinion`, "num")} value="${sp.opinion ?? ""}"></label><select ${ctl(`spaces/${sid}/pieces`, "addpiece", "", 'aria-label="Set a piece count"')}><option value="">Set a piece count...</option>${pcs.map((x) => `<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select>${btn("dry-delspace", "Remove", { cls: "link", data: `data-dry="${k}" data-s="${esc(sid)}"` })}</div>${lines}</div>`;
   }).join("");
   const add = `<select ${ctl("spaces", "addspace")} aria-label="Change a space"><option value="">Change a space...</option>${g.board.spaces.filter((s) => !pt.spaces?.[s.id]).map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join("")}</select>`;
-  return `<div class="grid4">${elig}${ply}${res}${tr}</div><div class="row">${card}</div><div class="row">${turn}</div><div class="row">${next}</div>${dice}${clear}${avail}${inPlay}<h4>Board changes</h4>${spaces}${add}`;
+  // botDeck (1.12.0): the top bot card and the flipped cards.
+  const bctl = (kind, extra = "") => `data-botdeck="${kind}" data-dry="${k}" data-path="/bots/${bi}/dryRuns/${di}/patch" ${extra}`;
+  const botDeck = b.mode === "cards" ? `<div class="row">${fld("Top bot card", `<select ${bctl("top")}><option value="">as listed (${esc(b.deck.cards[0].title)})</option>${b.deck.cards.map((c) => `<option value="${esc(c.id)}" ${pt.botDeck?.order?.[0] === c.id ? "selected" : ""}>${esc(c.title)}</option>`).join("")}</select>`)}${b.deck.cards.filter((c) => c.sides.length === 2).map((c) => `<label class="chk"><input type="checkbox" ${bctl("flip", `value="${esc(c.id)}"`)} ${(pt.botDeck?.flipped ?? []).includes(c.id) ? "checked" : ""}> ${esc(c.title)} shows its back</label>`).join("")}</div>` : "";
+  return `<div class="grid4">${elig}${ply}${res}${tr}</div><div class="row">${card}</div><div class="row">${turn}</div><div class="row">${next}</div>${botDeck}${dice}${clear}${avail}${inPlay}<h4>Board changes</h4>${spaces}${add}`;
 }
 
 function dryRuns(b, bi) {
@@ -179,17 +211,20 @@ export function renderBots() {
   const g = S.game;
   if (!g.bots.length) return `<section class="panel"><h3>Bots</h3>${picker()}</section>`;
   const bi = cur(), b = g.bots[bi], f = g.factions.find((x) => x.id === b.factionId);
-  if (!b.nodes.some((n) => n.id === S.botNode)) S.botNode = b.start;
-  const info = graphInfo(b);
+  const G = graphOf(b, bi);
+  if (!G.g.nodes.some((n) => n.id === S.botNode)) S.botNode = G.g.start;
+  const info = graphInfo(G.g);
   const hl = Object.entries(results).find(([k]) => k.startsWith(`${bi}/`) && S.dryShow === k)?.[1]?.path ?? [];
-  let svg; try { svg = graphSvg(b, { highlight: hl, selected: S.botNode, title: `${f?.name ?? b.factionId} bot flowchart` }); } catch (e) { svg = `<p class="err">Flowchart cannot be drawn: ${esc(e.message)}</p>`; }
-  const list = b.nodes.map((n) => `<li><button type="button" class="${n.id === S.botNode ? "on" : ""}" data-a="bot-node" data-id="${esc(n.id)}"><small>${KINDS.find(([k]) => k === n.kind)?.[1] ?? n.kind}</small> ${esc(n.text || n.id)}${info.unreachable.includes(n.id) ? ` ${chip("bad", "unreachable")}` : ""}${info.cycles.includes(n.id) ? ` ${chip("bad", "loop")}` : ""}</button></li>`).join("");
+  let svg; try { svg = graphSvg(G.g, { highlight: hl, selected: S.botNode, title: `${f?.name ?? b.factionId} bot flowchart` }); } catch (e) { svg = `<p class="err">Flowchart cannot be drawn: ${esc(e.message)}</p>`; }
+  const list = G.g.nodes.map((n) => `<li><button type="button" class="${n.id === S.botNode ? "on" : ""}" data-a="bot-node" data-id="${esc(n.id)}"><small>${KINDS.find(([k]) => k === n.kind)?.[1] ?? n.kind}</small> ${esc(n.text || n.id)}${info.unreachable.includes(n.id) ? ` ${chip("bad", "unreachable")}` : ""}${info.cycles.includes(n.id) ? ` ${chip("bad", "loop")}` : ""}</button></li>`).join("");
   let aid; try { aid = toMarkdown(aidModel(g, b)); } catch (e) { aid = `Aid cannot be built: ${e.message}`; }
   const meas = b.measures.map((m, mi) => `<div class="opt"><div class="grid2">${fld("Name", inp(`bots/${bi}/measures/${mi}/name`, m.name))}${fld("Meaning (printed)", inp(`bots/${bi}/measures/${mi}/plain`, m.plain))}</div>${isCond(m.expr) ? condEditor(`bots/${bi}/measures/${mi}/expr`, m.expr, { space: true }) : valueEditor(`bots/${bi}/measures/${mi}/expr`, m.expr)}</div>`).join("");
-  return `${picker()}<div class="botp" style="${fvars(f?.color ?? "#888")}">
+  // A message from the last bot edit, such as the branches a delete cleared.
+  const note = S.msg.bots ? `<p class="note" role="status">${esc(S.msg.bots)}</p>` : "";
+  return `${picker()}${note}<div class="botp" style="${fvars(f?.color ?? "#888")}">
     <section class="panel"><h3>${f ? fbadge(f, fidx(f.id)) : ""} ${esc(f?.name ?? b.factionId)} bot</h3><div class="grid3">${fld("Code (2 or 3 capitals)", inp(`bots/${bi}/code`, b.code))}${fld("Most steps per turn", inp(`bots/${bi}/maxSteps`, b.maxSteps, { t: "n", type: "number", attrs: 'min="1"' }))}<div class="fld"><span>&nbsp;</span>${confirmButton(`bot-${b.id}`, "Delete this bot", { action: "bot-del", data: `data-i="${bi}"` })}</div></div>${fld("Goal in plain words (printed)", area(`bots/${bi}/objective`, b.objective, { rows: 2 }))}</section>
-    <section class="panel"><h3>Flowchart</h3><div class="flow" data-a="bot-svg" tabindex="0" role="region" aria-label="Flowchart. Use the node list below to select a node.">${svg}</div>
-      <div class="graph"><div><h4>Nodes</h4><ul class="nodes">${list}</ul><select data-addnode="${bi}" data-path="/bots/${bi}/nodes" aria-label="Add a node"><option value="">Add a node...</option>${KINDS.map(([v, l]) => `<option value="${v}">${l}</option>`).join("")}</select></div><div>${nodeForm(b, bi)}</div></div></section>
+    ${deckPanel(b, bi)}<section class="panel"><h3>Flowchart</h3>${graphPicker(b)}<div class="flow" data-a="bot-svg" tabindex="0" role="region" aria-label="Flowchart. Use the node list below to select a node.">${svg}</div>
+      <div class="graph"><div><h4>Nodes</h4><ul class="nodes">${list}</ul><select data-addnode="${bi}" data-g="${G.p}" data-path="/${G.p}/nodes" aria-label="Add a node"><option value="">Add a node...</option>${KINDS.map(([v, l]) => `<option value="${v}">${l}</option>`).join("")}</select></div><div>${nodeForm(b, bi, G)}</div></div></section>
     <section class="panel"><h3>Priority tables</h3>${b.priorityTables.map((t, ti) => tableEditor(t, bi, ti)).join("")}${btn("bot-addtable", "Add a space table", { cls: "link", data: `data-p="bots/${bi}"` })}${btn("bot-addenemy", "Add an enemy table", { cls: "link", data: `data-p="bots/${bi}"` })}
       <h4>Random ties</h4><div class="grid3">${fld("Die", sel(`bots/${bi}/randomization/die`, b.randomization.die, [["d6", "one six-sided die"]]))}${fld("Which spaces take part", area(`bots/${bi}/randomization/eligibleSet`, b.randomization.eligibleSet, { rows: 2 }))}${fld("How the roll picks", area(`bots/${bi}/randomization/procedure`, b.randomization.procedure, { rows: 2 }))}</div></section>
     ${eventRules(b, bi)}
@@ -200,14 +235,22 @@ export function renderBots() {
 }
 
 // ---------- editing
-const done = (msg) => { if (msg) S.msg.bots = msg; touch(); render(); };
+const done = (msg) => { if (msg) S.msg.bots = msg; else delete S.msg.bots; touch(); render(); };
 const freeId = (taken, base) => { let n = 1; while (taken.has(`${base}${n}`)) n++; return `${base}${n}`; };
 const renumber = (steps) => steps.forEach((s, i) => { s.n = i + 1; });
 const reletter = (ties) => ties.forEach((t, i) => { t.letter = String.fromCharCode(97 + i); });
 const botOf = (p) => getP(S.game, p);
 
 export const botActions = {
-  "bot-pick": (d) => { S.bot = Number(d.i); S.botNode = null; render(); },
+  "bot-pick": (d) => { S.bot = Number(d.i); S.botNode = null; S.botGraph = ""; render(); },
+  // Card bots (1.12.0).
+  "bot-graph": (d) => { S.botGraph = d.g; S.botNode = null; render(); },
+  "bot-cards": (d) => { setCardMode(botOf(d.p), true); S.botGraph = ""; done(); },
+  "bot-nocards": (d) => { S.confirm = null; const cleared = setCardMode(botOf(d.p), false); S.botGraph = ""; done(cleared.length ? `Removed the bot deck. Cleared branches: ${cleared.join(", ")}. Set them again.` : "Removed the bot deck."); },
+  "bot-addcard": (d) => { const b = botOf(d.p); addBotCard(b); S.botGraph = `${b.deck.cards.length - 1}/0`; S.botNode = null; done(); },
+  "bot-delcard": (d) => { S.confirm = null; deleteBotCard(botOf(d.p), Number(d.i)); S.botGraph = ""; S.botNode = null; done(); },
+  "bot-addback": (d) => { const b = botOf(d.p); addBack(b, b.deck.cards[Number(d.i)]); S.botGraph = `${d.i}/1`; S.botNode = null; done(); },
+  "bot-delback": (d) => { S.confirm = null; const b = botOf(d.p), cleared = deleteBack(b, b.deck.cards[Number(d.i)]); S.botGraph = `${d.i}/0`; S.botNode = null; done(cleared.length ? `Removed the back side. Cleared branches: ${cleared.join(", ")}. Set them again.` : "Removed the back side."); },
   "bot-new": (d) => { S.game.bots.push(newBot(S.game, d.f)); S.bot = S.game.bots.length - 1; S.botNode = null; done(); },
   "bot-del": (d) => { S.confirm = null; S.game.bots.splice(Number(d.i), 1); S.bot = 0; done(); },
   "bot-node": (d) => { S.botNode = d.id; render(); },
@@ -215,14 +258,14 @@ export const botActions = {
   "bot-start": (d) => { botOf(d.p).start = d.id; done(); },
   "bot-delnode": (d) => { S.confirm = null; const cleared = deleteNode(botOf(d.p), d.id); done(cleared.length ? `Deleted ${d.id}. Cleared branches: ${cleared.join(", ")}. Set them again.` : `Deleted ${d.id}.`); },
   "bot-linked": (d, el) => {
-    const n = getP(S.game, d.p), b = getP(S.game, d.p.replace(/\/nodes\/\d+$/, ""));
+    const n = getP(S.game, d.p), b = botAt(d.p);
     if (el.checked) n.linked = { action: S.game.actions.find((a) => a.faction === b.factionId && a.kind === "specialActivity")?.id ?? "", timing: "after", trigger: true, table: b.priorityTables[0]?.id ?? "" };
     else delete n.linked;
     done();
   },
   // A second entry turns the object into a list; removing down to one entry turns it back.
   "bot-linked-add": (d) => {
-    const n = getP(S.game, d.p), b = getP(S.game, d.p.replace(/\/nodes\/\d+$/, "")), list = linkedOf(n);
+    const n = getP(S.game, d.p), b = botAt(d.p), list = linkedOf(n);
     const { skipText, ...next } = structuredClone(list[0]);
     next.action = S.game.actions.find((a) => a.faction === b.factionId && a.kind === "specialActivity" && !list.some((x) => x.action === a.id))?.id ?? next.action;
     n.linked = [...list, next];
@@ -243,7 +286,7 @@ export const botActions = {
   "bot-delscoring": (d) => { const b = botOf(d.p); b.scoring.splice(Number(d.i), 1); if (!b.scoring.length) delete b.scoring; done(); },
   // The first part takes the node's table and the Operation's effects; removing the last part gives its table back.
   "bot-parts-add": (d) => {
-    const n = getP(S.game, d.p), b = getP(S.game, d.p.replace(/\/nodes\/\d+$/, ""));
+    const n = getP(S.game, d.p), b = botAt(d.p);
     const table = n.table ?? b.priorityTables.find((t) => t.scope !== "opponent")?.id ?? "";
     if (!n.parts) { n.parts = [{ text: "", table, steps: structuredClone(S.game.actions.find((a) => a.id === n.action)?.steps ?? []) }]; delete n.table; }
     else n.parts.push({ text: "", table: n.parts.at(-1).table, steps: [] });
@@ -307,7 +350,16 @@ export function onBotChange(el) {
   // A step's own target (schema 1.8.0): an enemy faction, or none.
   if (d.steppiece) { const st = getP(S.game, d.steppiece); if (el.value) st.piece = el.value; else delete st.piece; done(); return true; }
   if (d.steptarget) { const st = getP(S.game, d.steptarget); if (el.value) st.target = el.value; else delete st.target; done(); return true; }
-  if (d.addnode) { if (!el.value) return true; const b = S.game.bots[Number(d.addnode)]; S.botNode = addNode(b, el.value).id; done(); return true; }
+  if (d.botgraph) { S.botGraph = el.value; S.botNode = null; render(); return true; }
+  // botDeck (1.12.0): the top card puts that card first, the rest in deck order; flipped is a list.
+  if (d.botdeck) {
+    const [bi, di] = d.dry.split("/").map(Number), b = S.game.bots[bi], pt = b.dryRuns[di].patch, bd = { ...pt.botDeck }, ids = b.deck.cards.map((c) => c.id);
+    if (d.botdeck === "top") { if (el.value) bd.order = [el.value, ...ids.filter((x) => x !== el.value)]; else delete bd.order; }
+    else { const f = new Set(bd.flipped ?? []); if (el.checked) f.add(el.value); else f.delete(el.value); if (f.size) bd.flipped = ids.filter((x) => f.has(x)); else delete bd.flipped; }
+    if (Object.keys(bd).length) pt.botDeck = bd; else delete pt.botDeck;
+    done(); return true;
+  }
+  if (d.addnode) { if (!el.value) return true; const b = S.game.bots[Number(d.addnode)]; S.botNode = addNode(b, el.value, getP(S.game, d.g)).id; done(); return true; }
   if (d.nkind) {
     const n = getP(S.game, d.nkind), keep = { id: n.id, kind: el.value, text: n.text };
     for (const k of Object.keys(n)) delete n[k];
@@ -316,7 +368,7 @@ export function onBotChange(el) {
   }
   if (d.nodeid) {
     const v = el.value.trim(), bi = Number(d.bot), b = S.game.bots[bi];
-    if (!ID_OK.test(v) || b.nodes.some((n) => n.id === v)) { done(`Node id "${v}" is not valid or is already in use.`); return true; }
+    if (!ID_OK.test(v) || botNodes(b).some((n) => n.id === v)) { done(`Node id "${v}" is not valid or is already in use.`); return true; }
     S.game.bots[bi] = renameId(b, d.nodeid, v); S.botNode = v; done(); return true;
   }
   return false;

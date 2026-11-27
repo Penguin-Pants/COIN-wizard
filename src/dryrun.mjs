@@ -7,6 +7,24 @@ import { applyAction, payCost, refundCost, withoutCost, runPhaseSteps, legalityO
 
 // A node's linked Special Activities as a list: none, one object or a list (schema 1.5.0).
 export const linkedOf = (node) => (node?.linked == null ? [] : [node.linked].flat());
+// The exits of a card bot (schema 1.12.0), in words. A branch may name one in place of a node.
+export const EXIT_TEXT = { $draw: "Draw the next bot card", $flip: "Flip this bot card" };
+// Every node of a bot: its own flowchart, then each side of each bot card (schema 1.12.0). Ids are unique over all.
+export const botNodes = (bot) => [...bot.nodes, ...(bot.deck?.cards ?? []).flatMap((c) => c.sides.flatMap((sd) => sd.nodes))];
+
+// The bot deck for one turn (schema 1.12.0): the dry-run patch "botDeck" sets the order (top card first)
+// and the flipped cards. Default: the deck as listed, none flipped. A flipped card shows its back.
+function deckOf(bot, state) {
+  const cards = bot.deck?.cards ?? [], ids = cards.map((c) => c.id), pt = state.botDeck ?? {};
+  const order = pt.order ?? ids, flipped = new Set(pt.flipped ?? []);
+  if (order.length !== ids.length || new Set(order).size !== ids.length || order.some((id) => !ids.includes(id))) throw new Error(`Patch botDeck.order must list each card of the bot deck once: ${ids.join(", ")}`);
+  for (const id of flipped) {
+    const c = cards.find((x) => x.id === id);
+    if (!c) throw new Error(`Patch botDeck.flipped names unknown bot card: ${id}`);
+    if (c.sides.length < 2) throw new Error(`Patch botDeck.flipped names bot card ${id}, which has one side`);
+  }
+  return { order: order.map((id) => cards.find((c) => c.id === id)), flipped };
+}
 
 // card.lasting: the lasting value ("momentum", "capability" or "none") of the side this bot
 // plays for the card, which is the override's side, else the Event policy side (schema 1.5.0).
@@ -236,14 +254,34 @@ export function runBot(game, bot, startState) {
   const state = structuredClone(startState);
   state.self = bot.factionId;
   cardFields(game, bot, state);
-  const nodes = Object.fromEntries(bot.nodes.map((n) => [n.id, n]));
+  const nodes = Object.fromEntries(botNodes(bot).map((n) => [n.id, n]));
   const tables = Object.fromEntries(bot.priorityTables.map((t) => [t.id, t]));
   const actions = Object.fromEntries(game.actions.map((a) => [a.id, a]));
   const ctx = { state, links: game.board.links };
   const result = { path: [], chosen: [], linked: undefined, side: undefined, outcome: undefined, target: undefined };
+  // Card bots (schema 1.12.0): $draw draws the next card and runs its face-up side; $flip runs the
+  // other side of the current card. A turn that draws every card passes (owner decision 2026-11-27).
+  const deck = bot.mode === "cards" ? deckOf(bot, state) : null;
+  let drawn = 0, card = null, side = null;
   let cur = bot.start;
   for (let i = 0; i <= bot.maxSteps; i++) {
     if (i === bot.maxSteps) throw new Error(`Bot ${bot.id} did not terminate within ${bot.maxSteps} steps`);
+    if (cur === "$draw") {
+      if (!deck) throw new Error(`Bot ${bot.id} draws a card but is not a card bot`);
+      if (drawn === deck.order.length) { result.path.push("deck:empty"); result.outcome = "pass"; return result; }
+      card = deck.order[drawn++];
+      side = card.sides[deck.flipped.has(card.id) ? 1 : 0];
+      result.path.push(`draw:${card.id}`);
+      cur = side.start;
+      continue;
+    }
+    if (cur === "$flip") {
+      if (!card || card.sides.length < 2) throw new Error(`Bot ${bot.id} flips a card with no other side`);
+      side = card.sides.find((x) => x !== side);
+      result.path.push(`flip:${card.id}`);
+      cur = side.start;
+      continue;
+    }
     const node = nodes[cur];
     if (!node) throw new Error(`Bot ${bot.id}: missing node ${cur}`);
     // A budget limits only its own action node (schema 1.11.0).

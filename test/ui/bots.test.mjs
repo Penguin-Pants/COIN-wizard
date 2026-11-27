@@ -55,6 +55,7 @@ test("clicking a node in the flowchart opens its form, and deleting it clears th
   await page.click('[data-a="confirm-ask"][data-key="node-cw.sweep"]'); await page.click('[data-a="bot-delnode"]'); await frames(page);
   await settle(page);
   assert.equal(await page.locator('.flow g[data-node="cw.sweep"]').count(), 0);
+  assert.match(await page.innerText('p.note[role="status"]'), /Deleted cw\.sweep\. Cleared branches: cw\.garrison\.onEmpty/);
   assert.ok(await page.locator("#stepissues li").count() > 0);
 }));
 
@@ -399,4 +400,47 @@ test("a designer tests what the card could do, sets the next card and sees what 
   await page.click('[data-a="tab"][data-tab="deck"]'); await frames(page);
   await page.locator('details.card[data-k="card-e01"] > summary').click(); await frames(page);
   assert.match(await page.innerText('details.card[data-k="card-e01"]'), /Bots read: this side could remove/);
+}));
+
+// Schema 1.12.0 part A: a card bot. The bot flowchart draws a bot card; a card side is a small
+// flowchart that can draw again, or flip when the card has a back. A dry run sets the bot deck.
+test("a designer makes a card bot, edits a card side, sets the bot deck in a dry run and removes the deck", () => withApp(async ({ page, db }) => {
+  await botsTab(page);
+  const draft = async () => { await page.waitForTimeout(1800); return JSON.parse((await db())["data/users/u1/draft"].json).bots[0]; };
+  await page.click('[data-a="bot-cards"]'); await frames(page);
+  let b = await draft();
+  assert.equal(b.mode, "cards");
+  assert.equal(b.deck.cards.length, 1);
+  // The Event check's "no" branch draws a card.
+  await page.click('[data-a="bot-node"][data-id="cw.event"]'); await frames(page);
+  const no = 'select[data-b="bots/0/nodes/2/no"]';
+  assert.deepEqual(await page.locator(`${no} option[value^="$"]`).evaluateAll((os) => os.map((o) => o.value)), ["$draw"], "the bot flowchart can draw, not flip");
+  await page.locator(no).selectOption("$draw"); await frames(page);
+  assert.match(await page.innerText(".flow"), /Draw the next bot card/);
+  // A back side makes "flip" an exit on the card's front.
+  await page.click('[data-a="bot-addback"][data-i="0"]'); await frames(page);
+  await page.locator('select[data-botgraph]').selectOption("0/0"); await frames(page);
+  await page.locator('select[data-addnode]').selectOption("condition"); await frames(page);
+  const yes = 'select[data-b="bots/0/deck/cards/0/sides/0/nodes/1/yes"]';
+  assert.deepEqual(await page.locator(`${yes} option[value^="$"]`).evaluateAll((os) => os.map((o) => o.value)), ["$draw", "$flip"]);
+  await page.locator(yes).selectOption("$flip"); await frames(page);
+  b = await draft();
+  assert.equal(b.nodes[2].no, "$draw");
+  assert.equal(b.deck.cards[0].sides.length, 2);
+  assert.equal(b.deck.cards[0].sides[0].nodes[1].yes, "$flip");
+  // The dry run sets the top card and a flipped card.
+  await page.click('[data-a="bot-addcard"]'); await frames(page);
+  await page.locator("details.act > summary", { hasText: "no-target" }).click(); await frames(page);
+  await page.locator('details.act[open] select[data-botdeck="top"]').selectOption("k2"); await frames(page);
+  await page.locator('details.act[open] input[data-botdeck="flip"][value="k1"]').check(); await frames(page);
+  b = await draft();
+  assert.deepEqual(b.dryRuns.find((d) => d.case === "no-target").patch.botDeck, { order: ["k2", "k1"], flipped: ["k1"] });
+  // Removing the deck clears the draw branch and the bot is a flowchart bot again.
+  await page.click('[data-a="confirm-ask"][data-key="nocards-bot.crown"]'); await frames(page);
+  await page.click('[data-a="bot-nocards"]'); await frames(page);
+  b = await draft();
+  assert.equal("mode" in b, false);
+  assert.equal("deck" in b, false);
+  assert.equal("no" in b.nodes[2], false);
+  assert.match(await page.innerText("#main"), /Cleared branches: cw\.event\.no/);
 }));

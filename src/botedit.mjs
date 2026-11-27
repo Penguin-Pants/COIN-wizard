@@ -1,6 +1,6 @@
 // Bot graph editing and dry-run helpers. Pure functions on the game data.
 import { deriveState, applyPatch } from "./state.mjs";
-import { runCase } from "./dryrun.mjs";
+import { runCase, botNodes } from "./dryrun.mjs";
 
 export const CASES = ["ineligible", "event-override", "no-target", "tie", "linked-sa", "fallback"];
 const BRANCHES = ["yes", "no", "then", "onEmpty"];
@@ -46,18 +46,19 @@ const FIELDS = {
   action: { then: "", onEmpty: "" },
   end: { outcome: "pass" }
 };
-export function addNode(bot, kind) {
-  const n = { id: freeId(new Set(bot.nodes.map((x) => x.id)), `${prefixOf(bot)}.n`), kind, text: "", ...structuredClone(FIELDS[kind]) };
+// graph: the bot's own flowchart (default) or one side of a bot card (schema 1.12.0). Node ids are unique over the whole bot.
+export function addNode(bot, kind, graph = bot) {
+  const n = { id: freeId(new Set(botNodes(bot).map((x) => x.id)), `${prefixOf(bot)}.n`), kind, text: "", ...structuredClone(FIELDS[kind]) };
   for (const k of BRANCHES) if (n[k] === "") delete n[k];
-  bot.nodes.push(n);
+  graph.nodes.push(n);
   return n;
 }
 
 // Removes the node and every branch that led to it. Returns the cleared branches as "node.branch".
+// bot: a bot, or one side of a bot card: anything with nodes and start.
 export function deleteNode(bot, id) {
   bot.nodes = bot.nodes.filter((n) => n.id !== id);
-  const cleared = [];
-  for (const n of bot.nodes) for (const k of BRANCHES) if (n[k] === id) { delete n[k]; cleared.push(`${n.id}.${k}`); }
+  const cleared = clearBranches(bot.nodes, id);
   if (bot.start === id) { bot.start = bot.nodes[0]?.id ?? ""; cleared.push("start"); }
   return cleared;
 }
@@ -72,6 +73,47 @@ export function graphInfo(bot) {
   if (byId[bot.start]) dfs(bot.start);
   return { unreachable: bot.nodes.filter((n) => !seen.has(n.id)).map((n) => n.id), cycles: [...new Set(cycles)] };
 }
+
+// Card bots (schema 1.12.0). A new card has one side, front "A", that passes. Ids are free over the whole bot.
+export function addBotCard(bot) {
+  const taken = new Set(botNodes(bot).map((x) => x.id)), cards = (bot.deck ??= { order: "cycle", cards: [] }).cards;
+  const id = freeId(new Set(cards.map((c) => c.id)), "k"), start = freeId(taken, `${prefixOf(bot)}.${id}.n`);
+  const card = { id, title: `Card ${cards.length + 1}`, sides: [{ id: "front", label: String.fromCharCode(65 + (cards.length % 26)), start, nodes: [{ id: start, kind: "end", text: "Pass.", outcome: "pass" }] }] };
+  cards.push(card);
+  return card;
+}
+// Removes a bot card and its id from every dry-run botDeck patch. The deck keeps at least one card.
+export function deleteBotCard(bot, ci) {
+  if (bot.deck.cards.length < 2) return;
+  const [gone] = bot.deck.cards.splice(ci, 1);
+  for (const d of bot.dryRuns) dropFromBotDeck(d.patch, gone.id, ["order", "flipped"]);
+}
+const dropFromBotDeck = (patch, id, keys) => {
+  const bd = patch.botDeck;
+  if (!bd) return;
+  for (const k of keys) if (bd[k]) { bd[k] = bd[k].filter((x) => x !== id); if (!bd[k].length) delete bd[k]; }
+  if (!Object.keys(bd).length) delete patch.botDeck;
+};
+// The back side doubles the front letter, as on the printed cards (A and AA).
+export function addBack(bot, card) {
+  const start = freeId(new Set(botNodes(bot).map((x) => x.id)), `${prefixOf(bot)}.${card.id}.n`);
+  card.sides.push({ id: "back", label: card.sides[0].label.repeat(2), start, nodes: [{ id: start, kind: "end", text: "Pass.", outcome: "pass" }] });
+}
+// Removing the back clears every front branch that flipped, and the card from every dry-run botDeck.flipped.
+// Returns the cleared branches.
+export function deleteBack(bot, card) {
+  card.sides.length = 1;
+  for (const d of bot.dryRuns) dropFromBotDeck(d.patch, card.id, ["flipped"]);
+  return clearBranches(card.sides[0].nodes, "$flip");
+}
+// A card bot: the deck starts with one card. Back to a flowchart bot: the deck goes and every $draw branch is cleared.
+export function setCardMode(bot, on) {
+  if (on) { bot.mode = "cards"; if (!bot.deck) addBotCard(bot); return []; }
+  delete bot.mode; delete bot.deck;
+  return clearBranches(bot.nodes, "$draw");
+}
+// Deletes every branch to a node id or an exit. Returns the cleared branches as "node.branch".
+const clearBranches = (nodes, to) => { const out = []; for (const n of nodes) for (const k of BRANCHES) if (n[k] === to) { delete n[k]; out.push(`${n.id}.${k}`); } return out; };
 
 export const missingCases = (bot) => CASES.filter((c) => !bot.dryRuns.some((d) => d.case === c));
 

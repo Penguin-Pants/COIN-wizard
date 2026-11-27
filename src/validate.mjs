@@ -4,7 +4,7 @@ import schema from "../schema/coin-game.schema.json" with { type: "json" };
 import { scanExpr, VAR_OK } from "./expr.mjs";
 import { opinionMax } from "./opinion.mjs";
 import { deriveState, applyPatch } from "./state.mjs";
-import { runCase, linkedOf } from "./dryrun.mjs";
+import { runCase, linkedOf, botNodes } from "./dryrun.mjs";
 
 const ajv = new Ajv2020({ allErrors: true, strict: false });
 const schemaCheck = ajv.compile(schema);
@@ -330,11 +330,18 @@ export function validate(game) {
 function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionById, cardById, seq }) {
   const faction = game.factions.find((f) => f.id === bot.factionId);
   if (!faction) { err("missing-ref", p, `Bot ${bot.id} names unknown faction ${bot.factionId}`); return; }
-  const nodes = Object.fromEntries(bot.nodes.map((n) => [n.id, n]));
+  const all = botNodes(bot), nodes = Object.fromEntries(all.map((n) => [n.id, n]));
   const tables = Object.fromEntries(bot.priorityTables.map((t) => [t.id, t]));
-  if (Object.keys(nodes).length !== bot.nodes.length) err("duplicate-id", `${p}/nodes`, "Duplicate node id");
+  if (Object.keys(nodes).length !== all.length) err("duplicate-id", `${p}/nodes`, "Duplicate node id. Node ids are unique over the bot's flowchart and its bot cards");
   if (Object.keys(tables).length !== bot.priorityTables.length) err("duplicate-id", `${p}/priorityTables`, "Duplicate table id");
-  if (!nodes[bot.start]) err("missing-ref", `${p}/start`, `Start node not found: ${bot.start}`);
+  // Graphs (1.12.0): the bot's flowchart, then each side of each bot card. A branch stays in its graph,
+  // or exits: $draw (card bots) draws the next card; $flip (a card side with a back) turns the card.
+  const cards = bot.mode === "cards" ? bot.deck.cards : [];
+  const graphs = [{ nodes: bot.nodes, start: bot.start, path: p, flip: false }, ...cards.flatMap((c, ci) => c.sides.map((sd, si) => ({ nodes: sd.nodes, start: sd.start, path: `${p}/deck/cards/${ci}/sides/${si}`, flip: c.sides.length === 2 })))];
+  for (const G of graphs) { G.ids = new Set(G.nodes.map((n) => n.id)); if (!G.ids.has(G.start)) err("missing-ref", `${G.path}/start`, `Start node not found: ${G.start}`); }
+  if (new Set(cards.map((c) => c.id)).size !== cards.length) err("duplicate-id", `${p}/deck/cards`, "Duplicate bot card id");
+  cards.forEach((c, ci) => c.sides.forEach((sd, si) => { if (sd.id !== ["front", "back"][si]) err("card-sides", `${p}/deck/cards/${ci}/sides/${si}`, `Bot card ${c.id}: the sides are front, then back`); }));
+  if (cards.length && !seq.choices.includes("pass")) err("pass-illegal", `${p}/deck`, "A card bot passes when it draws every card, but the rules do not allow Pass");
   bot.measures.forEach((m, i) => checkExpr(m.expr, `${p}/measures/${i}`));
   checkExpr(bot.eventPolicy.playIf, `${p}/eventPolicy/playIf`);
   bot.eventPolicy.overrides.forEach((o, i) => {
@@ -343,11 +350,16 @@ function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionByI
     if (o.targets && !o.node && o.directive !== "ignore") warn("solo", `${p}/eventPolicy/overrides/${i}`, `Event exception for ${o.cardId} names its targets in text only. The engine cannot read it: express the choice with the card's effects or a table.`);
     if (o.directive === "conditional") { if (!o.when) err("override", `${p}/eventPolicy/overrides/${i}`, `Conditional override for ${o.cardId} needs a "when" condition`); else checkExpr(o.when, `${p}/eventPolicy/overrides/${i}/when`); }
   });
-  const ref = (id, path, what) => { if (!nodes[id]) err("missing-ref", path, `${what} not found: ${id}`); };
+  let G;
+  const ref = (id, path, what) => {
+    if (id === "$draw") { if (!cards.length) err("bad-exit", path, `${what} draws a bot card, but ${bot.id} is not a card bot`); }
+    else if (id === "$flip") { if (!G.flip) err("bad-exit", path, `${what} flips the card, but only a side of a two-sided bot card can flip`); }
+    else if (!G.ids.has(id)) err("missing-ref", path, nodes[id] ? `${what} ${id} is in another flowchart. A branch stays in its own flowchart or card side` : `${what} not found: ${id}`);
+  };
   const used = new Set();
   const outcomes = new Set();
-  bot.nodes.forEach((n, i) => {
-    const np = `${p}/nodes/${i}`;
+  for (G of graphs) G.nodes.forEach((n, i) => {
+    const np = `${G.path}/nodes/${i}`;
     // budget (1.11.0): what an action node's Operation may spend.
     const bg = n.budget, bp = `${np}/budget`;
     if (bg && n.kind !== "action") err("bad-budget", bp, `Node ${n.id}: a budget works only on an action node`);
@@ -466,18 +478,24 @@ function validateBot(game, bot, p, { err, warn, checkExpr, checkSteps, actionByI
     if (!used.has(t.id)) warn("unused-table", tp, `Table ${t.id} is never used`);
   });
   // reachability, termination, cycles
+  // Each graph on its own: exits ($draw, $flip) and branches into another graph end the walk.
   const next = (n) => n.kind === "condition" || n.kind === "event-check" ? [n.yes, n.no] : n.kind === "action" ? [n.then, n.onEmpty] : [];
-  const reach = new Set(); const stack = [bot.start];
-  while (stack.length) { const id = stack.pop(); if (reach.has(id) || !nodes[id]) continue; reach.add(id); stack.push(...next(nodes[id]).filter(Boolean)); }
-  for (const n of bot.nodes) if (!reach.has(n.id)) err("unreachable", p, `Node ${n.id} cannot be reached from ${bot.start}`);
-  const color = {};
-  const dfs = (id) => {
-    if (!nodes[id]) return;
-    if (color[id] === 1) { err("cycle", p, `Decision loop through node ${id} has no explicit limit`); return; }
-    if (color[id] === 2) return;
-    color[id] = 1; for (const nx of next(nodes[id]).filter(Boolean)) dfs(nx); color[id] = 2;
-  };
-  dfs(bot.start);
+  for (const g of graphs) {
+    const inG = (id) => g.ids.has(id), reach = new Set(), stack = [g.start];
+    while (stack.length) { const id = stack.pop(); if (reach.has(id) || !inG(id)) continue; reach.add(id); stack.push(...next(nodes[id]).filter(Boolean)); }
+    for (const n of g.nodes) if (!reach.has(n.id)) err("unreachable", g.path, `Node ${n.id} cannot be reached from ${g.start}`);
+    const color = {};
+    const dfs = (id) => {
+      if (!inG(id)) return;
+      if (color[id] === 1) { err("cycle", g.path, `Decision loop through node ${id} has no explicit limit`); return; }
+      if (color[id] === 2) return;
+      color[id] = 1; for (const nx of next(nodes[id]).filter(Boolean)) dfs(nx); color[id] = 2;
+    };
+    dfs(g.start);
+  }
+  if (cards.length && !bot.nodes.some((n) => next(n).includes("$draw"))) warn("no-draw", p, `Card bot ${bot.id} never draws a card: no branch of its flowchart goes to "draw the next card"`);
+  // A card bot that draws every card passes (1.12.0).
+  if (cards.length) outcomes.add("pass");
   if (![...outcomes].some((o) => o === "pass")) warn("no-pass", p, "No branch ends in Pass: confirm a legal fallback exists");
   if (!bot.nodes.some((n) => n.kind === "end" && n.outcome === "none")) err("no-ineligible-path", p, "No end node for an Ineligible turn");
   // dry runs
@@ -507,7 +525,7 @@ export function sideReadsTarget(game, cardId, sideId) {
   const r = game.bots.flatMap((b) => b.eventPolicy.overrides.filter((o) => o.cardId === cardId && o.node && o.directive !== "ignore" && (o.side ?? b.eventPolicy.side) === sideId));
   return r.length > 0 && r.every((o) => o.node.target !== undefined);
 }
-export const tableUsers = (bot, id) => [...bot.nodes.filter((n) => n.table === id || linkedOf(n).some((L) => L.table === id) || (n.parts ?? []).some((pt) => pt.table === id)), ...(bot.scoring ?? []).filter((sc) => sc.table === id), ...bot.eventPolicy.overrides.filter((o) => o.node?.table === id).map((o) => o.node)];
+export const tableUsers = (bot, id) => [...botNodes(bot).filter((n) => n.table === id || linkedOf(n).some((L) => L.table === id) || (n.parts ?? []).some((pt) => pt.table === id)), ...(bot.scoring ?? []).filter((sc) => sc.table === id), ...bot.eventPolicy.overrides.filter((o) => o.node?.table === id).map((o) => o.node)];
 
 // True when an enemy choice sits below the top level of the steps (inside if, else or another
 // choice). A piece target (1.9.0) needs every enemy choice at the top level: a nested one is not
