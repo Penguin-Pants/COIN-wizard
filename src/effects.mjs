@@ -11,6 +11,8 @@ import { evalExpr, neighbors } from "./expr.mjs";
 const clamp = (v, lo, hi) => Math.min(hi ?? Infinity, Math.max(lo ?? -Infinity, v));
 
 function setTrack(game, state, id, value) {
+  // A bot that tracks no Resources (schema 1.12.0 part D): its resource track does not change while it runs.
+  if (id === state.frozen) return;
   const t = game.tracks.find((x) => x.id === id);
   const v = clamp(value, t?.min, t?.max);
   state.tracks[id] = v;

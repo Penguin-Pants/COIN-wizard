@@ -2476,6 +2476,10 @@
             }
           }
         },
+        "tracksResources": {
+          "type": "boolean",
+          "description": "1.12.0 part D. false: the bot tracks no Resources (PP 8.5.4). Its actions cost nothing, budgets have no effect, and its resource track does not change while it runs. Default true."
+        },
         "mode": {
           "enum": [
             "flowchart",

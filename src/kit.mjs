@@ -6,6 +6,7 @@ import { linkedOf, cardLasting, EXIT_TEXT, tablesOf } from "./dryrun.mjs";
 import { choiceCounts } from "./effects.mjs";
 import { condText, stepText, budgetText, controllerName } from "./plain.mjs";
 import { setupControl } from "./expr.mjs";
+import { tracksResources } from "./state.mjs";
 import { toCond } from "./exprmodel.mjs";
 import { voronoi, FRAME } from "./mapplace.mjs";
 
@@ -241,6 +242,7 @@ export function nonPlayerSheetHtml(g, bot) {
   const f = faction(g, bot.factionId);
   const { num, nodes } = stepNumbers(bot);
   const labels = tableLabels(bot, g);
+  const res = tracksResources(bot); // 1.12.0 part D
   const act = (id) => g.actions.find((a) => a.id === id);
   const table = (id) => tablesOf(g, bot).find((t) => t.id === id);
   const order = bot.nodes.filter((n) => num[n.id]).sort((a, b) => num[a.id] - num[b.id]);
@@ -287,9 +289,9 @@ export function nonPlayerSheetHtml(g, bot) {
     // parts: numbered sub-actions in one box, each with its table label, max and priorities.
     const maxOf = (pt) => { const x = table(pt.table); return Math.min(x.select === "all" ? x.limit : 1, a?.maxSpaces ?? Infinity); };
     const body = n.parts
-      ? `<div class="bt"><h3>${h(a?.name ?? n.action)}</h3></div>${where(a)}${target}${n.parts.map((pt, i) => `<div class="part"><p class="pt">${i + 1}. ${h(pt.text)} <small>(${labels[pt.table]}, max ${maxOf(pt)})</small></p>${prio(table(pt.table))}</div>`).join("")}<p class="pr">${a?.cost.per === "use" ? "Pay once, for the whole Operation." : "Pay once per space, over all parts."}</p>`
+      ? `<div class="bt"><h3>${h(a?.name ?? n.action)}</h3></div>${where(a)}${target}${n.parts.map((pt, i) => `<div class="part"><p class="pt">${i + 1}. ${h(pt.text)} <small>(${labels[pt.table]}, max ${maxOf(pt)})</small></p>${prio(table(pt.table))}</div>`).join("")}${!res ? "" : `<p class="pr">${a?.cost.per === "use" ? "Pay once, for the whole Operation." : "Pay once per space, over all parts."}</p>`}`
       : `${title(a?.name ?? n.action, t, a)}${where(a)}${target}${prio(t)}`;
-    const budget = n.budget ? `<p class="pr">${h(budgetText(n.budget))}</p>` : "";
+    const budget = n.budget && res ? `<p class="pr">${h(budgetText(n.budget))}</p>` : "";
     return `<section class="box op">${body}${budget}${linked}${next}${arr("if none", n.onEmpty)}</section>`;
   }).join("");
   const saBoxes = [...sas.values()].map(({ l, nexts, ends }) => {
@@ -323,7 +325,8 @@ export function nonPlayerSheetHtml(g, bot) {
   const evi = `<section class="evi"><h2>Event Instructions</h2>${ep.overrides.filter((o) => lasting(o) === "none").map((o) => `<p><b>${h(card(o.cardId))}:</b> ${h(o.plain)}${playSide(o)}${ovNode(o)}</p>${ovRows(o)}`).join("") || "<p>None.</p>"}</section>${lastingOvs.length ? `<section class="evi"><h2>Momentum, Capability</h2>${lastingOvs.map((o) => `<p><b>${h(card(o.cardId))}</b> (${LASTING[lasting(o)]}): ${h(o.plain)}${playSide(o)}${ovNode(o)}</p>${ovRows(o)}`).join("")}</section>` : ""}`;
   const terms = bot.measures.length ? `<div class="terms"><b>Terms.</b> ${bot.measures.map((m) => `<b>${h(m.name)}:</b> ${h(m.plain)}`).join(" ")}</div>` : "";
   const gain = g.rules.sequence.passGain[bot.factionId] ?? 0;
-  const foot = `<p class="foot">Ties after the lettered tie-breaks, when one space or faction is chosen: ${h(bot.randomization.eligibleSet)} ${h(bot.randomization.procedure)} Pass: gain ${gain} Resource${gain === 1 ? "" : "s"}.</p>`;
+  const pass = res ? `Pass: gain ${gain} Resource${gain === 1 ? "" : "s"}.` : "This bot tracks no Resources: its actions cost nothing, and it never gains or spends Resources.";
+  const foot = `<p class="foot">Ties after the lettered tie-breaks, when one space or faction is chosen: ${h(bot.randomization.eligibleSet)} ${h(bot.randomization.procedure)} ${pass}</p>`;
   const sym = shapeSvg(g, f);
   const body = `<section class="page np" style="--f:${f.color}"><div class="sheethead">${sym}<h1>Non-Player ${h(f.name)}</h1>${sym}</div>${head(g, "Non-Player sheet")}
     <div class="npgrid"><div class="col flow">${evt}${dias}</div><div class="col ops"><h2>Operations</h2>${ops || "<p>None.</p>"}</div><div class="col sas"><h2>Special Activities</h2>${saBoxes || "<p>None.</p>"}${scoring}</div></div>${evi}${terms}${foot}</section>`;

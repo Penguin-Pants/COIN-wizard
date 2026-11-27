@@ -3,6 +3,7 @@
 // and before the next node, so each sees the board the action left.
 import { evalExpr } from "./expr.mjs";
 import { seededRandom } from "./deck.mjs";
+import { tracksResources } from "./state.mjs";
 import { applyAction, payCost, refundCost, withoutCost, runPhaseSteps, legalityOf, startOperation } from "./effects.mjs";
 
 
@@ -16,6 +17,13 @@ export const usesTable = (bot, id) => tableUsers(bot, id).length > 0 || botNodes
 export const tablesOf = (game, bot) => [...bot.priorityTables, ...(game.sharedTables ?? [])];
 // The exits of a card bot (schema 1.12.0), in words. A branch may name one in place of a node.
 export const EXIT_TEXT = { $draw: "Draw the next bot card", $flip: "Flip this bot card" };
+// The actions as a bot run reads them: state.actions (src/state.mjs), where an action of a faction whose
+// bot tracks no Resources costs nothing (schema 1.12.0 part D). While such a bot runs, its own resource
+// track does not change (state.frozen, src/effects.mjs).
+function startRun(game, bot, state) {
+  state.frozen = tracksResources(bot) ? null : game.factions.find((f) => f.id === bot.factionId)?.resourceTrack ?? null;
+  return state.actions;
+}
 // Every node of a bot: its own flowchart, then each side of each bot card (schema 1.12.0). Ids are unique over all.
 export const botNodes = (bot) => [...bot.nodes, ...(bot.deck?.cards ?? []).flatMap((c) => c.sides.flatMap((sd) => sd.nodes))];
 
@@ -277,7 +285,7 @@ export function runBot(game, bot, startState) {
   cardFields(game, bot, state);
   const nodes = Object.fromEntries(botNodes(bot).map((n) => [n.id, n]));
   const tables = Object.fromEntries(tablesOf(game, bot).map((t) => [t.id, t]));
-  const actions = Object.fromEntries(game.actions.map((a) => [a.id, a]));
+  const actions = startRun(game, bot, state);
   const ctx = { state, links: game.board.links };
   const result = { path: [], chosen: [], linked: undefined, side: undefined, outcome: undefined, target: undefined };
   // Card bots (schema 1.12.0): $draw draws the next card and runs its face-up side; $flip runs the
@@ -394,6 +402,7 @@ export function runScoring(game, bot, startState) {
   state.self = bot.factionId;
   const tables = Object.fromEntries(tablesOf(game, bot).map((t) => [t.id, t]));
   cardFields(game, bot, state);
+  startRun(game, bot, state);
   const result = { path: [], chosen: [], linked: undefined, side: undefined, outcome: "none", target: undefined };
   for (const ph of game.rules.scoring.phases) {
     const sc = (bot.scoring ?? []).find((x) => x.phaseId === ph.id);

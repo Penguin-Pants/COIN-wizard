@@ -7,6 +7,7 @@ import { linkedOf, botNodes, EXIT_TEXT, tableUsers, tablesOf } from "../../src/d
 import { opinionMax } from "../../src/opinion.mjs";
 import { budgetText } from "../../src/plain.mjs";
 import { isExpr } from "../../src/exprmodel.mjs";
+import { tracksResources } from "../../src/state.mjs";
 import { S, esc, getP } from "../state.mjs";
 import { fld, inp, area, sel, btn, chip } from "../components/fields.mjs";
 import { condEditor, valueEditor } from "../components/exprEditor.mjs";
@@ -93,7 +94,7 @@ function nodeForm(b, bi, G) {
     const enemyTables = [["", "(none: act without a target)"], ...tablesOf(g, b).filter((t) => t.scope === "opponent").map((t) => [t.id, t.id])];
     body = `<div class="grid2">${fld("Pick the enemy first", sel(`${p}/target`, n.target ?? "", enemyTables, { t: "o", r: true }), "An enemy table picks one enemy faction. The space table can then use \"the target\".")}${fld("Operation", sel(`${p}/action`, n.action ?? "", [["", "(choose)"], ...ops], { t: "o", r: true }))}${n.parts ? "" : fld("Priority table", sel(`${p}/table`, n.table ?? "", tables, { t: "o", r: true }), "The table picks the spaces, so the bot needs no judgment.")}${branch("then", "After it acts, go to")}${branch("onEmpty", "If no space qualifies (fallback), go to")}</div>
       ${G.g.activation !== undefined ? `<label class="chk"><input type="checkbox" data-a="bot-noan" data-p="${p}" ${n.noActivation ? "checked" : ""}> Skip the Activation roll</label><small> This Operation takes spaces up to its table's limit.</small>` : ""}
-      ${budgetForm(n, p)}
+      ${tracksResources(b) ? budgetForm(n, p) : "<small>This bot tracks no Resources, so it has no spending limit.</small>"}
       ${partsForm(n, p, tables)}
       <label class="chk"><input type="checkbox" data-a="bot-linked" data-p="${p}" ${L ? "checked" : ""}> Linked Special Activity</label><small> Runs with the Operation when its trigger holds and its table finds a space.</small>
       ${entries.map(entry).join("")}${L ? `<div class="row">${btn("bot-linked-add", "Add an If none Special Activity", { cls: "link", data: `data-p="${p}"` })}<small> Tried in order: the first one whose trigger holds and whose table finds a space runs.</small></div>` : ""}`;
@@ -226,7 +227,7 @@ export function renderBots() {
   // A message from the last bot edit, such as the branches a delete cleared.
   const note = S.msg.bots ? `<p class="note" role="status">${esc(S.msg.bots)}</p>` : "";
   return `${picker()}${note}<div class="botp" style="${fvars(f?.color ?? "#888")}">
-    <section class="panel"><h3>${f ? fbadge(f, fidx(f.id)) : ""} ${esc(f?.name ?? b.factionId)} bot</h3><div class="grid3">${fld("Code (2 or 3 capitals)", inp(`bots/${bi}/code`, b.code))}${fld("Most steps per turn", inp(`bots/${bi}/maxSteps`, b.maxSteps, { t: "n", type: "number", attrs: 'min="1"' }))}<div class="fld"><span>&nbsp;</span>${confirmButton(`bot-${b.id}`, "Delete this bot", { action: "bot-del", data: `data-i="${bi}"` })}</div></div>${fld("Goal in plain words (printed)", area(`bots/${bi}/objective`, b.objective, { rows: 2 }))}</section>
+    <section class="panel"><h3>${f ? fbadge(f, fidx(f.id)) : ""} ${esc(f?.name ?? b.factionId)} bot</h3><div class="grid3">${fld("Code (2 or 3 capitals)", inp(`bots/${bi}/code`, b.code))}${fld("Most steps per turn", inp(`bots/${bi}/maxSteps`, b.maxSteps, { t: "n", type: "number", attrs: 'min="1"' }))}<div class="fld"><span>&nbsp;</span><label class="chk"><input type="checkbox" data-a="bot-res" data-i="${bi}" data-path="/bots/${bi}/tracksResources" ${tracksResources(b) ? "checked" : ""}> Tracks Resources</label><small>Off: its actions cost nothing, and it never gains or spends Resources.</small></div><div class="fld"><span>&nbsp;</span>${confirmButton(`bot-${b.id}`, "Delete this bot", { action: "bot-del", data: `data-i="${bi}"` })}</div></div>${fld("Goal in plain words (printed)", area(`bots/${bi}/objective`, b.objective, { rows: 2 }))}</section>
     ${deckPanel(b, bi)}<section class="panel"><h3>Flowchart</h3>${graphPicker(b)}<div class="flow" data-a="bot-svg" tabindex="0" role="region" aria-label="Flowchart. Use the node list below to select a node.">${svg}</div>
       <div class="graph"><div><h4>Nodes</h4><ul class="nodes">${list}</ul><select data-addnode="${bi}" data-g="${G.p}" data-path="/${G.p}/nodes" aria-label="Add a node"><option value="">Add a node...</option>${KINDS.map(([v, l]) => `<option value="${v}">${l}</option>`).join("")}</select></div><div>${nodeForm(b, bi, G)}</div></div></section>
     <section class="panel"><h3>Priority tables</h3>${b.priorityTables.map((t, ti) => tableEditor(t, bi, ti)).join("")}${btn("bot-addtable", "Add a space table", { cls: "link", data: `data-p="bots/${bi}"` })}${btn("bot-addenemy", "Add an enemy table", { cls: "link", data: `data-p="bots/${bi}"` })}
@@ -251,6 +252,7 @@ export const botActions = {
   // Card bots (1.12.0).
   "bot-addan": (d) => { getP(S.game, d.p).activation = 3; done(); },
   "bot-delan": (d) => { const sd = getP(S.game, d.p); delete sd.activation; for (const n of sd.nodes) delete n.noActivation; done(); },
+  "bot-res": (d, el) => { const b = S.game.bots[d.i]; if (el.checked) delete b.tracksResources; else b.tracksResources = false; done(); },
   "bot-noan": (d, el) => { const n = getP(S.game, d.p); if (el.checked) n.noActivation = true; else delete n.noActivation; done(); },
   "bot-graph": (d) => { S.botGraph = d.g; S.botNode = null; render(); },
   "bot-cards": (d) => { setCardMode(botOf(d.p), true); S.botGraph = ""; done(); },

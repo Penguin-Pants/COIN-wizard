@@ -28,7 +28,7 @@ Owner: **Owner** (a person must act or decide) or **Claude** (code or docs, afte
 
 | # | Item | Owner | Source |
 |---|---|---|---|
-| C1 | Card-driven bot mode, schema 1.12.0: parts A to C done (ACCEPTANCE rows 32, 34 and 35); parts D to G open, one part per PR. Part G (Move and Pieces tables) needs design questions first | Claude | R7; `docs/proposals/card-bots.md`, "Parts" |
+| C1 | Card-driven bot mode, schema 1.12.0: parts A to D done (ACCEPTANCE rows 32 and 34 to 36); parts E to G open, one part per PR. Part G (Move and Pieces tables) needs design questions first | Claude | R7; `docs/proposals/card-bots.md`, "Parts" |
 | C2 | Import the research data: prototype deck into a sample game; claims with confidence and a contested flag | Claude | R8 |
 | C3 | Preset library from the 14-game tables (victory, pass gain, tracks, scoring phases) | Claude | R9; `docs/research/coin-analysis/variation-matrix.md` |
 | C4 | Initiative Track and Operation limits before scoring | Claude | R11; `docs/research/coin-analysis/variation-matrix.md` lines 35-41 |
